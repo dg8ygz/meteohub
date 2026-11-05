@@ -1,0 +1,15 @@
+#!/bin/sh
+# Native UI compatibility; all processes belong to one systemd cgroup.
+set -eu
+if [ "${METEO_PREPARING-}" = 1 ]; then
+    echo 'Recursive logger control during configuration generation rejected' >&2
+    exit 70
+fi
+exec 9>/run/lock/meteohub-logger-control.lock
+flock -w 90 9
+case "${1-}" in
+    start|stop|restart) systemctl "$1" meteohub-live-test.service ;;
+    reload|force-reload) systemctl restart meteohub-live-test.service ;;
+    status) systemctl status meteohub-live-test.service --no-pager ;;
+    *) echo 'Usage: rcloggerd start|stop|restart|reload|status' >&2; exit 2 ;;
+esac
