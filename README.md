@@ -1,9 +1,69 @@
-# Meteohub unter Debian Trixie – eigene Kompatibilitätswerkzeuge
+# Meteohub auf Debian Trixie
 
-Dieser Ordner enthält die selbst entwickelten Hilfsprogramme, die Flash-freie
-Wetteranzeige und Tests aus der Migration einer bestehenden ARM-Meteohub-Station
-in einen isolierten Debian-Trixie-Testgast. Er ist kein vollständiges Meteohub-
-Installationsimage und noch keine Freigabe für den produktiven Stationsbetrieb.
+**Eine bestehende Meteohub-Wetterstation auf einer aktuellen Linux-Basis
+weiterbetreiben und ihre Messwerte ohne Flash anzeigen.**
+
+Dieses unabhängige Projekt sammelt die dafür entwickelten Kompatibilitätshelfer,
+eine kompakte Wetteranzeige und reproduzierbare Tests. Ausgangspunkt ist eine
+Raspberry-Pi-Station mit alter ARM-Meteohub-Software. Deren Anwendung und
+historische Wetterdaten werden in einer getrennten Debian-Trixie-Testumgebung
+erprobt, während die ursprüngliche Station weiter Messwerte liefert.
+
+Es handelt sich um ein eigenständiges Wetterstationsprojekt, nicht um einen
+Bestandteil der Webcam-Software. Das Projekt ist keine offizielle
+Meteohub-Veröffentlichung und enthält weder die proprietären Originalprogramme
+noch ein fertiges Installationsimage.
+
+**Stand: 5. November 2026 – laufender Migrationstest, noch keine vollständige
+Produktionsfreigabe.**
+
+[Funktionen](#was-das-projekt-bereits-bietet) ·
+[Projektstatus](#aktueller-projektstatus) ·
+[Originalsoftware beschaffen](#original-binaries-beschaffen) ·
+[Wettergrafik einbetten](#anzeige-und-datenbehandlung) ·
+[Tests](#prüfungen)
+
+## Was das Projekt bereits bietet
+
+- **Kompatibilität mit Trixie:** Hilfen für den Aufruf der alten CGI-Oberfläche,
+  historische Diagramme mit neuerem gnuplot und die Steuerung des nativen Loggers.
+- **Messwertkopie für den Testbetrieb:** Ein lesender Zubringer übernimmt die
+  bestehende Stationsausgabe. Der Testlogger greift nicht parallel auf die
+  physische USB-Wetterkonsole zu.
+- **Wetteranzeige ohne Flash:** Kompaktes HTML-Dashboard mit Zeitverläufen,
+  Sensoraktualität sowie Windrichtung, Mittelwind und Böen nach Richtungssektor.
+- **Einbettbare Grafik:** Eine eigenständige SVG mit 600 × 180 Pixeln für die
+  Verwendung als einfaches Bild auf anderen Webseiten.
+- **Nachvollziehbare Datenbehandlung:** Herkunftsprotokoll, Prüfung auf veraltete
+  Messwerte und ein abgeleiteter Anzeigeindex. Gültige Regenrate und Stationsdruck
+  bleiben nutzbar, wenn andere Felder desselben Sensorpakets unplausibel sind.
+
+## Aktueller Projektstatus
+
+| Bereich | Belegter Stand |
+| --- | --- |
+| ARM-Anwendung im Trixie-Testgast | Native Oberfläche und historische PNG-Erzeugung getestet; Host-Neustart mit Wiederanlauf geprüft. |
+| Neue Wetteranzeige | Dashboard, SVG-Einbettung, Authentifizierungsgrenzen und Datenkorrekturen im Testsystem geprüft. |
+| Lokale Regressionstests | 17 Unit-Tests und ein realer Plugin-Prozesstest bestanden. |
+| Langzeitbetrieb | Test eingerichtet; durchgehende 24-Stunden-Abnahme und vollständiger Datensatzabgleich noch offen. |
+| Produktive Umstellung | Archiv-/Aggregat-/Exportintegration und vollständige Wartungsabnahme noch offen. |
+| Allgemeine Installation | Noch kein universeller Installer; mehrere Helfer verwenden feste Laborpfade. |
+
+Die Angaben beschreiben die dokumentierten Prüfungen zu diesem Stand, keine
+automatisch aktualisierte Betriebsüberwachung. Weitere Einschränkungen stehen
+unter [Bekannte Grenzen](#bekannte-grenzen-und-noch-ausstehende-arbeit).
+
+## Einstieg
+
+Für eine eigene Erprobung zunächst die [Original-Binaries beschaffen](#original-binaries-beschaffen)
+und eine getrennte ARM-Testumgebung vorbereiten. Auf x86 ist dafür eine passende
+ARM-Emulation erforderlich. Ein Checkout dieses Repositorys allein installiert
+keine Wetterstation und ersetzt keine bestehende Anwendung.
+
+Die [Dateiübersicht](#bestand) erklärt die einzelnen Komponenten;
+die [Testbefehle](#prüfungen) lassen sich ohne angeschlossene Wetterstation
+ausführen. Wer nur die kompakte Anzeige nutzen möchte, findet das Bildformat
+und das Einbettungsbeispiel unter [Anzeige und Datenbehandlung](#anzeige-und-datenbehandlung).
 
 ## Bestand
 
