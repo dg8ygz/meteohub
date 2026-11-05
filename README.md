@@ -19,6 +19,7 @@ Produktionsfreigabe.**
 
 [Funktionen](#was-das-projekt-bereits-bietet) ·
 [Projektstatus](#aktueller-projektstatus) ·
+[Raspberry-Pi-Anleitung für Einsteiger](docs/raspberry-pi-setup.md) ·
 [Originalsoftware beschaffen](#original-binaries-beschaffen) ·
 [Wettergrafik einbetten](#anzeige-und-datenbehandlung) ·
 [Tests](#prüfungen)
@@ -54,6 +55,14 @@ automatisch aktualisierte Betriebsüberwachung. Weitere Einschränkungen stehen
 unter [Bekannte Grenzen](#bekannte-grenzen-und-noch-ausstehende-arbeit).
 
 ## Einstieg
+
+**Zum ersten Mal mit Meteohub?** Die
+[Schritt-für-Schritt-Anleitung für Pi 3 und Pi 4](docs/raspberry-pi-setup.md)
+erklärt Begriffe, benötigte Hardware, SD-Karte, Anmeldung, Stationskonfiguration,
+Messwertkontrolle und Sicherung. Sie trennt den vollständigen Herstellerweg für
+das alte Pi-3-Image von der aktuellen Trixie-Vorbereitung für Pi 3/Pi 4.
+Die noch fehlende native Trixie-Installation wird ausdrücklich als offen
+ausgewiesen; das QEMU-Testimage ist kein direkt bootfähiges Pi-Image.
 
 Für eine eigene Erprobung zunächst die [Original-Binaries beschaffen](#original-binaries-beschaffen)
 und eine getrennte ARM-Testumgebung vorbereiten. Auf x86 ist dafür eine passende
