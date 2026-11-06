@@ -83,6 +83,7 @@ und das Einbettungsbeispiel unter [Anzeige und Datenbehandlung](#anzeige-und-dat
 | `tools/probe-cgi.py` | Führt nach einer echten Isolationsprüfung genau einen CGI-Probelauf im kurzlebigen systemd-Testdienst aus; keine Webserver- oder Loggerinstallation. |
 | `tools/stage-runtime.py`, `tools/test-runtime.py` | Bereiten einen privaten Konfigurations-/Datenbaum für den CGI-Test vor und prüfen Dateiauswahl sowie optional die tatsächliche systemd-Isolation. |
 | `tools/web-test.py`, `tools/test-web.py` | Passwortgeschützte Browser-Testoberfläche über Loopback/SSH und echte HTTP-Tests mit synthetischem CGI; keine Bootfreigabe oder Loggerinstallation. |
+| `tools/tcp-feed.py`, `tools/test-tcp-feed.py` | Empfangen den bestehenden Plugin-Kopierstrom einer Station ausschließlich lesend und erstellen begrenzte JSON-Snapshots für das Spiegel-Plugin. |
 | `cgi_compat.sh` | Ergänzt bei leerem GET des nativen Haupt-CGI die Startseite. |
 | `gnuplot_compat.py` | Übersetzt alte Plot-Präambeln für das Distributions-gnuplot; verändert keine Roharchive. |
 | `prepare_logger.py`, `rcloggerd` | Begrenzen den nativen Logger auf die isolierte Pluginquelle und steuern dessen systemd-Dienst. |

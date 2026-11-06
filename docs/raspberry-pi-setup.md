@@ -1403,6 +1403,64 @@ Erprobung. Zuvor muss eine korrekte, stabile System-ID des Zielgeräts vorliegen
 Ob der Transferdienst aktuell erfolgreich arbeitet, ist noch nicht getestet;
 die Dokumentation allein ist kein Nachweis einer erfolgreichen Übertragung.
 
+#### B5o. Vorhandene Station als TCP-Messwertquelle prüfen
+
+Wenn die vorhandene Station bereits einen TCP-Kopierstrom der Plugin-Daten
+bereitstellt, kann der neue Pi diesen mitlesen. Im geprüften Aufbau war dies
+Port **5500**, mit Zeilen wie `wind0 70 67 30` und `data0 600`.
+Den Port am eigenen Quellsystem prüfen; nicht beliebige Stations- oder
+Steuerports anschreiben. Der neue Zubringer sendet keinerlei Anwendungsdaten
+oder Befehle an diesen Port und öffnet keine serielle Schnittstelle.
+
+Auf dem neuen Pi als normaler Benutzer:
+
+```sh
+(
+set -e
+umask 077
+cd "$HOME/src/meteohub"
+git pull --ff-only
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-tcp-feed.py
+read -r -p 'IP oder DNS-Name der bisherigen Station: ' source_host
+python3 tools/tcp-feed.py \
+  --host "$source_host" --port 5500 --duration 90 \
+  --output "$HOME/meteohub-staging/tcp-feed/feed.json"
+)
+```
+
+Der Empfang läuft 90 Sekunden und endet dann. Die Ausgabe nennt Datensätze je
+Sensor, zuletzt empfangene Werte, verworfene Formate und Verbindungsanzahl.
+Ein Exitcode 2 bedeutet, dass kein gültiger Datensatz empfangen wurde.
+Ein seltener sendender Sensor muss innerhalb dieses kurzen Fensters nicht
+auftreten; das ist kein Nachweis für seinen Ausfall.
+
+`feed.json` enthält höchstens die letzten 300 formal gültigen Plugin-Zeilen;
+`feed.status.json` enthält die Abschlussstatistik. Beide Dateien bleiben privat.
+Der Zubringer überschreibt einen vorhandenen Snapshot beim Start zunächst mit
+einem leeren Stand, damit keine alten Messwerte wieder eingespielt werden.
+Angebrochene Zeilen werden bei Verbindungsabbruch verworfen, nicht mit einer
+späteren Verbindung zusammengefügt. Ein Wiederanlauf erfolgt nach fünf Sekunden;
+nach 60 Sekunden ohne Bytes wird die Verbindung neu aufgebaut.
+
+Der TCP-Kopierstrom enthält **keine Quellzeitstempel**. Die vorangestellten
+UTC-Zeitstempel sind Empfangszeiten auf dem neuen Pi, keine nachgewiesenen
+Messzeitpunkte. Netzwerkpuffer können verzögern; unveränderte Zahlen dürfen
+nicht pauschal als Duplikate verworfen werden. Die Datei kennzeichnet diese
+Zeitbasis ausdrücklich. Die bestehende Temperatur-Plausibilitätsprüfung des
+Spiegel-Plugins ist ein separater Verarbeitungsschritt; der TCP-Zubringer
+verändert oder korrigiert die empfangenen Zahlen nicht.
+
+Dieser Schritt prüft nur den Zubringer. Er startet noch keinen nativen Logger
+und belegt keine Archivierung oder vollständige Sensorversorgung. Für den
+späteren laufenden Zubringer ist `--duration 0` vorgesehen; dessen Dienst und
+die schreibgeschützte Übergabe in die isolierte Loggerumgebung werden gesondert
+eingerichtet. Die Netzwerkisolation der Web-Testoberfläche bleibt bestehen.
+
+Entwicklungsprüfung: Drei Tests mit tatsächlichen lokalen TCP-Verbindungen
+prüfen Teilzeilen, fehlerhafte/überlange Eingaben, ausbleibende Sendebefehle,
+Verbindungswiederaufnahme, das Verwerfen alter Snapshots sowie die Übergabe an
+den vorhandenen Plugin-Parser. Die zugehörigen Testdaten sind synthetisch.
+
 ### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
