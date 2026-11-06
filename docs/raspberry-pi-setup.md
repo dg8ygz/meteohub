@@ -1382,7 +1382,26 @@ dieser allein den Browserbetrieb nicht verhindern muss. Socket-Aktivierung
 und getrenntes Netz wurden mit einem tatsächlich gestarteten Testdienst geprüft.
 Die optionale Wiederholung heißt `sudo python3 tools/test-web.py`; sie verwendet
 zufällige lokale Testports, temporäre Testkennwörter und keine Original-Binaries.
-Der echte ARM-Browserlauf auf dem Ziel-Pi ist noch offen.
+Der erste echte ARM-Browserlauf wurde am 06.11.2026 um 22:48 CET vom Betreiber
+bestätigt: Die authentifizierte Oberfläche zeigte „System Information“,
+Meteohub 5.0s Build 180 und den aktuellen Kernel. Dies belegt die Ausgabe
+dieser CGI-Seite, noch nicht Stationsaufnahme, Archivierung oder Aktivierung.
+
+Die Seite meldete fehlende PID-Dateien für loggerd, Dropbear und Samba sowie
+inaktive Netzwerkeinstellungen. Im isolierten Test sind diese Dienste nicht
+gestartet; der tatsächliche SSH-Zugang des Pi läuft außerhalb dieser Umgebung.
+Keine künstlichen PID-Dateien anlegen und nicht anhand dieser alten Statusseite
+Hostdienste nachinstallieren. Die Anzeige „x86“ widerspricht den nachgewiesenen
+ARM-Binaries; ihre Hardwareerkennung ist noch zu untersuchen. Eine leere
+System-ID mit dem Zusatz „activated“ ist kein belastbarer Aktivierungsnachweis.
+
+Für den späteren Hardwarewechsel beschreibt der Hersteller einen
+[Lizenztransfer](https://wiki.meteohub.de/wiki/index.php/Transfer).
+Laut dieser Anleitung wird dabei der alte Aktivierungscode gesperrt. Deshalb
+erst bei vorbereitetem Umstieg durchführen, nicht während der parallelen
+Erprobung. Zuvor muss eine korrekte, stabile System-ID des Zielgeräts vorliegen.
+Ob der Transferdienst aktuell erfolgreich arbeitet, ist noch nicht getestet;
+die Dokumentation allein ist kein Nachweis einer erfolgreichen Übertragung.
 
 ### B6. Noch offene native Installation und Abnahme
 
