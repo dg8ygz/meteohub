@@ -1636,9 +1636,13 @@ Herstellerpaket bestanden am 06.11.2026: ARM-Dateien/Abhängigkeiten und
 unveränderte ausführbare Sektionen, erhaltene Quellen, Ablehnung vorhandener
 oder verschachtelter Ziele, beschädigter Archive, abweichender Bibliotheken
 sowie problematischer Archivpfade/Links/Duplikate. Kein Herstellerprogramm
-wurde dabei ausgeführt. Der Betreiber hat den Download auf dem Pi mit
-passender Prüfsumme bestätigt; die native Prüfung dieser neuen Kopie ist
-noch offen.
+wurde dabei ausgeführt. Auf dem echten Raspberry Pi 4 hat der Betreiber
+anschließend mit Repository-Stand `5cb594d` dieselben fünf Tests erfolgreich
+ausgeführt (4,015 Sekunden) und den Kandidaten `5.1e-openssl3` erstellt.
+Paket-/Komponentenprüfsummen und unveränderte ausführbare Sektionen wurden
+dabei erneut bestätigt. Bibliotheksauflösung und tatsächliche Ausführung
+der neuen ARM-Anwendung auf diesem Pi sind noch offen. Ein auf ARM laufender
+Python-Test ersetzt diese native Anwendungsprüfung nicht.
 
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
