@@ -767,7 +767,42 @@ apt-get -s --no-install-recommends install libssl3t64:armhf python3-pyelftools
 Dieser Schritt installiert noch keine Pakete und verändert keine Binaries.
 `python3-pyelftools` ist ein Analysewerkzeug für die folgende ELF-Prüfung;
 `libssl3t64:armhf` stellt die aktuelle 32-Bit-OpenSSL-Laufzeit bereit. Die
-konkrete Paketauflösung und Funktionsliste auf dem Pi sind noch zu prüfen.
+konkrete Paketauflösung und Funktionsliste müssen auf dem Ziel-Pi geprüft werden.
+
+Auf dem Pi 4 bestätigte der Anwender am 6. November 2026:
+
+- `meteometar`: keine Treffer im oben verwendeten Symbolfilter, trotz direkter
+  `libssl.so.1.0.0`-Abhängigkeit. Daraus allein folgt nicht, dass sämtliche
+  dynamischen Bibliothekszugriffe ausgeschlossen sind.
+- `meteonet` und `meteoschedule`: jeweils `MD5@OPENSSL_1.0.0`.
+- `meteohub.cgi`: 16 versionierte Funktionsimporte aus den BIO-, EVP-, PEM- und
+  RSA-APIs. Diese passen zur bisher untersuchten Funktionsmenge; das ist noch
+  kein Nachweis für die Laufzeitkompatibilität des neuen Programmbuilds.
+- `usr/local/lib/libgcgi.so.0.0.0`: vorhanden, 111327 Bytes; die beiden
+  Bibliothekssymlinks zeigen relativ auf diese Datei.
+- Paketplan: fünf neue Pakete (`libatomic1:armhf`, `libzstd1:armhf`,
+  `zlib1g:armhf`, `libssl3t64:armhf`, `python3-pyelftools`), keine
+  Aktualisierungen oder Entfernungen. OpenSSL-Kandidat
+  `3.5.7-1~deb13u3+rpt1`, pyelftools `0.32-1`. Keine zusätzlichen Serverdienste
+  in diesem Paketplan.
+
+Nach Prüfung dieses Plans die Pakete installieren und den Zustand prüfen:
+
+```sh
+sudo apt-get install --no-install-recommends libssl3t64:armhf python3-pyelftools
+dpkg-query -W libssl3t64:armhf python3-pyelftools
+python3 -c 'import elftools; print("pyelftools", elftools.__version__)'
+sudo dpkg --audit
+```
+
+Erwartet sind installierte Paketversionen, eine erfolgreiche Python-
+Importprüfung und ein leeres dpkg-Audit. Wenn der reale Paketplan unerwartet
+abweicht, vor der Bestätigung neu prüfen. Die Installation auf dem Pi ist bis
+zur nächsten Anwenderausgabe noch offen. Sie passt noch keine Originalprogramme
+an, startet keinen Meteohub-Dienst und ersetzt keine Aktivierung. Eine spätere
+ELF-Anpassung muss mit unverändertem Original und nachvollziehbaren Änderungen
+in einer separaten Arbeitskopie erfolgen; Bibliotheksauflösung und tatsächliche
+Funktionen sind danach getrennt zu testen.
 
 Außerdem wichtig für die folgende Übernahme: Das Image erwartet Programme
 unter `/home/meteohub`, das auf dem neuen Pi bereits das persönliche
