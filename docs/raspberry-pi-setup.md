@@ -336,6 +336,57 @@ Mit dem vom SSH-Client angezeigten Fingerprint vergleichen. Ein bloßer
 Hostschlüsselwarnungen daher nicht durch Abschalten der Prüfung umgehen.
 Persönliche Zugangsdaten gehören nicht in dieses Repository.
 
+### B2b. ARM-32-Bit-Laufzeit auf bestehendem arm64-Trixie vorbereiten
+
+Dieser Abschnitt gilt nur bei Paketarchitektur `arm64`. Alle Befehle führt der
+Anwender auf dem neuen Pi aus. Nach jedem Schritt die Ausgabe prüfen, bevor der
+nächste folgt. Die bestehende Wetterstation bleibt dabei unverändert.
+
+Zuerst die Voraussetzungen prüfen:
+
+```sh
+dpkg --print-architecture
+dpkg --print-foreign-architectures
+grep '^CONFIG_COMPAT=' "/boot/config-$(uname -r)"
+```
+
+Beim vorbereiteten Pi 4 wurden `arm64`, die zusätzliche Architektur `armhf`
+und `CONFIG_COMPAT=y` festgestellt. Fehlt die Kernel-Konfigurationsdatei,
+ist das allein kein Beweis für fehlende Unterstützung; diese zunächst gesondert
+prüfen. Fehlt nur die zusätzliche Architektur, diese eintragen und Paketlisten
+aktualisieren:
+
+```sh
+sudo dpkg --add-architecture armhf
+sudo apt-get update
+```
+
+Paketplan zunächst ohne Installation ansehen:
+
+```sh
+apt-get -s --no-install-recommends install libc6:armhf
+```
+
+Am 6. November 2026 zeigte die Simulation auf dem Pi 4 genau drei neue Pakete:
+`gcc-14-base:armhf`, `libgcc-s1:armhf` und `libc6:armhf`, ohne Aktualisierungen
+oder Entfernungen. Der eigene Paketplan kann abweichen und muss geprüft werden.
+Bei unerwarteten Entfernungen oder Architekturkonflikten nicht fortfahren.
+
+Nach Prüfung des Plans installieren:
+
+```sh
+sudo apt-get install --no-install-recommends libc6:armhf
+/lib/ld-linux-armhf.so.3 --version
+sudo dpkg --audit
+```
+
+In einer bereits geöffneten Root-Shell kann `sudo` entfallen. Erwartet werden
+eine Versionsausgabe des 32-Bit-Loaders und keine Meldung von `dpkg --audit`.
+Das prüft die grundlegende 32-Bit-Ausführung, noch nicht die Meteohub-Anwendung
+oder deren vollständige Bibliotheksabhängigkeiten. Beim Dokumentieren dieses
+Schritts war die Simulation geprüft; die Installation und Ausführungsprüfung
+auf dem echten Pi standen noch aus.
+
 ### B3. Basissystem aktualisieren und neu starten
 
 **Auf dem frisch installierten Pi**; Monitor/Routerzugriff als Rückweg verfügbar
