@@ -1042,7 +1042,90 @@ Host-Konfiguration kopiert werden. Etwaige Kompatibilitätsdateien gehören nur
 in die getrennte Anwendungssicht. Lizenztexte und eine spätere bewusste Annahme
 der Bedingungen werden von Aktivierung und Hardwarebindung unterschieden;
 vorhandene Annahmemarker aus einer anderen Installation werden nicht übernommen.
-Die Bestandsaufnahme auf dem Ziel-Pi und der Aufbau dieser Umgebung sind offen.
+Die Bestandsaufnahme auf dem Ziel-Pi ist bestätigt: Originalimage weiterhin
+ext3 `ro,nosuid,nodev,noexec,norecovery`; keine Lesefehler. Die Anwendungskonfiguration
+ist 65536 Bytes groß, `interfaces` 703 Bytes, `thttpd.conf` 82 Bytes und
+`smb.conf` 384 Bytes. `/data` ist ein echtes Verzeichnis, `/root/data` fehlt.
+Vorhanden sind die drei Lizenztexte `meteohub-license-5.txt` (7026 Bytes),
+`meteohub-license.txt` (6151 Bytes) und `weather-display-live-license.txt`
+(6050 Bytes). Es wurden keine `.lic`-Annahmemarker aufgelistet.
+
+Die Links müssen korrekt eingeordnet werden: `opt/etc/ntp/ntp.conf` verweist
+absolut auf `/etc/ntp.conf`; `var/run` auf `/run`. `opt/share -> ../usr/share`
+bezieht sich relativ auf **`/opt/usr/share`** im Image, nicht auf das
+Host-Verzeichnis `/usr/share`. Die neue Testumgebung verwendet bewusst die
+aktuellen Trixie-Zeitzonendateien statt dieser alten Linkstruktur.
+
+#### B5j. Eigenes Test-Root mit Konfiguration, Datenordnern und Ressourcen
+
+Das neue Werkzeug `tools/stage-runtime.py` liest zunächst alle benötigten
+Dateien ein und prüft die Original-Binary-Hashes sowie das vorhandene
+Kandidatenmanifest. Erst dann erzeugt es ein neues Verzeichnis
+`$HOME/meteohub-staging/5.0s-runtime`. Darin liegt ein eigener `root`-Baum:
+
+- Originale 64-KiB-Anwendungskonfiguration und drei Lizenztexte unter
+  `root/home/meteohub`. Keine Aktivierungsschlüssel und keine Annahmemarker.
+- Leere Ordner `root/data/{weather,graphs,export,myweb,log}`. Es werden keine
+  vorhandenen Stationsarchive kopiert oder als neue Messwerte ausgegeben.
+- Ausgewählte alte Netzwerk-/thttpd-/NTP-/Samba-Dateien unter `root/etc`, nur
+  für die kompatible Dateiansicht im isolierten CGI-Test. Sie repräsentieren
+  **nicht die tatsächliche Netz- oder Dienstkonfiguration des neuen Pi**.
+- Statische HTML-/JS-/CSS-/Bild-/Textressourcen aus dem Hersteller-Webroot;
+  keine alten `.cgi`, Shellskripte, `.htpasswd`, Symlinks oder Flash-Dateien.
+- Kleine generierte Benutzer-/Gruppendateien ohne Passwörter und die aktuelle
+  Host-Zeitzone. Trixies `/usr` und SSL-Konfiguration werden erst im Testdienst
+  schreibgeschützt eingebunden, nicht als altes Betriebssystem kopiert.
+
+Als normaler Benutzer ausführen; der Probelauf fragt selbst nach sudo:
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 tools/stage-runtime.py \
+  /mnt/meteohub-original \
+  "$HOME/meteohub-staging/5.0s-openssl3" \
+  "$HOME/meteohub-staging/5.0s-runtime"
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.0s-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.0s-runtime"
+)
+```
+
+Das Ziel muss neu sein. Bei einem bereits vorhandenen Runtime-Verzeichnis
+zunächst dessen Stand prüfen; nicht blind löschen und den Import wiederholen.
+Ein erneuter CGI-Test benötigt nur den zweiten Python-Aufruf. Vor jedem Lauf
+wird die Anwendungskonfiguration als `meteohub.conf.before` im privaten
+Berichtverzeichnis gesichert. Das Runtime-Manifest dokumentiert die beim Import
+gelesenen Dateien mit SHA256; die Anwendungskonfiguration darf sich im Test
+anschließend ändern. Die Originaldatei im Image bleibt unverändert.
+
+`probe-cgi.py --runtime` setzt systemds `RootDirectory` auf diesen privaten
+Baum. `ProtectSystem=strict` hält ihn grundsätzlich schreibgeschützt;
+`ReadWritePaths=+/home/meteohub +/data` erlaubt nur die vorgesehenen dauerhaften
+Schreibbereiche innerhalb dieses Roots. Binärdateien und `libgcgi` werden
+zusätzlich schreibgeschützt eingebunden. Private temporäre Verzeichnisse bleiben
+für normale Programmarbeit verfügbar. Root-Rechte, USB-Zugriff, ausgehendes Netz
+und Host-Laufzeitsockets werden weiterhin nicht an das CGI gegeben.
+
+Die vorgeschaltete Isolationsprüfung testet jetzt zusätzlich echte Schreibzugriffe
+in die privaten Verzeichnisse, Schreibschutz der Netzwerk-Testdatei sowie
+Vorhandensein von NTP-Datei, Zeitzonen und Lizenztext. Erst danach wird wie zuvor
+genau `GET page=0` ausgeführt. Es werden keine Bedingungen automatisch angenommen,
+kein Webserver gestartet und keine Stationsaufnahme eingerichtet. Die fehlende
+Route bleibt wegen der Isolation erwartbar. Weitere Anwendungsfehler werden
+anhand der vollständigen Ausgabe getrennt bearbeitet.
+
+Entwicklungsnachweis: `python3 tools/test-runtime.py --isolation` bestand lokal
+unter systemd 257 mit drei Tests einschließlich eines tatsächlich gestarteten
+unprivilegierten Testdienstes. Geprüft wurden Dateiauswahl, Ausschluss von
+Passwort-/CGI-/Annahmedateien und Links, abweichende Konfigurationsgröße,
+Verweigerung eines vorhandenen Ziels sowie die tatsächlichen Schreib- und
+Isolationsgrenzen. Ohne `--isolation` laufen die beiden Dateitests ohne root;
+der systemd-Test wird dann explizit übersprungen. Alle Fixtures sind synthetisch,
+keine proprietären Dateien gehören zu den Tests. Der ARM-CGI-Lauf mit dem
+Hersteller-Konfigurationsbestand ist auf dem Ziel-Pi noch offen.
 
 ### B6. Noch offene native Installation und Abnahme
 

@@ -30,8 +30,8 @@ class PageText(HTMLParser):
             self.parts.append(data.strip())
 
 
-def properties(candidate):
-    return [
+def properties(candidate, runtime=None):
+    result = [
         'Type=exec', 'RuntimeMaxSec=30s', 'TimeoutStopSec=3s',
         'KillMode=control-group', 'MemoryMax=128M', 'TasksMax=32',
         'CPUQuota=50%', 'LimitCORE=0', 'LimitFSIZE=2M', 'UMask=0077',
@@ -47,6 +47,32 @@ def properties(candidate):
         'BindReadOnlyPaths=' + str(candidate) + ':/home/meteohub',
         'WorkingDirectory=/home/meteohub',
     ]
+    if runtime is not None:
+        result = [value for value in result if value.split('=', 1)[0] not in
+                  ('ProtectHome', 'InaccessiblePaths', 'BindReadOnlyPaths')]
+        result += [
+            'RootDirectory=' + str(runtime / 'root'), 'MountAPIVFS=yes',
+            'ReadWritePaths=+/home/meteohub +/data',
+            'BindReadOnlyPaths=/usr:/usr -/etc/ssl:/etc/ssl '
+            + str(candidate / 'bin') + ':/home/meteohub/bin '
+            + str(candidate / 'lib') + ':/home/meteohub/lib',
+        ]
+    return result
+
+
+def verify_runtime(runtime):
+    manifest = json.loads((runtime / 'runtime-manifest.json').read_text())
+    if manifest.get('schema') != 1 or manifest.get('uid') != os.getuid():
+        raise ValueError('Runtime must be created by this login user')
+    for name in ('root', 'root/usr', 'root/etc', 'root/etc/ssl', 'root/home',
+                 'root/home/meteohub', 'root/home/meteohub/bin',
+                 'root/home/meteohub/lib', 'root/data'):
+        path = runtime / name
+        if path.is_symlink() or not path.is_dir():
+            raise ValueError('Unexpected runtime mount directory: ' + name)
+    config = runtime / 'root/home/meteohub/meteohub.conf'
+    if config.is_symlink() or not config.is_file():
+        raise ValueError('Unexpected runtime application configuration')
 
 
 def verify(candidate):
@@ -67,24 +93,32 @@ def verify(candidate):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('candidate', type=Path)
+    parser.add_argument('--runtime', type=Path, help='Private test root from stage-runtime.py')
     args = parser.parse_args()
     if os.geteuid() == 0:
         parser.error('Run as the normal login user; sudo is used only for systemd-run')
     candidate = args.candidate.resolve(strict=True)
+    runtime = args.runtime.resolve(strict=True) if args.runtime else None
     # systemd path-list syntax has separators/expansions; do not interpolate them.
-    if any(c.isspace() or c in ':\\%"\'' for c in str(candidate)):
+    if any(c.isspace() or c in ':\\%"\'' for c in str(candidate) + str(runtime or '')):
         parser.error('Use a candidate path without whitespace or systemd special characters')
     verify(candidate)
+    if runtime is not None:
+        verify_runtime(runtime)
     subprocess.run(['sudo', '-v'], check=True)
     os.umask(0o077)
     report = Path(tempfile.mkdtemp(prefix='cgi-probe-', dir=candidate.parent))
+    if runtime is not None:
+        # Preserve the mutable application config before each GET probe.
+        (report / 'meteohub.conf.before').write_bytes(
+            (runtime / 'root/home/meteohub/meteohub.conf').read_bytes())
     unit = 'meteohub-cgi-probe-' + str(time.time_ns())
     command = [
         'sudo', '-n', 'systemd-run', '--wait', '--pipe', '--collect',
         '--unit=' + unit, '--uid=' + str(os.getuid()), '--gid=' + str(os.getgid()),
         '--expand-environment=no',
     ]
-    for value in properties(candidate):
+    for value in properties(candidate, runtime):
         command += ['--property=' + value]
     command += [
         '/usr/bin/env', '-i', 'PATH=/usr/bin:/bin', 'HOME=/home/meteohub',
@@ -116,6 +150,23 @@ except OSError as e: assert e.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH), 
 else: raise AssertionError("outbound route exists")
 print("PASS: unprivileged; private home/run; read-only candidate; no USB or outbound route")
 '''
+    if runtime is not None:
+        check += '''import tempfile
+for folder in ("/home/meteohub", "/data"):
+    fd, name = tempfile.mkstemp(prefix="isolation-check-", dir=folder)
+    os.write(fd, b"private write test")
+    os.close(fd)
+    os.unlink(name)
+try: fd = os.open("/etc/network/interfaces", os.O_WRONLY | os.O_APPEND)
+except OSError as e: assert e.errno == errno.EROFS, e
+else:
+    os.close(fd)
+    raise AssertionError("network fixture writable")
+assert os.path.isfile("/opt/etc/ntp/ntp.conf")
+assert os.path.isdir("/opt/share/zoneinfo-posix")
+assert os.path.isfile("/home/meteohub/meteohub-license-5.txt")
+print("PASS: private config/data writable; system fixtures read-only; resources present")
+'''
     preflight = [('--unit=' + unit + '-check') if arg == '--unit=' + unit else arg
                  for arg in command]
     with (report / 'isolation.txt').open('wb') as stream:
@@ -139,7 +190,7 @@ print("PASS: unprivileged; private home/run; read-only candidate; no USB or outb
     (report / 'result.json').write_text(json.dumps({
         'unit': unit, 'systemd_run_exit': code,
         'status': 'CGI smoke test only; functionality and activation not accepted',
-        'properties': properties(candidate),
+        'properties': properties(candidate, runtime),
     }, indent=2) + '\n')
     print('SYSTEMD_RUN_EXIT:', code)
     print('RESPONSE_BYTES:', (report / 'response.txt').stat().st_size)
