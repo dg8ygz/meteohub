@@ -597,6 +597,50 @@ weder diese Datei noch eine SD-Karte. Sektorgröße, Partitionsanfänge und Grö
 aus der Ausgabe festhalten. Noch keine Partitionsnummer oder Mount-Offsets
 annehmen. Das spätere Öffnen muss schreibgeschützt erfolgen.
 
+#### B5b. Image schreibgeschützt als Loop-Gerät öffnen
+
+Der Anwender bestätigte erfolgreiches Entpacken (`All OK`) und exakt
+1970274304 Bytes. Die ausgelesene MBR-Partitionstabelle hat 512-Byte-Sektoren:
+
+| Partition | Startsektor | Sektoren | Typ |
+| --- | ---: | ---: | --- |
+| 1 | 2048 | 102400 | FAT32, 50 MiB |
+| 2 | 104448 | 3481600 | Linux |
+| 3 | 3586048 | 262144 | Swap, 128 MiB |
+
+Für dieses geprüfte Image ist Partition 2 der Kandidat für das Linux-Root-
+Dateisystem. Der Partitionstyp allein sagt noch nicht, ob es beispielsweise
+ext3 oder ext4 ist. Vor dem Mounten den Dateisystemtyp lesen:
+
+```sh
+(
+set -e
+umask 077
+cd "$HOME/meteohub-original"
+test ! -e image-loop.device
+meteohub_loop=$(sudo losetup --find --show --read-only --partscan "$PWD/mhrpi-v5.0s.img")
+printf '%s\n' "$meteohub_loop" > image-loop.device
+sudo udevadm settle
+sudo lsblk -o NAME,SIZE,RO,FSTYPE,MOUNTPOINTS "$meteohub_loop"
+sudo blkid "${meteohub_loop}p2"
+)
+```
+
+`image-loop.device` merkt sich das zugeteilte Gerät, etwa `/dev/loop0`. Die
+Nummer nicht voraussetzen. Die Spalte `RO` muss für das Loop-Gerät und seine
+Partitionen `1` zeigen. Dieser Schritt mountet noch kein Dateisystem und
+aktiviert die Swap-Partition nicht. Existiert die Merkerdatei bereits, zunächst
+das bestehende Mapping prüfen, statt ein weiteres anzulegen. Nach einem Reboot
+kann die Merkerdatei veraltet sein; vor Wiederverwendung immer die Zuordnung
+zur Image-Datei mit `sudo losetup --list` kontrollieren.
+
+Zum späteren Rückbau zuerst eventuell eingehängte Image-Partitionen aushängen,
+danach ausschließlich das überprüfte zugehörige Loop-Gerät mit
+`sudo losetup --detach /dev/loopN` lösen (`loopN` durch die ermittelte Nummer
+ersetzen). Erst anschließend die Merkerdatei entfernen. Kein `--detach-all`
+verwenden. Ein erfolgreicher Loop-Aufbau und Dateisystemtyp sind bis zur
+nächsten Anwenderausgabe noch nicht bestätigt.
+
 ### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
