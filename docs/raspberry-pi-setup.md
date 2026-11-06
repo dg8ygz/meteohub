@@ -3,6 +3,11 @@
 Stand: **6. November 2026**. Zielgeräte: **Raspberry Pi 3 Model B** und
 **Raspberry Pi 4 Model B, auch die Variante mit 1 GB RAM**.
 
+**Verbindlicher Zielstand für Weg B: Meteohub 5.1e.** Das Image 5.0s dient
+als Quelle für die Grunddateien und für die ersten Verträglichkeitsprüfungen.
+Vor Logger-Abnahme und produktivem Betrieb folgt zwingend das
+[5.1e-Update in B5q](#b5q-zielversion-51e-vom-hersteller-beziehen).
+
 ## Zuerst den richtigen Installationsweg wählen
 
 Es gibt zwei unterschiedliche Wege. Bitte nicht deren Schritte vermischen:
@@ -1533,6 +1538,9 @@ ARM-Referenzbinary gibt dieser einen Zahlenwert aus; `-1` ruft dagegen die
 Konfigurationsschreiber einschließlich `logger.conf` auf. Diese Untersuchung
 ist kein Ausführungsnachweis für das konkrete 5.0s-Binary auf dem Ziel-Pi.
 Der korrigierte native Lauf muss dort noch erfolgreich abgenommen werden.
+Das anschließend untersuchte Herstellerpaket 5.1e bestätigt den Aufruf
+zusätzlich direkt: Sein Skript `onboot` führt das CGI mit `-1` aus; dieses
+Skript wird bei unserer Vorbereitung ausschließlich gelesen, nicht ausgeführt.
 
 Die bisherigen synthetischen Tests prüften die Isolation und Aufrufübergabe,
 aber bestätigten den irrtümlich vorausgesetzten Parameter. Die Testattrappe
@@ -1578,10 +1586,69 @@ vom Hersteller veröffentlichte Signatur.
 Das Paket enthält auch alte Betriebssystemdateien, eine Bash-Binärdatei,
 Debian-Pakete und Startskripte. Deshalb den historischen Updateablauf nicht
 ungeprüft auf Trixie ausführen und das Archiv nicht über das Host-Dateisystem
-entpacken. Der nächste Schritt ist eine getrennte Vorbereitung der benötigten
-Anwendungsdateien. Die bisherigen Hashlisten und OpenSSL-Anpassungen für 5.0s
-sind noch keine Freigabe für 5.1e. Native Ausführung und Loggerbetrieb dieser
-Version auf dem neuen Pi bleiben bis zur gesonderten Prüfung offen.
+entpacken. Unser Update-Schritt bereitet zuerst die fünf aktuell genutzten
+Kernprogramme aus dem `rpi/`-Zweig vor: `loggerd`, `meteometar`, `meteonet`,
+`meteoschedule` und `meteohub.cgi`. Die hashgeprüfte `libgcgi` bleibt aus dem
+Basiskandidaten erhalten. Es werden keine Betriebssystemdateien, vorgegebenen
+SSH-Schlüssel, Konfigurationen oder Update-Skripte übernommen.
+
+**1. Quellen aktualisieren, Update prüfen und neuen Kandidaten erzeugen:**
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-update.py \
+  "$HOME/meteohub-original/update-v5.1e.upd" \
+  "$HOME/meteohub-staging/5.0s-openssl3/lib/libgcgi.so.0"
+python3 tools/stage-update.py \
+  "$HOME/meteohub-original/update-v5.1e.upd" \
+  "$HOME/meteohub-staging/5.0s-openssl3" \
+  "$HOME/meteohub-staging/5.1e-openssl3"
+)
+```
+
+Das Ziel muss neu sein; bei einem vorhandenen Ziel bricht das Werkzeug ab.
+Ein fehlgeschlagener oder bereits erzeugter Kandidat wird nicht automatisch
+überschrieben. Der bestehende Kandidat und die laufende Oberfläche bleiben
+unverändert. `manifest.json` hält Herkunft, Version, Prüfsummen und einzelne
+ELF-Metadatenänderungen fest. Ausführbare Sektionen bleiben bytegleich.
+
+**2. Auf dem Pi die Bibliotheksauflösung der neuen Dateien prüfen:**
+
+```sh
+(
+set -e
+candidate="$HOME/meteohub-staging/5.1e-openssl3"
+for name in loggerd meteometar meteonet meteoschedule meteohub.cgi; do
+  printf '\nBIBLIOTHEKEN 5.1e: %s\n' "$name"
+  env -u LD_PRELOAD -u LD_AUDIT -u LD_LIBRARY_PATH \
+    /lib/ld-linux-armhf.so.3 \
+    --library-path "$candidate/lib:/usr/lib/arm-linux-gnueabihf" \
+    --list "$candidate/bin/$name"
+done
+)
+```
+
+**Nachweise und noch offene Schritte:** Fünf lokale Tests mit dem echten
+Herstellerpaket bestanden am 06.11.2026: ARM-Dateien/Abhängigkeiten und
+unveränderte ausführbare Sektionen, erhaltene Quellen, Ablehnung vorhandener
+oder verschachtelter Ziele, beschädigter Archive, abweichender Bibliotheken
+sowie problematischer Archivpfade/Links/Duplikate. Kein Herstellerprogramm
+wurde dabei ausgeführt. Der Betreiber hat den Download auf dem Pi mit
+passender Prüfsumme bestätigt; die native Prüfung dieser neuen Kopie ist
+noch offen.
+
+Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
+Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
+Versions- und Buildanzeige, generierte Logger-Konfiguration und echte
+Messwertarchivierung zu prüfen. Weitere Anwendungsprogramme und Ressourcen
+für Diagramme, Export und zusätzliche Stationsarten müssen passend eingebunden
+werden, bevor diese Funktionen als verfügbar gelten. Die Hersteller-Builds
+242 und 276 werden im [5.1e-Release-Thread](https://forum.meteohub.de/viewtopic.php?t=15410)
+unterschieden; aus dem Dateinamen allein wird keine Buildnummer abgeleitet.
+Die bestehende Installation dient bis zur Abnahme als Rückweg.
 
 ### B6. Noch offene native Installation und Abnahme
 
@@ -1596,6 +1663,7 @@ Vor einer Fortsetzung bis zur fertigen Pi-Wetterstation sind konkret nötig:
 
 | Schritt | Erforderlicher Nachweis |
 | --- | --- |
+| **Update auf 5.1e** | B5q durchführen; native Versions-/Buildanzeige und tatsächlich verwendete Dateien prüfen. 5.0s ist kein produktiver Abschlussstand. |
 | Originalsoftware importieren | Version, ARM-ABI, alle Bibliotheken und Webressourcen erfasst; keine alten Systembibliotheken über Trixie kopieren. |
 | Aktivierung | Gültige Aktivierung für die Zielhardware; keine Übernahme einer fremden Hardwareidentität. |
 | Weboberfläche | Authentifizierung, CGI-Zuordnung, leere GET-Anfragen, historische Diagramme und native Einstellungen auf dem echten Pi geprüft. |
