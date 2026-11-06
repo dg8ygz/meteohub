@@ -1,6 +1,6 @@
 # Meteohub von Anfang an auf einem Raspberry Pi einrichten
 
-Stand: **5. November 2026**. Zielgeräte: **Raspberry Pi 3 Model B** und
+Stand: **6. November 2026**. Zielgeräte: **Raspberry Pi 3 Model B** und
 **Raspberry Pi 4 Model B, auch die Variante mit 1 GB RAM**.
 
 ## Zuerst den richtigen Installationsweg wählen
@@ -253,6 +253,12 @@ Repositorys ist damit noch nicht installiert.
 
 ### B1. Aktuelles Betriebssystem mit Imager schreiben – am PC
 
+**Ist Trixie bereits installiert und bootfähig, direkt mit B2 beginnen.**
+Eine vorhandene 64-Bit-Installation nicht vorsorglich überschreiben. Zuerst
+Modell, Paketarchitektur und die Laufzeitbedingungen der alten ARM-Programme
+prüfen. Der unten beschriebene 32-Bit-Weg ist eine Vorbereitungsempfehlung für
+eine neue Karte, kein Grund zum Löschen einer bestehenden Installation.
+
 Diese Schritte verwenden eine eigene Karte; nicht die funktionierende
 Originalstation überschreiben.
 
@@ -288,7 +294,9 @@ verwenden: `ssh wetter@PI-ADRESSE`. Nach der Anmeldung **auf dem Pi**:
 
 ```sh
 cat /etc/os-release
+uname -m
 dpkg --print-architecture
+dpkg --print-foreign-architectures
 tr -d '\000' < /proc/device-tree/model
 printf '\n'
 free -h
@@ -298,11 +306,35 @@ ip route
 timedatectl status
 ```
 
-Erwartet sind Trixie als Versionsname, `armhf` als Paketarchitektur und das
-tatsächlich verwendete Pi-Modell. `arm64` bedeutet, dass ein anderer
-Userspace installiert wurde. Dann für diese Anleitung mit dem richtigen Image
-neu beginnen. Bei 1 GB RAM erscheint wegen Reservierungen weniger nutzbarer
-Speicher; kein Desktop wird benötigt.
+Erwartet sind Trixie als Versionsname und das tatsächlich verwendete Pi-Modell.
+Bei einer Installation nach B1 ist die Paketarchitektur `armhf`. Bei `arm64`
+bleibt das bestehende System zunächst erhalten: Die Laufzeit für die alten
+32-Bit-Programme muss gesondert vorbereitet und geprüft werden. Beim untersuchten
+Original-Logger handelt es sich um ein ARM-32-Bit-Programm mit dem Loader
+`/lib/ld-linux-armhf.so.3`. Daraus folgt noch keine erfolgreiche Ausführung auf
+einem konkreten 64-Bit-Pi. Kernel-Unterstützung, Bibliotheken und die übrigen
+Programme sind vor der Installation einzeln zu prüfen. Noch keine fremden
+Bibliotheken in Systemverzeichnisse kopieren.
+
+Bei 1 GB RAM erscheint wegen Reservierungen weniger nutzbarer Speicher; kein
+Desktop wird benötigt. Ein erfolgreicher Test auf dem Pi 4 ersetzt die spätere
+Boot- und Empfangsabnahme auf dem Pi 3 nicht.
+
+### B2a. Fernzugriff auf einen neu installierten Pi identifizieren
+
+Wird eine bisher anderweitig verwendete IP-Adresse neu vergeben, gehört der
+gespeicherte SSH-Hostschlüssel möglicherweise noch zum vorherigen Gerät.
+Vor einer Passwortanmeldung den Fingerprint über die lokale Konsole oder eine
+bereits vertrauenswürdig aufgebaute Sitzung auf dem neuen Pi ablesen:
+
+```sh
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+Mit dem vom SSH-Client angezeigten Fingerprint vergleichen. Ein bloßer
+`ssh-keyscan` über das Netzwerk bestätigt die Geräteidentität nicht.
+Hostschlüsselwarnungen daher nicht durch Abschalten der Prüfung umgehen.
+Persönliche Zugangsdaten gehören nicht in dieses Repository.
 
 ### B3. Basissystem aktualisieren und neu starten
 
