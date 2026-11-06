@@ -514,12 +514,52 @@ muss ohne Ausgabe mit Exitcode 0 enden. Der Stash bleibt als Sicherung erhalten;
 kein `stash pop`, denn der Fix ist bereits im aktualisierten Git-Stand enthalten.
 Bei Abweichungen die Sicherung behalten und den Unterschied prüfen.
 
+Der Anwender hat diesen Abgleich auf dem Pi 4 am 6. November 2026 bis zum
+GitHub-Stand `c8a59b6` durchgeführt: Fast-forward erfolgreich, kein Unterschied
+zwischen gesichertem Patch und übernommenem Fix, beide Prozessprüfungen
+bestanden und Arbeitsverzeichnis sauber.
+
 **Bis hier ist ein aktuelles Linux mit getesteten Projektquellen eingerichtet.
 Noch keine Meteohub-Weboberfläche und noch kein Stationslogger.** Ein Browser-
 Fehler auf Port 80 ist an diesem Punkt erwartbar. Es gibt hier noch keinen
 universellen `install.sh`-Befehl.
 
-### B5. Warum die native Meteohub-Installation noch eine offene Stufe ist
+### B5. Originalprogramme aus dem Herstellerimage vorbereiten
+
+Für einen nachbaubaren Aufbau die Originalsoftware direkt vom Hersteller
+beziehen. Ein privater Patch- oder Backupserver ist hierfür nicht erforderlich.
+Die offizielle [Imageliste](https://wiki.meteohub.de/wiki/index.php/Images)
+verlinkt das RPi-Image 5.0s. Am 6. November 2026 lieferte dessen HTTPS-Adresse
+HTTP 200 und eine Archivgröße von 393194245 Bytes (rund 375 MiB).
+
+**Auf dem neuen Pi als normaler Benutzer:** Entpacker installieren, Archiv in
+einem privaten Verzeichnis außerhalb des Git-Klons speichern und zunächst nur
+den Inhalt auflisten. Der Archivname darf dabei nicht schon eine aufbewahrte
+andere Datei bezeichnen; bei einem bereits vorhandenen Download diesen zuerst
+prüfen.
+
+```sh
+sudo apt-get install --no-install-recommends unrar-free
+(
+set -e
+umask 077
+mkdir -p "$HOME/meteohub-original"
+cd "$HOME/meteohub-original"
+wget -O mhrpi-v5.0s.rar https://www.meteohub.de/files/mhrpi-v5.0s.rar
+sha256sum mhrpi-v5.0s.rar | tee mhrpi-v5.0s.rar.sha256
+unrar-free -t mhrpi-v5.0s.rar
+)
+```
+
+`unrar-free -t` listet den Inhalt; es ist kein vollständiger Entpack- oder
+Integritätstest. Anhand der Ausgabe zunächst Namen und entpackte Größe des
+Disk-Images feststellen. Die lokal erzeugte Prüfsumme dokumentiert den Download,
+ersetzt aber keinen unabhängigen Hersteller-Prüfwert. Das Image wird später nur
+zur Dateientnahme schreibgeschützt geöffnet, nicht über die Trixie-SD-Karte
+geschrieben. Originalprogramme aus dem Image müssen vor ihrer Verwendung gegen
+die im Labor untersuchte Version und deren Abhängigkeiten geprüft werden.
+
+### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
 benötigt. Einfach `/home/meteohub` und ein CGI in den Webroot zu kopieren reicht
@@ -550,7 +590,7 @@ müssen.
 Deshalb stehen hier keine geratenen Kopier-, Bibliotheks- oder Dienstbefehle,
 die anschließend eine fertige Installation behaupten. Für den vorhandenen Pi 4
 mit 1 GB ist **B1–B4** die konkrete Vorbereitung für den nächsten Hardwaretest.
-Erst nach dieser nativen Abnahme lässt sich B5 durch eine belastbare Folge von
+Erst nach dieser nativen Abnahme lässt sich B6 durch eine belastbare Folge von
 Installationsbefehlen ersetzen.
 
 ## 7. Eine fertige SD-Karte als Image sichern
