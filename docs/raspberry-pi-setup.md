@@ -1631,6 +1631,39 @@ done
 )
 ```
 
+**3. Eigene 5.1e-Laufzeitumgebung und einmaliger CGI-Test:**
+
+Die laufende Browser-Testoberfläche bleibt währenddessen bestehen. Für diesen
+Probelauf wird ein neuer, leerer privater Konfigurations-/Datenbaum aus dem
+schreibgeschützt eingebundenen Basisimage angelegt. Einstellungen und Daten
+einer bestehenden Testinstallation werden dabei nicht überschrieben. Die
+statischen Grundressourcen stammen weiterhin aus dem Image; dies prüft zuerst
+den Start des neuen Haupt-CGI, noch nicht sämtliche Webfunktionen.
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 tools/stage-runtime.py \
+  /mnt/meteohub-original \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  "$HOME/meteohub-staging/5.1e-runtime"
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime"
+)
+```
+
+Der Probelauf führt nach der Isolationsprüfung genau einen CGI-Aufruf aus,
+mit 30 Sekunden Laufzeitgrenze und ohne Loggerstart. Im neuen Testbaum wurden
+noch keine Lizenzbedingungen bestätigt und keine Wetterstation eingerichtet;
+eine entsprechende Seite ist daher möglich. Auch eine Gateway-Warnung ist
+wegen der Netzwerkisolation zu erwarten. Exit 1 allein ist weder Beweis für
+einen Absturz noch eine erfolgreiche Funktionsabnahme: Antwortinhalt und
+Fehlerausgabe gemeinsam auswerten. Bei einer Wiederholung nur den Probelauf
+aufrufen; `stage-runtime.py` verweigert ein bereits vorhandenes Ziel.
+
 **Nachweise und noch offene Schritte:** Fünf lokale Tests mit dem echten
 Herstellerpaket bestanden am 06.11.2026: ARM-Dateien/Abhängigkeiten und
 unveränderte ausführbare Sektionen, erhaltene Quellen, Ablehnung vorhandener
@@ -1640,9 +1673,12 @@ wurde dabei ausgeführt. Auf dem echten Raspberry Pi 4 hat der Betreiber
 anschließend mit Repository-Stand `5cb594d` dieselben fünf Tests erfolgreich
 ausgeführt (4,015 Sekunden) und den Kandidaten `5.1e-openssl3` erstellt.
 Paket-/Komponentenprüfsummen und unveränderte ausführbare Sektionen wurden
-dabei erneut bestätigt. Bibliotheksauflösung und tatsächliche Ausführung
-der neuen ARM-Anwendung auf diesem Pi sind noch offen. Ein auf ARM laufender
-Python-Test ersetzt diese native Anwendungsprüfung nicht.
+dabei erneut bestätigt. Danach löste der native ARM-Lader auf dem Pi für alle
+fünf Programme sämtliche aufgeführten Bibliotheken auf, einschließlich
+`libssl.so.3`, `libcrypto.so.3` und der privaten `libgcgi.so.0`. Es wurden keine
+fehlenden Bibliotheken oder Versionsanforderungen gemeldet. Die tatsächliche
+Ausführung des neuen CGI und des Loggers bleibt separat zu prüfen; `--list`
+führt ihre Anwendungslogik nicht aus.
 
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
