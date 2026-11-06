@@ -35,6 +35,36 @@ def check_config(path):
             raise ValueError('Unexpected private data/log path; no changes made')
 
 
+def verify_prepared(runtime):
+    probe_tool().verify_runtime(runtime)
+    check_config(runtime/'root/home/meteohub/logger.conf')
+    manifest = runtime/'tcp-plugin-prepared.json'
+    if manifest.is_symlink() or not manifest.is_file():
+        raise ValueError('Prepare the private TCP plugin first')
+    record = json.loads(manifest.read_text())
+    expected = {
+        'root/home/meteohub/plugin.sh': WRAPPER.encode(),
+        'root/home/meteohub/live_feed_plugin.py':
+            (Path(__file__).resolve().parent.parent/'live_feed_plugin.py').read_bytes(),
+    }
+    if record.get('schema') != 1 or set(record.get('files', {})) != set(expected):
+        raise ValueError('Unexpected plugin preparation manifest')
+    for name, data in expected.items():
+        path = runtime/name
+        if path.is_symlink() or not path.is_file() or path.read_bytes() != data:
+            raise ValueError('Installed private plugin differs from reviewed source')
+        if hashlib.sha256(data).hexdigest() != record['files'][name]:
+            raise ValueError('Prepared plugin hash mismatch')
+    for name in ('root/data/tcp-feed', 'root/data/tcp-feed/state'):
+        path = runtime/name
+        if path.is_symlink() or (path.exists() and not path.is_dir()):
+            raise ValueError('Unexpected feed/state path')
+    for name in ('feed.json', 'state/cursor.json', 'state/provenance.jsonl'):
+        path = runtime/'root/data/tcp-feed'/name
+        if path.is_symlink() or (path.exists() and not path.is_file()):
+            raise ValueError('Unexpected feed/state file')
+
+
 def prepare(runtime):
     runtime = runtime.resolve(strict=True)
     probe_tool().verify_runtime(runtime)

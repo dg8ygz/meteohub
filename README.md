@@ -81,7 +81,7 @@ und das Einbettungsbeispiel unter [Anzeige und Datenbehandlung](#anzeige-und-dat
 | `tools/inspect-original.py` | Liest ELF-Metadaten und Symlinks aus dem separat geöffneten Originalimage, ohne dessen Programme auszuführen. |
 | `tools/stage-openssl3.py`, `tools/test-crypto-adaptation.py` | Erstellen private, hashgeprüfte OpenSSL-3-Testkopien aus dem Herstellerimage und prüfen die ELF-Änderungsgrenzen; kein Installer und keine allgemeine ABI-Garantie. |
 | `tools/stage-update.py`, `tools/test-update.py` | Bereiten das verpflichtende 5.1e-Kernupdate aus dem Herstellerpaket in einer neuen privaten Kopie vor; keine alten Systemdateien oder Update-Skripte werden ausgeführt/installiert. |
-| `tools/probe-cgi.py` | Führt nach einer echten Isolationsprüfung einen CGI-Probelauf oder die native Konfigurationsgenerierung (`-1`) aus; keine Webserver- oder Loggerinstallation. |
+| `tools/probe-cgi.py` | Führt nach einer echten Isolationsprüfung einen CGI-Probelauf oder die native Konfigurationsgenerierung (`-1`) oder einen begrenzten Plug-in-Datenwegtest aus; keine Webserver- oder Loggerinstallation. |
 | `tools/stage-runtime.py`, `tools/test-runtime.py` | Bereiten einen privaten Konfigurations-/Datenbaum für den CGI-Test vor und prüfen Dateiauswahl sowie optional die tatsächliche systemd-Isolation. |
 | `tools/web-test.py`, `tools/test-web.py` | Passwortgeschützte Browser-Testoberfläche über Loopback/SSH und echte HTTP-Tests mit synthetischem CGI; keine Bootfreigabe oder Loggerinstallation. |
 | `tools/prepare-tcp-plugin.py`, `tools/test-tcp-plugin-prepare.py` | Prüfen die native Plug-in-Konfiguration und legen den Snapshot-Adapter im privaten Testbaum an; starten weder TCP-Zubringer noch Logger. |

@@ -2,6 +2,7 @@
 """Run the prepared CGI once in a transient systemd sandbox, without a webserver."""
 import argparse
 import hashlib
+import importlib.util
 from html.parser import HTMLParser
 import json
 import os
@@ -137,6 +138,40 @@ def report_logger_generation(path,previous,report):
     return 0
 
 
+def plugin_result(report, code, provenance, offset):
+    output = (report/'response.txt').read_text(errors='replace').splitlines()
+    counts = {}
+    malformed = []
+    for line in output:
+        parts = line.split()
+        if (len(parts) < 2 or not re.fullmatch(r'(?:wind|rain|th|t|uv|sol|data)[0-9]+', parts[0])
+                or any(not re.fullmatch(r'-?[0-9]+', item) for item in parts[1:])):
+            malformed.append(line)
+            continue
+        counts[parts[0]] = counts.get(parts[0], 0) + 1
+    rows = []
+    if provenance.exists():
+        with provenance.open('rb') as stream:
+            stream.seek(offset)
+            data = stream.read(2 * 1024 * 1024 + 1)
+        if len(data) > 2 * 1024 * 1024:
+            raise ValueError('Unexpected provenance size')
+        rows = [json.loads(line) for line in data.splitlines() if line]
+    pressures = [r for r in rows if r.get('pressure_only') is True]
+    success = code == 124 and bool(counts) and not malformed
+    summary = {'plugin_probe_passed': success, 'stop': '15-second timeout' if code == 124 else code,
+               'output_records': sum(counts.values()), 'sensors': counts,
+               'pressure_records': len(pressures),
+               'rejected_records': sum('rejected' in r for r in rows),
+               'unexpected_output_lines': len(malformed),
+               'native_logger_started': False}
+    (report/'plugin-result.json').write_text(json.dumps(summary, indent=2)+'\n')
+    print(json.dumps(summary, indent=2))
+    print('Plugin stdout and diagnostics remain private in:', report)
+    print('No native logger/archive acceptance. Collector is a separate, finite test.')
+    return 0 if success else 3
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('candidate', type=Path)
@@ -146,19 +181,28 @@ def main():
                         help='Run only the harmless isolation preflight, not the CGI')
     mode.add_argument('--generate-logger-config', action='store_true',
                       help='Run native CGI -1 in the private runtime; do not start loggerd')
+    mode.add_argument('--probe-plugin', action='store_true',
+                      help='Run the prepared snapshot plugin for 15 seconds; no logger')
     args = parser.parse_args()
     if os.geteuid() == 0:
         parser.error('Run as the normal login user; sudo is used only for systemd-run')
     candidate = args.candidate.resolve(strict=True)
     runtime = args.runtime.resolve(strict=True) if args.runtime else None
-    if args.generate_logger_config and runtime is None:
-        parser.error('--generate-logger-config requires --runtime')
+    if (args.generate_logger_config or args.probe_plugin) and runtime is None:
+        parser.error('This mode requires --runtime')
     # systemd path-list syntax has separators/expansions; do not interpolate them.
     if any(c.isspace() or c in ':\\%"\'' for c in str(candidate) + str(runtime or '')):
         parser.error('Use a candidate path without whitespace or systemd special characters')
     verify(candidate)
     if runtime is not None:
         verify_runtime(runtime)
+    provenance_offset = 0
+    if args.probe_plugin:
+        spec = importlib.util.spec_from_file_location('tcp_prepare', Path(__file__).with_name('prepare-tcp-plugin.py'))
+        helper = importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
+        helper.verify_prepared(runtime)
+        provenance = runtime/'root/data/tcp-feed/state/provenance.jsonl'
+        provenance_offset = provenance.stat().st_size if provenance.exists() else 0
     subprocess.run(['sudo', '-v'], check=True)
     os.umask(0o077)
     report = Path(tempfile.mkdtemp(prefix='cgi-probe-', dir=candidate.parent))
@@ -189,7 +233,7 @@ def main():
         'LANG=C', 'LD_BIND_NOW=1',
         'LD_LIBRARY_PATH=/home/meteohub/lib:/usr/lib/arm-linux-gnueabihf',
     ]
-    if args.generate_logger_config:
+    if args.generate_logger_config or args.probe_plugin:
         command += ['METEO_PREPARING=1']
     else:
         command += ['GATEWAY_INTERFACE=CGI/1.1', 'SERVER_PROTOCOL=HTTP/1.1',
@@ -198,7 +242,8 @@ def main():
         'SCRIPT_NAME=/cgi-bin/meteohub.cgi', 'DOCUMENT_ROOT=/srv/www',
         ]
     print('REPORT:', report, flush=True)
-    print(('Private logger configuration generation; no logger started; 30s limit.' if args.generate_logger_config else
+    print(('Prepared plugin probe; 15s limit; no logger started.' if args.probe_plugin else
+           'Private logger configuration generation; no logger started; 30s limit.' if args.generate_logger_config else
            'Isolation preflight only; CGI will not be started.' if args.isolation_only else
            'One CGI request, no network/USB access, no actual home access; 30s limit.'), flush=True)
     # Exercise the same isolation before allowing the proprietary executable.
@@ -255,8 +300,11 @@ print("PASS: resolver file present; isolated routing table readable and empty")
     if args.isolation_only:
         print('PASS: isolation-only check complete; CGI not started.')
         return 0
-    command += ['/home/meteohub/bin/meteohub.cgi']
-    if args.generate_logger_config:command += ['-1']
+    if args.probe_plugin:
+        command += ['/usr/bin/timeout', '--signal=TERM', '--kill-after=3s', '15s', '/home/meteohub/plugin.sh']
+    else:
+        command += ['/home/meteohub/bin/meteohub.cgi']
+        if args.generate_logger_config:command += ['-1']
     with (report / 'response.txt').open('wb') as stdout, (report / 'stderr.txt').open('wb') as stderr:
         try:
             result = subprocess.run(command, stdin=subprocess.DEVNULL,
@@ -265,14 +313,17 @@ print("PASS: resolver file present; isolated routing table readable and empty")
         except subprocess.TimeoutExpired:
             subprocess.run(['sudo', '-n', 'systemctl', 'stop', unit + '.service'],
                            stdout=stderr, stderr=stderr, timeout=10, check=False)
-            code = 124
+            code = 125 if args.probe_plugin else 124
     (report / 'result.json').write_text(json.dumps({
         'unit': unit, 'systemd_run_exit': code,
-        'status': ('Logger config generation only; no logger/archive acceptance' if args.generate_logger_config else
+        'status': ('Plugin probe only; no native logger/archive acceptance' if args.probe_plugin else
+                   'Logger config generation only; no logger/archive acceptance' if args.generate_logger_config else
                    'CGI smoke test only; functionality and activation not accepted'),
         'properties': properties(candidate, runtime),
     }, indent=2) + '\n')
     print('SYSTEMD_RUN_EXIT:', code)
+    if args.probe_plugin:
+        return plugin_result(report, code, provenance, provenance_offset)
     if args.generate_logger_config:
         if code:
             print('STOP: generator failed; private diagnostics:',report/'stderr.txt')

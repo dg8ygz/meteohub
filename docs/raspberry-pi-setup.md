@@ -1846,6 +1846,69 @@ Prozesstests prüfen zusätzlich Temperatur-vor-Wind, Wiederanlauf ohne Replay,
 Drucktrennung samt Index sowie das Beenden nach geschlossenem Leser. Der
 Produktionsnachweis mit frischem TCP-Eingang und nativem Logger bleibt offen.
 
+**7. Begrenzter Test: TCP-Empfang bis zur echten Plug-in-Ausgabe:**
+
+Auf dem Ziel-Pi wurden am 07.11.2026 die vier Vorbereitungstests bestätigt.
+Die native Generierung schrieb nun 361 Bytes `logger.conf`, einschließlich
+`@WEATHERSTATION 0 9 5`; der Adapter wurde erfolgreich im privaten Testbaum
+vorbereitet (Bericht `cgi-probe-gq0dg5mp`). Noch läuft kein Logger.
+
+Für den folgenden Test darf noch kein anderer Zubringer oder Logger dieselbe
+Testumgebung benutzen. Während der Prüfung keine Stationskonfiguration im
+Browser ändern. `SOURCE_HOST` durch die Adresse der vorhandenen Station mit
+bereits bereitgestelltem Plugin-Kopierstrom ersetzen. Der TCP-Dienst muss
+bereits vorhanden sein; die Quelle und deren USB-Zugriff werden nicht geändert.
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+sudo -v
+python3 tools/tcp-feed.py \
+  --host SOURCE_HOST --port 5500 --duration 120 \
+  --output "$HOME/meteohub-staging/5.1e-runtime/root/data/tcp-feed/feed.json"
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime" \
+  --probe-plugin
+)
+```
+
+Zuerst werden 120 Sekunden lang Daten ausschließlich empfangen. Unmittelbar
+danach liest der tatsächlich vorbereitete Wrapper die Momentaufnahme in der
+bereits geprüften Dateisystem-/Netzwerkisolation für maximal 15 Sekunden.
+`sudo -v` steht bewusst vor dem Empfang, damit eine spätere Passwortabfrage
+die Messwerte nicht unnötig altern lässt. Die bestehenden Frischegrenzen
+bleiben unverändert: höchstens 45 Sekunden seit der letzten Quelllesung und
+höchstens 180 Sekunden je Empfangszeitstempel. Der TCP-Dienst liefert selbst
+keine Messzeitstempel.
+
+Erwartet werden empfangene Datensätze beim Zubringer und anschließend
+`"plugin_probe_passed": true`, Sensorzähler und gegebenenfalls separat erfasste
+Druckwerte. `SYSTEMD_RUN_EXIT: 124` bedeutet in diesem speziellen Modus den
+vorgesehenen 15-Sekunden-Abbruch durch `timeout`. Der Helfer akzeptiert ihn
+nur mit syntaktisch gültiger, nicht leerer Plug-in-Ausgabe ohne THB-Datensätze.
+Ein äußeres Zeitlimit, ein anderer Exitcode oder eine leere Ausgabe ist kein
+Erfolg. Fehlt in diesem kurzen Fenster ein Druckwert oder `t2`, darf daraus
+kein dauerhafter Sensorausfall abgeleitet werden; Wind bleibt beim Start bis
+zum ersten echten `t2` zurückgestellt.
+
+Der Bericht enthält `plugin-result.json`, private Standardausgabe und
+Fehlerausgabe. Der Herkunftsnachweis und der Cursor des Test-Plugins liegen
+unter `runtime/root/data/tcp-feed/state`. Nur neu hinzugekommene Druck- und
+Ablehnungseinträge zählen zum Bericht. Der Test erzeugt keine nativen
+Wetterarchive. Er ist keine Hintergrundüberwachung: TCP-Zubringer und Plugin
+enden beide; Dauerbetrieb und nativer Logger folgen als eigene Schritte.
+
+Entwicklungsnachweis: Ein echter lokaler TCP-Testserver sendete synthetische
+Temperatur-, Wind- und THB-Daten an den tatsächlichen Zubringer. Danach lief
+der installierte Wrapper als unprivilegierter Benutzer in der tatsächlichen
+systemd-Isolation: Temperatur und Wind wurden ausgegeben, nur Druck wurde
+separat gehalten und das 15-Sekunden-Limit beendete den Prozess. Zusätzlich
+werden leere/THB-Ausgaben und unerwartete Exitcodes als Fehler geprüft.
+Der Nachweis mit den realen Quelldaten auf dem Ziel-Pi bleibt offen.
+
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
 Versions- und Buildanzeige, generierte Logger-Konfiguration und echte
