@@ -1711,8 +1711,62 @@ oder unveränderte Altdatei zählt trotz Exit 0 als Fehler. In dieser frischen
 Testumgebung ist noch keine Station eingerichtet; auch eine erzeugte Datei
 muss vor dem Loggerstart auf den vorgesehenen Plugin-Eingang eingestellt und
 geprüft werden. Dieser Befehl startet keinen Logger und schaltet die laufende
-Browseroberfläche nicht um. Die native Generierung bleibt bis zur Rückmeldung
-vom Pi offen.
+Browseroberfläche nicht um.
+
+Am 07.11.2026 wurde dieser Lauf auf dem Pi bestätigt (Bericht
+`cgi-probe-epi7arc2`): Isolation bestanden, CGI-Exit 0, neue `logger.conf`
+mit 276 Bytes, `@DATAPATH /data/weather/` und
+`@ERRORLOG /data/log/meteohub.log`. Es wurde keine `@WEATHERSTATION`-Zeile
+ausgegeben. Damit ist die Generierung nachgewiesen, die Stationsauswahl
+bleibt offen; kein Logger wurde gestartet.
+
+**5. Browser-Testoberfläche für 5.1e vorbereiten und umstellen:**
+
+Zuerst die neue Oberfläche vorbereiten. Dabei wird noch kein Dienst gestoppt
+oder gestartet. Das Webkennwort zweimal interaktiv eingeben; nicht in Befehle,
+Git oder Protokolle schreiben.
+
+```sh
+cd "$HOME/src/meteohub"
+python3 tools/web-test.py prepare \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  "$HOME/meteohub-staging/5.1e-runtime"
+```
+
+Für den folgenden Wechsel die Pfade des tatsächlich bisher verwendeten
+Kandidaten und Laufzeitordners als Rückweg bereithalten. Die beiden Variablen
+unten gelten für den ursprünglichen 5.0s-Test aus dieser Anleitung; bei einer
+abweichenden Testkopie müssen beide auf deren wirkliche Pfade zeigen. Die
+vorhandenen Verzeichnisse werden bei diesem Wechsel nicht entfernt.
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+previous_candidate="$HOME/meteohub-staging/5.0s-openssl3"
+previous_runtime="$HOME/meteohub-staging/5.0s-runtime"
+test -f "$previous_candidate/manifest.json"
+test -f "$previous_runtime/root/opt/meteohub-web/prepared.json"
+sudo systemctl stop meteohub-web-test.socket meteohub-web-test.service
+if ! python3 tools/web-test.py start \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  "$HOME/meteohub-staging/5.1e-runtime"
+then
+  sudo systemctl stop meteohub-web-test.socket meteohub-web-test.service
+  python3 tools/web-test.py start "$previous_candidate" "$previous_runtime"
+  exit 1
+fi
+)
+```
+
+Der bestehende SSH-Tunnel auf Port 18090 kann weiterverwendet werden.
+Im Browser `http://127.0.0.1:18090/cgi-bin/meteohub.cgi` neu laden und mit
+Benutzer `meteohub` sowie dem neuen Webkennwort anmelden. Die Lizenzbedingungen
+der neuen Testkopie selbst lesen und gegebenenfalls bestätigen. Danach unter
+System Information die tatsächlich angezeigte Version und Buildnummer prüfen.
+Eine Aktivierungsanzeige ersetzt die Prüfung des Loggerbetriebs nicht. In der
+neuen Kopie ist weiterhin noch keine Station ausgewählt. Bis zu diesem Punkt
+ist die Browserumstellung vorbereitet, aber auf dem Ziel-Pi noch nicht belegt.
 
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
