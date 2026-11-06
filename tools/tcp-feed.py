@@ -14,17 +14,15 @@ import sys
 import tempfile
 import time
 
-ARITY = {'data': 1, 't': 1, 'uv': 1, 'sol': 2, 'wind': 3,
-         'rain': 2, 'th': 2, 'thb': 4}
-
-
 def validate(raw):
     line = raw.decode('ascii').strip()
     parts = line.split()
     if not parts:
         raise ValueError('empty record')
     match = re.fullmatch(r'(data|t|uv|sol|wind|rain|th|thb)[0-9]{1,4}', parts[0])
-    if not match or len(parts) != ARITY[match.group(1)] + 1:
+    # Match the existing live_feed_plugin plugin-input contract. In particular,
+    # live sol0 carries one value; archived solar records can carry two.
+    if not match or not 2 <= len(parts) <= 7:
         raise ValueError('sensor or field count')
     if any(not re.fullmatch(r'-?[0-9]{1,10}', p) or not -2147483648 <= int(p) <= 2147483647
            for p in parts[1:]):

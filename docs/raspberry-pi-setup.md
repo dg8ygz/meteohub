@@ -1450,6 +1450,12 @@ Zeitbasis ausdrücklich. Die bestehende Temperatur-Plausibilitätsprüfung des
 Spiegel-Plugins ist ein separater Verarbeitungsschritt; der TCP-Zubringer
 verändert oder korrigiert die empfangenen Zahlen nicht.
 
+Plugin-Zeilen und archivierte Zeilen haben nicht immer dieselbe Feldzahl:
+Beim Live-Abgleich lieferte der TCP-Socket beispielsweise `sol0 17` mit einem
+Solarwert. Der Zubringer akzeptiert deshalb wie der bestehende Plugin-Parser
+bekannte Sensor-IDs mit ein bis sechs Ganzzahlen. Das ist eine Formatprüfung,
+keine Bestätigung der fachlichen Plausibilität durch den nativen Logger.
+
 Dieser Schritt prüft nur den Zubringer. Er startet noch keinen nativen Logger
 und belegt keine Archivierung oder vollständige Sensorversorgung. Für den
 späteren laufenden Zubringer ist `--duration 0` vorgesehen; dessen Dienst und

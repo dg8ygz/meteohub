@@ -22,10 +22,10 @@ class FeedTests(unittest.TestCase):
         self.assertEqual(f.feed(b'wind0 70 '), [])
         self.assertEqual(f.feed(b'67 30\r\ndata0 600\n'), ['wind0 70 67 30', 'data0 600'])
         self.assertEqual(f.feed(b'x' * 600 + b'\nwind0 1 2 3\n'), ['wind0 1 2 3'])
-        self.assertEqual(f.feed(b't2 10\xff\nt2 2147483648\nwind0 1 2\n'), [])
+        self.assertEqual(f.feed(b't2 10\xff\nt2 2147483648\nwind0\n'), [])
         self.assertEqual(f.rejected, 4)
-        self.assertEqual(f.feed(b'rain0 0 10\nsol0 20 30\nthb0 1289 55 10132 0\n'),
-                         ['rain0 0 10', 'sol0 20 30', 'thb0 1289 55 10132 0'])
+        self.assertEqual(f.feed(b'rain0 0 10\nsol0 17\nsol0 20 30\nthb0 1289 55 10132 0\n'),
+                         ['rain0 0 10', 'sol0 17', 'sol0 20 30', 'thb0 1289 55 10132 0'])
 
     def test_actual_tcp_receive_only_and_feed_consumer(self):
         with tempfile.TemporaryDirectory() as temporary, socket.socket() as server:
