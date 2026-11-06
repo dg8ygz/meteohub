@@ -476,6 +476,43 @@ zunächst dessen Git-Status und Herkunft prüfen. Die Tests laufen ohne
 Root-Rechte und ohne angeschlossene Wetterkonsole; sie starten keinen
 produktiven Stationsdienst.
 
+#### Lokale Pipe-Korrektur übernehmen, solange sie noch nicht veröffentlicht ist
+
+Für den oben geprüften Stand `b2c3078` wurde die Änderung aus `efff9ee` als
+Patch ausschließlich für `live_feed_plugin.py` und `test-feed-process.py`
+vorbereitet. Der Betreuer stellt die Datei separat bereit; sie enthält keine
+Original-Binaries oder Zugangsdaten. Erwartete SHA256-Prüfsumme:
+
+```text
+515d1f12774e552d1052b305f95e88bfe48e0f6d5ede61cf2b1e45e028da48c3
+```
+
+Die erhaltene Datei als `$HOME/meteohub-feed-recovery-efff9ee.patch` speichern.
+Als normaler Benutzer ausführen:
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+printf '%s  %s\n' \
+  515d1f12774e552d1052b305f95e88bfe48e0f6d5ede61cf2b1e45e028da48c3 \
+  "$HOME/meteohub-feed-recovery-efff9ee.patch" | sha256sum -c -
+git apply --check "$HOME/meteohub-feed-recovery-efff9ee.patch"
+git apply "$HOME/meteohub-feed-recovery-efff9ee.patch"
+PYTHONDONTWRITEBYTECODE=1 python3 test-feed-process.py
+)
+```
+
+Erwartet sind nun zwei `PASS`-Zeilen, einschließlich
+`closed reader exits promptly without false delivery or checkpoint`.
+Die Anwendung des Patches auf einen frischen Export von `b2c3078` und beide
+Prozessprüfungen wurden auf dem Vorbereitungsrechner getestet. Der erneute Test
+auf dem Pi steht bis zur entsprechenden Anwenderausgabe noch aus.
+`git rev-parse HEAD` bleibt nach `git apply` unverändert; `git diff` zeigt die
+zwei lokal geänderten Dateien. Bei bereits enthaltenem Fix oder abweichendem
+Quellstand keinen Patch erzwingen. Der spätere Git-Abgleich muss diese lokalen
+Änderungen berücksichtigen.
+
 **Bis hier ist ein aktuelles Linux mit getesteten Projektquellen eingerichtet.
 Noch keine Meteohub-Weboberfläche und noch kein Stationslogger.** Ein Browser-
 Fehler auf Port 80 ist an diesem Punkt erwartbar. Es gibt hier noch keinen
