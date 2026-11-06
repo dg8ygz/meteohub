@@ -850,7 +850,85 @@ readelf -W --version-info "$meteohub_gcgi"
 Die Prüfung von `libgcgi` erfasst die konkrete Originaldatei samt Hash,
 Abhängigkeiten und Versionsanforderungen für eine spätere private Übernahme.
 Noch keine Bibliothek nach `/usr/lib` kopieren und keine Kompatibilitätssymlinks
-im System anlegen. Der Ziel-Pi-Abgleich dieses Schrittes steht noch aus.
+im System anlegen. Der Anwender bestätigte alle 17 Exporte mit
+`OPENSSL_3.0.0`. Die originale CGI-Bibliothek hat SHA256
+`b8c22c56b978e7a66e050a1c0ff4aaf74dce95d79661a535b767e0cd80042ec6`,
+SONAME `libgcgi.so.0`, benötigt nur `libm.so.6` und `libc.so.6` und fordert
+von beiden `GLIBC_2.4` an. Beide untersuchten Bibliotheken sind ELF32 ARM.
+
+#### B5g. Separate OpenSSL-3-Testkopien vorbereiten
+
+Das Werkzeug `tools/stage-openssl3.py` akzeptiert ausschließlich die sechs
+anhand der obigen Herstellerimage-Inventur festgelegten SHA256-Werte. Es legt
+ein neues privates Verzeichnis an. Logger und CGI-Bibliothek werden unverändert
+kopiert; bei den vier Programmen mit OpenSSL-Verweisen werden ausschließlich
+die Bibliotheks-/Versionsnamen und zugehörigen ELF-Versionshashes angepasst.
+Die Dateigröße und sämtliche ausführbaren ELF-Abschnitte bleiben unverändert.
+Ein Manifest protokolliert Quell-/Zielhashes und jede Änderung mit Offset und
+Bytes. Kein Image-Programm wird dabei ausgeführt, kein Dienst eingerichtet.
+
+**Das ist ein experimenteller Anpassungsversuch für diese Binaries.**
+OpenSSL garantiert keine allgemeine Binärkompatibilität über diesen
+Versionssprung; siehe den
+[OpenSSL-Migrationsleitfaden](https://docs.openssl.org/3.5/man7/ossl-guide-migration/).
+Symbolnamen allein belegen weder identische Datenstrukturen noch Semantik.
+Die späteren Tests müssen insbesondere CGI, Crypto-Aufrufe und Fehlerpfade
+abdecken. Die Anpassung ersetzt keine gültige Aktivierung.
+
+Als normaler Benutzer auf dem Ziel-Pi:
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-crypto-adaptation.py \
+  /mnt/meteohub-original
+python3 tools/stage-openssl3.py \
+  /mnt/meteohub-original \
+  "$HOME/meteohub-staging/5.0s-openssl3"
+)
+```
+
+Die Tests benötigen separat beschaffte Originaldateien; solche Dateien sind
+nicht im Repository enthalten. Lokaler Entwicklungsnachweis: drei Testmethoden
+mit vier echten ARM-Binaries aus der früheren Stationskopie bestanden,
+einschließlich unveränderter ausführbarer Abschnitte, Manifestabgleich,
+unbekannter Importe, erneuter Anpassung, Hashfehler, Symlinks und belegtem
+Zielverzeichnis. Diese Stationskopie unterscheidet sich vom Herstellerimage;
+der eigentliche Import verweigerte sie erwartungsgemäß wegen Hashabweichung,
+bevor ein Zielverzeichnis entstand. Der obige native Lauf mit dem konkreten
+5.0s-Image steht noch aus.
+
+Das Zielverzeichnis muss neu sein. Bei einem Abbruch nicht blind löschen oder
+denselben Kandidaten überschreiben; zuerst die Ursache und das Manifest prüfen.
+Die Testkopien gehören nicht in Git und werden noch nicht nach `/home/meteohub`
+oder `/srv/www` installiert. `libgcgi.so.0` ist eine private reguläre Kopie;
+es werden keine globalen Bibliothekslinks oder Suchpfade geändert.
+
+Nach erfolgreicher Vorbereitung die Auflösung der Bibliotheken und deren
+Versionen mit dem ARM-Loader prüfen:
+
+```sh
+(
+set -e
+candidate="$HOME/meteohub-staging/5.0s-openssl3"
+for name in loggerd meteometar meteonet meteoschedule meteohub.cgi; do
+  printf '\nBIBLIOTHEKEN: %s\n' "$name"
+  env -u LD_PRELOAD -u LD_AUDIT -u LD_LIBRARY_PATH \
+    /lib/ld-linux-armhf.so.3 \
+    --library-path "$candidate/lib:/usr/lib/arm-linux-gnueabihf" \
+    --list "$candidate/bin/$name"
+done
+)
+```
+
+`--list` zeigt die dynamische Bibliotheksauflösung, ohne die Anwendung zu
+starten. Fehlende Bibliotheken oder Symbolversionen stoppen diesen Block.
+Dies ist weder eine vollständige Prüfung aller Funktionsaufrufe noch ein
+Meteohub-Betriebstest. Diesen Schritt nicht durch einen direkten Programmstart
+ersetzen: Betriebsverzeichnisse, Konfiguration, Rechte und Dienstisolation sind
+erst noch einzurichten.
 
 ### B6. Noch offene native Installation und Abnahme
 
