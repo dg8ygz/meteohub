@@ -251,6 +251,16 @@ Repositorys ist damit noch nicht installiert.
 
 ## Weg B: Trixie für Pi 3 oder Pi 4 vorbereiten
 
+**Ausgangsbasis des laufenden Pi-4-Aufbaus (6. November 2026):** Der Anwender
+hat Raspberry Pi OS Lite heruntergeladen, auf dem Pi installiert und vor der
+Meteohub-Einrichtung auf den aktuellen Paketstand gebracht. Geprüft wurden
+Trixie mit Paketarchitektur `arm64`, Kernel `6.18.60+rpt-rpi-v8` nach Neustart,
+ein unauffälliges `dpkg --audit` und keine fehlgeschlagenen systemd-Dienste.
+Es wurde kein altes Meteohub-Komplettimage als Betriebssystembasis verwendet.
+Der folgende Bestandsweg für eine vorhandene 64-Bit-Installation beschreibt
+diesen Aufbau; B1 beschreibt dagegen die alternative Neuinstallation auf einer
+eigenen Karte. Diese Basisprüfung ist noch keine Meteohub-Funktionsabnahme.
+
 ### B1. Aktuelles Betriebssystem mit Imager schreiben – am PC
 
 **Ist Trixie bereits installiert und bootfähig, direkt mit B2 beginnen.**
