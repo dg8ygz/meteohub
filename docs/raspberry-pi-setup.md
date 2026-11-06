@@ -426,6 +426,12 @@ wichtig; die alte Sitzung vor dem Neustart genügt nicht als Zugangsprüfung.
 
 ### B4. Projektquellen holen und lokale Tests ausführen
 
+Beim Pi-4-Aufbau am 6. November 2026 wurden nach der Paketinstallation folgende
+Werkzeugversionen vom Anwender geprüft: Git 2.47.3, Python 3.13.5, file 5.46 und
+GNU readelf 2.44. Git brachte zusätzlich `git-man` und `liberror-perl` mit;
+es wurden keine Pakete entfernt. Diese Versionsangaben dokumentieren den Test,
+sie sind keine Aufforderung, später neuere Sicherheitsupdates zurückzusetzen.
+
 **Auf dem Pi**, als normaler Benutzer, nicht dauerhaft in einer Root-Shell:
 
 ```sh
@@ -451,6 +457,14 @@ Bibliotheksanforderungen, ohne den Stationslogger starten zu müssen.
 Ein GitHub-Klon enthält nur veröffentlichte Commits. Noch ausschließlich lokal
 vorhandene Korrekturen sind darin nicht enthalten; vor einer Installation den
 vorgesehenen Quellstand mit `git rev-parse HEAD` abgleichen.
+
+Wer bisher als root gearbeitet hat, kann nach der Paketinstallation mit
+`su - BENUTZERNAME` zum eigenen normalen Benutzer wechseln. Anschließend die
+obigen Befehle ab `mkdir -p "$HOME/src"` ausführen. Existiert das Zielverzeichnis
+`$HOME/src/meteohub` bereits, nicht löschen oder blind überschreiben, sondern
+zunächst dessen Git-Status und Herkunft prüfen. Die Tests laufen ohne
+Root-Rechte und ohne angeschlossene Wetterkonsole; sie starten keinen
+produktiven Stationsdienst.
 
 **Bis hier ist ein aktuelles Linux mit getesteten Projektquellen eingerichtet.
 Noch keine Meteohub-Weboberfläche und noch kein Stationslogger.** Ein Browser-
