@@ -447,7 +447,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 test-feed-process.py
 ```
 
 Erwartet beim dokumentierten Stand: 13 Tests im ersten Lauf, vier im zweiten,
-anschließend eine `PASS`-Zeile des Prozesstests. Dieser verwendet Testdaten und
+anschließend zwei `PASS`-Zeilen des Prozesstests. Dieser verwendet Testdaten und
 benötigt keine Wetterstation. `git rev-parse HEAD` notiert die genaue Version,
 damit ein späterer Fehlerbericht zugeordnet werden kann.
 
@@ -456,10 +456,10 @@ dem Pi 4 den veröffentlichten Stand
 `b2c30785411986e85272051ddad058fe3ef72960`. Alle 13 Dashboard-Tests, vier
 Normalisierungstests und der damalige Plugin-Prozesstest bestanden. Dieser
 Quellstand enthält noch nicht die spätere Korrektur für eine geschlossene
-Logger-Pipe (`efff9ee539e7263d93c7dbba9683cc23f6f736e1`). Die erfolgreiche
-Prüfung des veröffentlichten Stands ist daher kein Nachweis für diesen
-zusätzlichen Fehlerfall. Vor einem Betrieb mit Plugin-Zubringer die Korrektur
-übernehmen und den erweiterten Prozesstest erneut ausführen.
+Logger-Pipe (`efff9ee539e7263d93c7dbba9683cc23f6f736e1`). Die damalige
+Prüfung dieses Stands ist daher kein Nachweis für diesen zusätzlichen Fehlerfall.
+Der anschließend auf demselben Pi angewendete Fix bestand auch den erweiterten
+Prozesstest; neue Installationen beziehen ihn direkt aus GitHub (siehe unten).
 
 `file` und `readelf` (aus `binutils`) werden anschließend zur Prüfung der
 originalen ARM-Programme benötigt. Sie analysieren deren Format und
@@ -476,42 +476,43 @@ zunächst dessen Git-Status und Herkunft prüfen. Die Tests laufen ohne
 Root-Rechte und ohne angeschlossene Wetterkonsole; sie starten keinen
 produktiven Stationsdienst.
 
-#### Lokale Pipe-Korrektur übernehmen, solange sie noch nicht veröffentlicht ist
+#### Aktualisierungen vollständig aus GitHub beziehen
 
-Für den oben geprüften Stand `b2c3078` wurde die Änderung aus `efff9ee` als
-Patch ausschließlich für `live_feed_plugin.py` und `test-feed-process.py`
-vorbereitet. Der Betreuer stellt die Datei separat bereit; sie enthält keine
-Original-Binaries oder Zugangsdaten. Erwartete SHA256-Prüfsumme:
-
-```text
-515d1f12774e552d1052b305f95e88bfe48e0f6d5ede61cf2b1e45e028da48c3
-```
-
-Die erhaltene Datei als `$HOME/meteohub-feed-recovery-efff9ee.patch` speichern.
-Als normaler Benutzer ausführen:
+Die Pipe-Korrektur ist Bestandteil dieses Repositorys (Commit `efff9ee`). Ein
+separater Patchserver ist für die Installation nicht erforderlich. Neue Klone
+enthalten den Fix; bei einem unveränderten bestehenden Klon aktualisieren:
 
 ```sh
-(
-set -e
 cd "$HOME/src/meteohub"
-printf '%s  %s\n' \
-  515d1f12774e552d1052b305f95e88bfe48e0f6d5ede61cf2b1e45e028da48c3 \
-  "$HOME/meteohub-feed-recovery-efff9ee.patch" | sha256sum -c -
-git apply --check "$HOME/meteohub-feed-recovery-efff9ee.patch"
-git apply "$HOME/meteohub-feed-recovery-efff9ee.patch"
+git status --short
+git pull --ff-only
 PYTHONDONTWRITEBYTECODE=1 python3 test-feed-process.py
-)
 ```
 
-Erwartet sind nun zwei `PASS`-Zeilen, einschließlich
+Bei lokalen Änderungen vor dem Pull deren Zweck prüfen und sie sichern.
+Erwartet sind mit dem Fix zwei `PASS`-Zeilen, einschließlich
 `closed reader exits promptly without false delivery or checkpoint`.
-Die Anwendung des Patches auf einen frischen Export von `b2c3078` und beide
-Prozessprüfungen wurden auf dem Vorbereitungsrechner getestet. Der erneute Test
-auf dem Pi steht bis zur entsprechenden Anwenderausgabe noch aus.
-`git rev-parse HEAD` bleibt nach `git apply` unverändert; `git diff` zeigt die
-zwei lokal geänderten Dateien. Bei bereits enthaltenem Fix oder abweichendem
-Quellstand keinen Patch erzwingen. Der spätere Git-Abgleich muss diese lokalen
-Änderungen berücksichtigen.
+Am 6. November 2026 wurden beide Prozessprüfungen nach Anwendung derselben
+Korrektur durch den Anwender auf dem echten Pi 4 erfolgreich ausgeführt.
+
+**Nur für den frühen Pi-Testaufbau mit bereits manuell angewendetem Patch:**
+Die Änderungen an den beiden Dateien vor dem Aktualisieren in einem lokalen
+Git-Stash sichern. Nach dem Pull mit dem gesicherten Zustand vergleichen:
+
+```sh
+cd "$HOME/src/meteohub"
+git stash push -m "Pipe-Fix vor GitHub-Abgleich" -- live_feed_plugin.py test-feed-process.py
+git pull --ff-only
+git diff --exit-code 'stash@{0}' HEAD -- live_feed_plugin.py test-feed-process.py
+PYTHONDONTWRITEBYTECODE=1 python3 test-feed-process.py
+```
+
+Diese Folge setzt voraus, dass die beiden Dateien noch den manuell angewendeten
+Patch als lokale Änderungen enthalten und der Stash tatsächlich neu angelegt
+wird. Bei einem Fehler nicht mit dem nächsten Befehl fortfahren. Der Vergleich
+muss ohne Ausgabe mit Exitcode 0 enden. Der Stash bleibt als Sicherung erhalten;
+kein `stash pop`, denn der Fix ist bereits im aktualisierten Git-Stand enthalten.
+Bei Abweichungen die Sicherung behalten und den Unterschied prüfen.
 
 **Bis hier ist ein aktuelles Linux mit getesteten Projektquellen eingerichtet.
 Noch keine Meteohub-Weboberfläche und noch kein Stationslogger.** Ein Browser-
