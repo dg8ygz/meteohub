@@ -830,7 +830,16 @@ test -f "$meteohub_crypto"
 test -f "$meteohub_gcgi"
 file -L "$meteohub_crypto" "$meteohub_gcgi"
 readelf -W --dyn-syms "$meteohub_crypto" |
-  awk '$7 != "UND" && $8 ~ /^(MD5|BIO_ctrl|BIO_f_base64|BIO_free|BIO_free_all|BIO_new|BIO_new_mem_buf|BIO_push|BIO_read|BIO_s_mem|BIO_set_flags|BIO_write|EVP_PKEY_free|EVP_PKEY_get1_RSA|PEM_read_bio_PUBKEY|RSA_new|RSA_public_decrypt)@/ {print}'
+  awk '
+  BEGIN {
+    names = "MD5|BIO_ctrl|BIO_f_base64|BIO_free|BIO_free_all"
+    names = names "|BIO_new|BIO_new_mem_buf|BIO_push|BIO_read"
+    names = names "|BIO_s_mem|BIO_set_flags|BIO_write"
+    names = names "|EVP_PKEY_free|EVP_PKEY_get1_RSA"
+    names = names "|PEM_read_bio_PUBKEY|RSA_new|RSA_public_decrypt"
+    pattern = "^(" names ")@"
+  }
+  $7 != "UND" && $8 ~ pattern {print}'
 sha256sum "$meteohub_gcgi"
 readelf -W -d "$meteohub_gcgi" |
   awk '/NEEDED|SONAME|RPATH|RUNPATH/'
