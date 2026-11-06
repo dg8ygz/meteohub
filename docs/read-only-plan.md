@@ -1,0 +1,76 @@
+# Schreibgeschütztes System und tägliche Datensicherung
+
+**Entwurf vom 7. November 2026; noch nicht aktiviert oder abgenommen.**
+Der Betreiber möchte Betriebssystem und SD-Karte weitgehend schonen, flüchtige
+Daten im RAM halten und frühmorgens täglich sichern. Der Installer schaltet
+bislang absichtlich weder Boot noch Dateisysteme auf Read-only um.
+
+## Warum nicht einfach `/` schreibgeschützt mounten?
+
+Die aktuelle private Laufzeitumgebung benötigt Schreibzugriffe auf
+`/home/meteohub` (Konfiguration und Logger-Konfiguration) und `/data`.
+Der TCP-Zubringer ersetzt `feed.json`; das Plugin schreibt Cursor und
+Herkunftsprotokoll. Der Dashboard-Indexer schreibt SQLite samt WAL und Status.
+Der native Logger wird zusätzlich Roharchive, Status und Protokolle schreiben;
+seine vollständigen Schreibpfade sind auf dem neuen Pi noch nicht abgenommen.
+Diese Funktionen würden auf einer unverändert schreibgeschützten Installation
+fehlschlagen.
+
+Ein Root-Overlay kann Schreibzugriffe in RAM umleiten, benötigt aber einen
+getrennten dauerhaften Datenspeicher. Ein nachträgliches Zurückkopieren in die
+unter einem **laufenden** Overlay liegende Root-Partition ist kein zulässiger
+Synchronisationsweg: Änderungen an zugrundeliegenden Dateisystemen während des
+Betriebs sind laut [Kernel-Dokumentation](https://docs.kernel.org/filesystems/overlayfs.html#changes-to-underlying-filesystems)
+nicht erlaubt; das Verhalten wäre undefiniert.
+
+## Vorgesehene Aufteilung
+
+- Betriebssystem/Boot schreibgeschützt im Normalbetrieb; Wartungsmodus für
+  Paket-, Installer- und Konfigurationsänderungen.
+- Begrenzte RAM-Verzeichnisse für kurzfristige Messwertpuffer, PID-Dateien,
+  Status und begrenzte Logs. Kein komplettes historisches Archiv im RAM eines
+  Pi mit 1 GB. Auch Swap auf SD wäre mit dem Ziel „keine laufenden SD-Schreibzugriffe“
+  abzugleichen; ein tmpfs allein garantiert das nicht.
+- Separater dauerhafter Datenbereich außerhalb des Root-Overlays, im Normalfall
+  lesbar. Geprüfte tägliche Sicherung beispielsweise **04:15 Europe/Berlin**;
+  dieser Zeitpunkt ist ein Vorschlag, noch kein eingerichteter Timer.
+- Konfigurationsänderungen ausdrücklich dauerhaft speichern, damit ein Neustart
+  neue Stationseinstellungen nicht verwirft.
+- Messwerte aus RAM in eine neue abgeschlossene Sicherung schreiben, prüfen und
+  synchronisieren; den letzten gültigen Stand erst anschließend ablösen. Bei
+  Fehlern alte Sicherung und noch nicht gesicherte Messwerte behalten. RAM-Grenzen
+  und fehlgeschlagene Sicherungen sichtbar melden, nicht still Daten löschen.
+- Beim regulären Herunterfahren zusätzlich sichern. Bei Stromverlust ist das
+  nicht möglich: tägliche Sicherung bedeutet im Normalfall bis zu 24 Stunden
+  Datenverlust, bei fehlgeschlagenen Sicherungen entsprechend mehr.
+
+Eine laufende SQLite-Datenbank samt WAL darf nicht unkoordiniert als einzelne
+Datei kopiert werden. Dafür ist eine konsistente Sicherung über die
+[SQLite-Backup-API](https://www.sqlite.org/backup.html) vorgesehen. Der Anzeigeindex
+ist grundsätzlich aus Rohdaten wiederherstellbar; unersetzliche Messwerte und
+Einstellungen haben Vorrang.
+
+Eine zweite Partition auf derselben SD ist dabei kein Schutz vor einem Ausfall
+der ganzen Karte. Ein zusätzliches externes Backup bleibt davon getrennt.
+
+## Nächster Schritt: Bestandsaufnahme auf dem neuen Pi
+
+Als normaler Benutzer, ohne Änderungen an Mounts oder Diensten:
+
+```bash
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 install-pi.py storage-check
+```
+
+Das zeigt RAM/Swap, Dateisysteme, Partitionen und Größen der relevanten privaten
+Datenverzeichnisse. Es ist noch keine Messung des täglichen Datenzuwachses.
+Danach sind laufende Messwerterfassung, Datenwachstum und RAM-Grenzen zu prüfen.
+Vor Boot-/Partitionsänderungen müssen Sicherung und konkreter Rückweg geprüft
+werden. Eine bestehende SSH-Sitzung ist kein unabhängiger Wiederherstellungsweg.
+
+Erst nach diesen Befunden werden RAM-Mounts, persistenter Datenbereich, Start- und
+Sicherungsreihenfolge implementiert. Abnahme: frische Messwerte, konsistente
+Sicherung, Wiederherstellung nach Neustart, neue SSH-Anmeldung, Betrieb bei
+vollem RAM-Puffer und fehlgeschlagener Sicherung. Bis dahin keine erfolgreiche
+RO-Umstellung behaupten.

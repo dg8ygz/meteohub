@@ -6,8 +6,8 @@ class Api(unittest.TestCase):
    for n,(direction,speed,gust) in enumerate([(359,1,2),(1,3,4),(90,2,6)]):
     for field,value in [('direction',direction),('speed',speed),('gust',gust)]:db.execute('INSERT INTO samples VALUES(?,?,?,?)',('wind0',field,now-5+n,value))
    db.commit();db.close();(p/'status.json').write_text(json.dumps({'last_success':now,'history_importing':False}))
-   code=pathlib.Path(__file__).with_name('weather-api.cgi').read_text().replace("BASE=pathlib.Path('/var/lib/meteohub-dashboard')",'BASE=pathlib.Path('+repr(tmp)+')')
-   old=dict(os.environ);os.environ.update(REMOTE_USER='test',REQUEST_METHOD='GET',QUERY_STRING='range=24h')
+   code=pathlib.Path(__file__).with_name('weather-api.cgi').read_text()
+   old=dict(os.environ);os.environ.update(REMOTE_USER='test',REQUEST_METHOD='GET',QUERY_STRING='range=24h',METEO_DASHBOARD_STATE=tmp)
    try:
     out=io.StringIO()
     with contextlib.redirect_stdout(out):exec(compile(code,'weather-api.cgi','exec'),{})

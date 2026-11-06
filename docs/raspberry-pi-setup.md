@@ -1,5 +1,10 @@
 # Meteohub von Anfang an auf einem Raspberry Pi einrichten
 
+**Neu: [Installer und separates Dashboard-/SVG-Update](installer.md)** bündeln die
+nachfolgend dokumentierten Vorbereitungsschritte. Vorhandene 5.1e-Verzeichnisse
+werden geprüft und wiederverwendet. Produktionsabnahme und Autostart bleiben offen.
+
+
 Stand: **7. November 2026**. Zielgeräte: **Raspberry Pi 3 Model B** und
 **Raspberry Pi 4 Model B, auch die Variante mit 1 GB RAM**.
 

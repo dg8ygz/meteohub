@@ -3,6 +3,8 @@
 import argparse
 import base64
 import importlib.util
+import json
+from unittest.mock import patch
 import os
 from pathlib import Path
 import secrets
@@ -54,6 +56,17 @@ exit 1
         config = root / 'opt/meteohub-web'
         config.mkdir()
         web.write_config(config)
+        extension = load('extension-update')
+        extension.UNIT = unit + '-index.service'
+        extension.update(candidate, case.runtime, services=False)
+        # Refresh the derived index in the real private namespace as the web user.
+        # Synthetic data only; source archives and receiver are absent.
+        data_dir = root / 'data/tcp-feed/state'
+        data_dir.mkdir(parents=True)
+        stamp = time.strftime('%Y%m%d%H%M%S', time.gmtime())
+        (data_dir / 'provenance.jsonl').write_text(json.dumps({
+            'source': stamp + ' thb0 1289 100 9839',
+            'source_format': 'plugin', 'pressure_only': True}) + '\n')
         with socket.socket() as reservation:
             reservation.bind(('127.0.0.1', 0))
             port = reservation.getsockname()[1]
@@ -66,6 +79,16 @@ exit 1
             os.chown(parent, 65534, 65534)
             for name in files:
                 os.chown(Path(parent) / name, 65534, 65534, follow_symlinks=False)
+        with patch.object(extension.os, 'getuid', return_value=65534), patch.object(extension.os, 'getgid', return_value=65534):
+            command = extension.index_command(candidate, case.runtime, once=True)
+        subprocess.run(command, check=True, capture_output=True, timeout=45)
+        with patch.object(extension.os, 'getuid', return_value=65534), patch.object(extension.os, 'getgid', return_value=65534):
+            extension.start_index(candidate, case.runtime)
+            assert extension.service_state(case.runtime)
+            extension.stop_service(case.runtime)
+            extension.start_index(candidate, case.runtime)
+        index_status = json.loads((root / 'data/dashboard/status.json').read_text())
+        assert not index_status.get('error'), index_status
         props = web.web_properties(candidate, case.runtime)
         props += [
             'RuntimeMaxSec=45s',
@@ -108,10 +131,26 @@ exit 1
             status, body = request(path, password)
             assert status in (400, 403, 404, 500), (path, status)
             assert b'SHOULD_NOT_LEAK' not in body and b'meteohub:$2' not in body
+        for path in ('/dashboard/', '/cgi-bin/weather-api.cgi', '/cgi-bin/weather-image.cgi'):
+            assert request(path)[0] == 401, path
+            status, body = request(path, password)
+            assert status == 200, (path, status, body[:200])
+            if path.endswith('weather-api.cgi'):
+                payload = json.loads(body)
+                assert any(m['field'] == 'pressure' for m in payload['metrics']), payload
+                assert not any(m['sensor'] == 'thb0' and m['field'] in ('temperature','humidity') for m in payload['metrics'])
+            elif path.endswith('weather-image.cgi'):
+                assert b'<svg' in body and b'983,9' in body, body[:200]
+            else:
+                assert b'weather.js' in body
+        for path in ('/dashboard/weather.js', '/dashboard/weather.css'):
+            assert request(path, password)[0] == 200
+        assert request('/cgi-bin/weather-image.cgi', password, b'invalid=post')[0] == 405
+        print('PASS: dashboard/API/SVG authentication, real pressure-only index, assets and method restriction')
         print('PASS: 10 real HTTP cases; authentication, GET/POST, static files, CGI exit 1, private paths')
         print('PASS: inherited loopback socket served by lighttpd in the private runtime/network')
     finally:
-        subprocess.run(['systemctl', 'stop', unit + '.socket', unit + '.service'],
+        subprocess.run(['systemctl', 'stop', unit + '.socket', unit + '.service', unit + '-index.service'],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=10)
         case.doCleanups()
 

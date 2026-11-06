@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 import datetime,json,os,pathlib,sqlite3,sys,time,urllib.parse,zoneinfo,math
-sys.path.insert(0,'/usr/local/lib/meteohub-dashboard')
+sys.path.insert(0,os.environ.get('METEO_DASHBOARD_LIB','/usr/local/lib/meteohub-dashboard'))
 from weather_data import FIELDS
-BASE=pathlib.Path('/var/lib/meteohub-dashboard');now=time.time()
+BASE=pathlib.Path(os.environ.get('METEO_DASHBOARD_STATE','/var/lib/meteohub-dashboard'));now=time.time()
 def output(data,status='200 OK'):
  print('Status: '+status+'\r\nContent-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\n\r\n'+json.dumps(data,ensure_ascii=False,allow_nan=False))
 if not os.environ.get('REMOTE_USER'):output({'error':'Anmeldung erforderlich'},'401 Unauthorized');sys.exit()
@@ -12,7 +12,7 @@ if selected not in ranges:output({'error':'Unbekannter Zeitraum'},'400 Bad Reque
 db=None
 try:
  db=sqlite3.connect('file:'+str(BASE/'weather.sqlite')+'?mode=ro',uri=True,timeout=3)
- cadence_file=pathlib.Path('/etc/meteohub-dashboard.json')
+ cadence_file=pathlib.Path(os.environ.get('METEO_DASHBOARD_CONFIG','/etc/meteohub-dashboard.json'))
  cadence=json.loads(cadence_file.read_text()).get('sensor_intervals_seconds',{}) if cadence_file.exists() else {}
  duration=ranges[selected];since=int(now-duration);step=max(15,math.ceil(duration/600));metrics=[]
  day=datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Berlin')).replace(hour=0,minute=0,second=0,microsecond=0).timestamp()

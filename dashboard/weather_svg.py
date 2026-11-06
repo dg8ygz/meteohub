@@ -1,10 +1,10 @@
 """Small standalone weather image. Only weather readings; no browser dependencies."""
-import datetime, html, json, math, pathlib, sqlite3, time, zoneinfo
-BASE = pathlib.Path('/var/lib/meteohub-dashboard')
+import os, datetime, html, json, math, pathlib, sqlite3, time, zoneinfo
+BASE = pathlib.Path(os.environ.get('METEO_DASHBOARD_STATE','/var/lib/meteohub-dashboard'))
 
 def read_weather(now):
-    cadence_path = pathlib.Path('/etc/meteohub-dashboard.json')
-    cadence = json.loads(cadence_path.read_text()).get('sensor_intervals_seconds', {})
+    cadence_path = pathlib.Path(os.environ.get('METEO_DASHBOARD_CONFIG','/etc/meteohub-dashboard.json'))
+    cadence = json.loads(cadence_path.read_text()).get('sensor_intervals_seconds', {}) if cadence_path.exists() else {}
     status = json.loads((BASE / 'status.json').read_text())
     index_ok = not status.get('error') and -5 <= now - status.get('last_success', 0) < 60
     db = sqlite3.connect('file:' + str(BASE / 'weather.sqlite') + '?mode=ro', uri=True, timeout=2)

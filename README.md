@@ -14,9 +14,11 @@ Bestandteil der Webcam-Software. Das Projekt ist keine offizielle
 Meteohub-Veröffentlichung und enthält weder die proprietären Originalprogramme
 noch ein fertiges Installationsimage.
 
-**Stand: 5. November 2026 – laufender Migrationstest, noch keine vollständige
+**Stand: 7. November 2026 – laufender Migrationstest, noch keine vollständige
 Produktionsfreigabe.**
 
+[Installer und Extension-Update](docs/installer.md) ·
+[RO-/RAM-Konzept (noch offen)](docs/read-only-plan.md) ·
 [Funktionen](#was-das-projekt-bereits-bietet) ·
 [Projektstatus](#aktueller-projektstatus) ·
 [Raspberry-Pi-Anleitung für Einsteiger](docs/raspberry-pi-setup.md) ·
@@ -48,13 +50,22 @@ Produktionsfreigabe.**
 | Lokale Regressionstests | 17 Unit-Tests und ein realer Plugin-Prozesstest bestanden. |
 | Langzeitbetrieb | Test eingerichtet; durchgehende 24-Stunden-Abnahme und vollständiger Datensatzabgleich noch offen. |
 | Produktive Umstellung | Archiv-/Aggregat-/Exportintegration und vollständige Wartungsabnahme noch offen. |
-| Allgemeine Installation | Noch kein universeller Installer; mehrere Helfer verwenden feste Laborpfade. |
+| Pi-Installation | `install-pi.py` bündelt die Vorbereitung auf Pi 3/4 mit Trixie ARM64; separater Dashboard-/SVG-Updater. Vollständiger Produktionsinstaller und Abnahme noch offen. |
 
 Die Angaben beschreiben die dokumentierten Prüfungen zu diesem Stand, keine
 automatisch aktualisierte Betriebsüberwachung. Weitere Einschränkungen stehen
 unter [Bekannte Grenzen](#bekannte-grenzen-und-noch-ausstehende-arbeit).
 
 ## Einstieg
+
+Die bisher einzeln ausgeführten Pi-Schritte sind jetzt in
+[`install-pi.py`](install-pi.py) gebündelt. Die
+[Installer-Anleitung](docs/installer.md) beschreibt Installation, Wiederaufnahme,
+manuelle Stationseinrichtung und den getrennten Befehl `extension-update` für
+Dashboard und SVG. Bestehende Einstellungen bleiben erhalten. Der Stand richtet
+die Testumgebung ein; nativer Dauerbetrieb und Boot-Autostart sind noch nicht
+Teil des Installers.
+
 
 **Zum ersten Mal mit Meteohub?** Die
 [Schritt-für-Schritt-Anleitung für Pi 3 und Pi 4](docs/raspberry-pi-setup.md)

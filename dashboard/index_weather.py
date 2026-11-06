@@ -3,7 +3,8 @@
 import datetime,json,os,pathlib,sqlite3,time,sys
 from weather_data import timestamp,decode,pressure_only
 BASE=pathlib.Path(os.environ.get('METEO_DASHBOARD_STATE','/var/lib/meteohub-dashboard'))
-ARCHIVE=pathlib.Path('/data/weather');LIVE=pathlib.Path('/var/local/meteohub-live-test/state/provenance.jsonl')
+ARCHIVE=pathlib.Path(os.environ.get('METEO_DASHBOARD_ARCHIVE','/data/weather'))
+LIVE=pathlib.Path(os.environ.get('METEO_DASHBOARD_LIVE','/var/local/meteohub-live-test/state/provenance.jsonl'))
 def ingest(db,path,live=False):
  st=path.stat();key=str(path);old=db.execute('SELECT inode,offset FROM positions WHERE path=?',(key,)).fetchone();off=old[1] if old and old[0]==st.st_ino and old[1]<=st.st_size else 0
  count=bad=0;scanned=0;started=time.monotonic();cutoff=time.time()-35*86400

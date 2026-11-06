@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import os,sys,time,sqlite3
-sys.path.insert(0,'/usr/local/lib/meteohub-dashboard')
+sys.path.insert(0,os.environ.get('METEO_DASHBOARD_LIB','/usr/local/lib/meteohub-dashboard'))
 from weather_svg import read_weather,render
 method=os.environ.get('REQUEST_METHOD','GET')
 if method not in ('GET','HEAD'):

@@ -52,6 +52,12 @@ exec "$@"
 '''
 
 
+# Same authentication and listener; permit only these two additional Python CGIs.
+EXTENSION_LAUNCHER = LAUNCHER.replace(
+    '[ "$#" = 1 ] && [ "$1" = /srv/www/cgi-bin/meteohub.cgi ] || exit 64',
+    '[ "$#" = 1 ] || exit 64\ncase "$1" in\n /srv/www/cgi-bin/weather-api.cgi|/srv/www/cgi-bin/weather-image.cgi)\n  export METEO_DASHBOARD_LIB=/opt/meteohub-dashboard/current\n  export METEO_DASHBOARD_STATE=/data/dashboard\n  export PYTHONDONTWRITEBYTECODE=1\n  exec /usr/bin/python3 "$1" ;;\n /srv/www/cgi-bin/meteohub.cgi) ;;\n *) exit 64 ;;\nesac')
+
+
 def probe_tool():
     spec = importlib.util.spec_from_file_location('probe', Path(__file__).with_name('probe-cgi.py'))
     module = importlib.util.module_from_spec(spec)
@@ -118,8 +124,12 @@ def start(candidate, runtime):
         path = web / name
         if path.is_symlink() or not path.is_file():
             raise ValueError('Missing/linked web preparation file: ' + name)
-    if (web / 'lighttpd.conf').read_text() != CONFIG or (web / 'cgi-launcher').read_text() != LAUNCHER:
+    if (web / 'lighttpd.conf').read_text() != CONFIG or (web / 'cgi-launcher').read_text() not in (LAUNCHER, EXTENSION_LAUNCHER):
         raise ValueError('Web configuration differs from this reviewed tool version')
+    if (web / 'cgi-launcher').read_text() == EXTENSION_LAUNCHER:
+        spec = importlib.util.spec_from_file_location('extension', Path(__file__).with_name('extension-update.py'))
+        extension = importlib.util.module_from_spec(spec); spec.loader.exec_module(extension)
+        extension.verify_installed(runtime)
     if (web / 'users.htpasswd').stat().st_mode & 0o077:
         raise ValueError('Password hash file must be private (chmod 600)')
     cgi = runtime / 'root/srv/www/cgi-bin/meteohub.cgi'
