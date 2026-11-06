@@ -451,6 +451,16 @@ anschließend eine `PASS`-Zeile des Prozesstests. Dieser verwendet Testdaten und
 benötigt keine Wetterstation. `git rev-parse HEAD` notiert die genaue Version,
 damit ein späterer Fehlerbericht zugeordnet werden kann.
 
+**Auf echter Hardware bestätigt (6. November 2026):** Der Anwender klonte auf
+dem Pi 4 den veröffentlichten Stand
+`b2c30785411986e85272051ddad058fe3ef72960`. Alle 13 Dashboard-Tests, vier
+Normalisierungstests und der damalige Plugin-Prozesstest bestanden. Dieser
+Quellstand enthält noch nicht die spätere Korrektur für eine geschlossene
+Logger-Pipe (`efff9ee539e7263d93c7dbba9683cc23f6f736e1`). Die erfolgreiche
+Prüfung des veröffentlichten Stands ist daher kein Nachweis für diesen
+zusätzlichen Fehlerfall. Vor einem Betrieb mit Plugin-Zubringer die Korrektur
+übernehmen und den erweiterten Prozesstest erneut ausführen.
+
 `file` und `readelf` (aus `binutils`) werden anschließend zur Prüfung der
 originalen ARM-Programme benötigt. Sie analysieren deren Format und
 Bibliotheksanforderungen, ohne den Stationslogger starten zu müssen.
