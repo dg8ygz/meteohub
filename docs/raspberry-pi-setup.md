@@ -1,6 +1,6 @@
 # Meteohub von Anfang an auf einem Raspberry Pi einrichten
 
-Stand: **6. November 2026**. Zielgeräte: **Raspberry Pi 3 Model B** und
+Stand: **7. November 2026**. Zielgeräte: **Raspberry Pi 3 Model B** und
 **Raspberry Pi 4 Model B, auch die Variante mit 1 GB RAM**.
 
 **Verbindlicher Zielstand für Weg B: Meteohub 5.1e.** Das Image 5.0s dient
@@ -1676,9 +1676,43 @@ Paket-/Komponentenprüfsummen und unveränderte ausführbare Sektionen wurden
 dabei erneut bestätigt. Danach löste der native ARM-Lader auf dem Pi für alle
 fünf Programme sämtliche aufgeführten Bibliotheken auf, einschließlich
 `libssl.so.3`, `libcrypto.so.3` und der privaten `libgcgi.so.0`. Es wurden keine
-fehlenden Bibliotheken oder Versionsanforderungen gemeldet. Die tatsächliche
-Ausführung des neuen CGI und des Loggers bleibt separat zu prüfen; `--list`
+fehlenden Bibliotheken oder Versionsanforderungen gemeldet. `--list` allein
 führt ihre Anwendungslogik nicht aus.
+
+Am 07.11.2026 um 00:20 CET folgte auf dem Pi der echte CGI-Probelauf
+(Bericht `cgi-probe-awzogl3m`): alle Isolationsprüfungen bestanden, 15945 Bytes
+HTML-Antwort mit Lizenzbedingungen, kein Ladefehler oder Signalabbruch in
+der gelieferten Ausgabe. Das CGI endete mit Status 1 nach 237 ms.
+Die unkonfigurierte Station und Netzwerkisolation wurden in der Seite
+gemeldet. Das belegt den nativen Start und die Ausgabe dieses CGI-Pfades,
+noch keine vollständige OpenSSL-, Aktivierungs- oder Logger-Abnahme. Die
+Laufzeitumgebung war bereits vorhanden; deshalb wurde ihre Neuanlage korrekt
+verweigert und nur der Probelauf wiederholt.
+
+**4. Native Logger-Konfiguration in der 5.1e-Testumgebung erzeugen:**
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime" \
+  --generate-logger-config
+)
+```
+
+Der Helfer sichert vor dem Aufruf den privaten Anwendungskonfigurationsordner
+unter `home-before` im neuen Berichtverzeichnis und ruft danach das CGI mit
+`-1` auf. Erwartet wird `GENERATED: logger.conf` mit den begrenzt ausgegebenen
+Daten-/Logpfaden und gegebenenfalls Stationskennungen. Eine fehlende Datei
+oder unveränderte Altdatei zählt trotz Exit 0 als Fehler. In dieser frischen
+Testumgebung ist noch keine Station eingerichtet; auch eine erzeugte Datei
+muss vor dem Loggerstart auf den vorgesehenen Plugin-Eingang eingestellt und
+geprüft werden. Dieser Befehl startet keinen Logger und schaltet die laufende
+Browseroberfläche nicht um. Die native Generierung bleibt bis zur Rückmeldung
+vom Pi offen.
 
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
