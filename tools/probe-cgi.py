@@ -93,8 +93,10 @@ def verify(candidate):
 
 def logger_config_summary(path):
     """Only report routing/type directives, never credentials or full configuration."""
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > 262144:
-        raise ValueError('Missing, linked or oversized logger.conf')
+    if path.is_symlink():raise ValueError('logger.conf is a symlink; not followed')
+    if not path.exists():raise ValueError('logger.conf was not created')
+    if not path.is_file():raise ValueError('logger.conf is not a regular file')
+    if path.stat().st_size > 262144:raise ValueError('logger.conf exceeds 256 KiB')
     result=[]
     for line in path.read_text(errors='replace').splitlines():
         parts=line.split()
@@ -109,6 +111,29 @@ def logger_config_summary(path):
             else:result.append(parts[0]+' [value withheld]')
     if not result:raise ValueError('No expected logger directives generated')
     return result
+
+
+def report_logger_generation(path,previous,report):
+    try:
+        summary=logger_config_summary(path)
+        current=(path.stat().st_ino,path.stat().st_mtime_ns)
+        if current==previous:
+            raise ValueError('Existing logger.conf was not regenerated; do not use stale settings')
+    except (ValueError,OSError) as error:
+        (report/'logger-generation.json').write_text(json.dumps({'ready':False,'reason':str(error)})+'\n')
+        print('LOGGER_CONFIG_READY: no')
+        print('STOP:',error)
+        for name in ('response.txt','stderr.txt'):
+            file=report/name
+            print(name.upper()+'_BYTES:',file.stat().st_size if file.is_file() else 'missing')
+        print('Private diagnostics:',report)
+        print('CGI exit 0 alone is not successful configuration generation. No logger started.')
+        return 3
+    (report/'logger-generation.json').write_text(json.dumps({'ready':True,'bytes':path.stat().st_size})+'\n')
+    print('GENERATED: logger.conf;',path.stat().st_size,'bytes')
+    print('\n'.join(summary))
+    print('No logger started. Full configuration and previous copies remain private.')
+    return 0
 
 
 def main():
@@ -248,14 +273,7 @@ print("PASS: resolver file present; isolated routing table readable and empty")
         if code:
             print('STOP: generator failed; private diagnostics:',report/'stderr.txt')
             return code
-        summary=logger_config_summary(logger_config)
-        current=(logger_config.stat().st_ino,logger_config.stat().st_mtime_ns)
-        if current==previous_logger:
-            raise ValueError('Existing logger.conf was not regenerated; do not use stale settings')
-        print('GENERATED: logger.conf;',logger_config.stat().st_size,'bytes')
-        print('\n'.join(summary))
-        print('No logger started. Full configuration and previous copies remain private.')
-        return 0
+        return report_logger_generation(logger_config,previous_logger,report)
     print('RESPONSE_BYTES:', (report / 'response.txt').stat().st_size)
     print('--- launcher / CGI stderr (first 6000 characters) ---')
     print((report / 'stderr.txt').read_text(errors='replace')[:6000])

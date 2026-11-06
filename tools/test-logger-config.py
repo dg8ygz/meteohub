@@ -17,6 +17,24 @@ if ISOLATION:sys.argv.remove('--isolation')
 
 
 class SummaryTests(unittest.TestCase):
+    def test_zero_exit_without_output_is_not_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=root/'logger.conf'
+            (root/'response.txt').write_text('private output must stay private')
+            (root/'stderr.txt').write_text('private diagnostics')
+            out=io.StringIO()
+            with redirect_stdout(out):code=probe.report_logger_generation(path,None,root)
+            self.assertEqual(code,3)
+            self.assertIn('logger.conf was not created',out.getvalue())
+            self.assertNotIn('private output must stay private',out.getvalue())
+            self.assertFalse(json.loads((root/'logger-generation.json').read_text())['ready'])
+            path.write_text('@DATAPATH /data/weather/\n')
+            previous=(path.stat().st_ino,path.stat().st_mtime_ns)
+            with redirect_stdout(io.StringIO()):code=probe.report_logger_generation(path,previous,root)
+            self.assertEqual(code,3)
+            with redirect_stdout(io.StringIO()):code=probe.report_logger_generation(path,None,root)
+            self.assertEqual(code,0)
+
     def test_selected_directives_do_not_disclose_credentials(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'logger.conf'

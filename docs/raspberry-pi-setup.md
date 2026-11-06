@@ -1523,6 +1523,16 @@ Konfiguration ausschließlich im privaten Testbaum geschrieben. Zwei weitere
 Tests prüfen die begrenzte Ausgabe und das Zurückweisen ungeeigneter Dateien.
 Die native Generierung auf dem Ziel-Pi ist noch separat abzunehmen.
 
+Der erste native Versuch am 06.11.2026 bestand die Isolation und beendete das
+CGI mit Exit 0, lieferte aber keine vom Werkzeug akzeptierte `logger.conf`.
+Die damalige gemeinsame Fehlermeldung unterschied fehlende Datei, Symlink und
+Übergröße noch nicht; der konkrete Grund ist damit noch nicht belegt. Es wurde
+kein Logger gestartet. Das Werkzeug meldet diese Zustände nun getrennt und
+behandelt auch eine unveränderte Altdatei als Fehler. Ein Regressionstest deckt
+Exit 0 ohne erzeugte Konfiguration ab. Vor einem erneuten Generatorlauf den
+vorhandenen privaten Bericht auswerten; weder eine leere Konfiguration anlegen
+noch Exit 0 als Erfolg der Generierung behandeln.
+
 ### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
