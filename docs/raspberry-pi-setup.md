@@ -1765,8 +1765,25 @@ Benutzer `meteohub` sowie dem neuen Webkennwort anmelden. Die Lizenzbedingungen
 der neuen Testkopie selbst lesen und gegebenenfalls bestätigen. Danach unter
 System Information die tatsächlich angezeigte Version und Buildnummer prüfen.
 Eine Aktivierungsanzeige ersetzt die Prüfung des Loggerbetriebs nicht. In der
-neuen Kopie ist weiterhin noch keine Station ausgewählt. Bis zu diesem Punkt
-ist die Browserumstellung vorbereitet, aber auf dem Ziel-Pi noch nicht belegt.
+neuen Kopie ist weiterhin noch keine Station ausgewählt.
+
+**Native Browserabnahme, 07.11.2026, 00:24 CET:** Der Betreiber bestätigte
+auf dem Raspberry Pi 4 die erfolgreiche Umstellung mit Isolationsprüfung,
+lighttpd-Konfigurationstest und HTTP 401 für nicht authentifizierte Anfragen.
+Die authentifiziert aufgerufene Systemseite zeigte **5.1e (Build 277)**,
+Kernel `6.18.60+rpt` und 927 MB RAM. Das ist die beobachtete Buildnummer des
+oben per Hash festgelegten Herstellerpakets; sie wurde nicht aus dem
+Paketnamen oder älteren Forenbeiträgen abgeleitet.
+
+Die alte Plattformanzeige meldete dabei `x86`, obwohl die eingespielten und
+nativ geladenen Programme ARM-ELF32 sind. Plattform-Erkennung, leere System-ID
+und ungültige MAC bleiben daher offen. Das Wort `activated` neben einer leeren
+System-ID gilt nicht als erfolgreiche Aktivierungsprüfung. Die Netzwerkhinweise
+entsprechen der isolierten Umgebung. Fehlende `loggerd.pid`, `dropbear.pid`
+und `smbd.pid` betreffen dort nicht laufende Legacy-Dienste; insbesondere ist
+die Dropbear-Prüfung kein Statusnachweis für den tatsächlichen OpenSSH-Dienst
+des Pi. Loggerstart, Stationsauswahl und Messwertarchivierung sind weiterhin
+nicht abgenommen.
 
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
