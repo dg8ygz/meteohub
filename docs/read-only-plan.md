@@ -74,3 +74,33 @@ Sicherungsreihenfolge implementiert. Abnahme: frische Messwerte, konsistente
 Sicherung, Wiederherstellung nach Neustart, neue SSH-Anmeldung, Betrieb bei
 vollem RAM-Puffer und fehlgeschlagener Sicherung. Bis dahin keine erfolgreiche
 RO-Umstellung behaupten.
+
+## Erster Pi-4-Befund (7. November 2026, Betreiber-Ausgabe)
+
+- RAM: 905 MiB insgesamt, 707 MiB verfügbar, 197 MiB benutzt. Das ist eine
+  Momentaufnahme vor dem nativen Dauerbetrieb, kein freigegebenes RAM-Budget.
+- Aktiver Swap: `/dev/zram0`, 905 MiB logische Größe, 2,7 MiB belegt. Zusätzlich
+  erscheint `loop0` mit 905 MiB und Swap-Signatur. Ob dieses Gerät als ZRAM-
+  Writeback dient, ist **offen**. Die ZRAM-Größe ist kein zusätzlicher physischer RAM.
+- SD: Bootpartition 512 MiB und Rootpartition 29,2 GiB, beide RW. Ein eigener
+  persistenter Datenbereich ist in der vorgelegten Partitionierung nicht vorhanden.
+  Freie Extents sind damit noch nicht separat vermessen.
+- Private Laufzeitdaten: 28 KiB belegter Platz, Wetterarchiv-Verzeichnis 4 KiB,
+  TCP-Verzeichnis 4 KiB, private Anwendungskonfiguration 220 KiB.
+  Dashboard-Verzeichnis noch nicht vorhanden. Kein belegter täglicher Zuwachs.
+- `loop1` enthält das ursprüngliche Herstellerimage und ist nicht mit `loop0`
+  zu verwechseln. Keines der Geräte zu Diagnosezwecken lösen oder deaktivieren.
+
+Nächste rein lesende Prüfung auf diesem Pi:
+
+```bash
+cat /sys/block/zram0/backing_dev
+cat /sys/block/zram0/bd_stat
+sudo losetup --list --output NAME,BACK-FILE
+```
+
+`backing_dev` zeigt den konfigurierten Hintergrundspeicher; `bd_stat` dessen
+Nutzung und Lese-/Schreibzähler. Erst zusammen mit dem Loop-Dateipfad lässt sich
+feststellen, ob Auslagerungen die SD betreffen. Details:
+[ZRAM-Writeback und Statistik](https://docs.kernel.org/admin-guide/blockdev/zram.html#writeback).
+Ein momentaner Schreibzähler von null beweist nicht, dass Writeback deaktiviert ist.
