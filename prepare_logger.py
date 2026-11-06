@@ -5,7 +5,7 @@ BASE=pathlib.Path('/var/local/meteohub-live-test')
 def main():
  env=dict(os.environ,METEO_PREPARING='1');env.pop('REQUEST_METHOD',None);env.pop('QUERY_STRING',None)
  with (BASE/'config-generator.log').open('ab') as log:
-  subprocess.run(['/srv/www/cgi-bin/meteohub.cgi','-2'],env=env,stdout=log,stderr=log,timeout=45,check=True)
+  subprocess.run(['/srv/www/cgi-bin/meteohub.cgi','-1'],env=env,stdout=log,stderr=log,timeout=45,check=True)
  lines=pathlib.Path('/home/meteohub/logger.conf').read_text().splitlines();out=[];stations=0
  for line in lines:
   parts=line.split()

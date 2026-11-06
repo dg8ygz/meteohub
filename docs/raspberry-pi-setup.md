@@ -1484,10 +1484,12 @@ Details und Abgrenzung zum nativen Roharchiv stehen in
 #### B5p. Native Logger-Konfiguration vorbereiten
 
 Vor dem Start muss die aktuelle native Konfiguration geprüft werden. Dazu
-führt der bestehende Probelauf das vorbereitete CGI einmal mit `-2` aus.
+führt der bestehende Probelauf das vorbereitete CGI einmal mit `-1` aus.
 Das geschieht mit denselben Datei-, Geräte- und Netzwerkgrenzen wie der
-CGI-Probelauf. `meteohub.conf` und eine bereits vorhandene `logger.conf`
-werden zuvor im privaten Berichtverzeichnis gesichert. Währenddessen keine
+CGI-Probelauf. Der gesamte private Ordner `root/home/meteohub` wird zuvor
+als `home-before` im privaten Berichtverzeichnis gesichert, da der native
+Generator mehrere Konfigurationsdateien schreibt. Symlinks werden als Links
+gesichert und nicht verfolgt. Währenddessen keine
 Einstellungen in der Browseroberfläche ändern.
 
 Als normaler Benutzer auf dem Pi (Pfade auf die tatsächlich verwendete
@@ -1518,20 +1520,27 @@ werden. Die dauerhafte TCP-Aufnahme, der Dateizugriff aus der isolierten
 Loggerumgebung und die tatsächliche native Archivierung werden danach geprüft.
 
 Entwicklungstest: Ein synthetisches CGI hat unter den tatsächlichen
-systemd-Isolationsregeln `-2` und die bereinigte Umgebung geprüft und seine
+systemd-Isolationsregeln `-1` und die bereinigte Umgebung geprüft und seine
 Konfiguration ausschließlich im privaten Testbaum geschrieben. Zwei weitere
 Tests prüfen die begrenzte Ausgabe und das Zurückweisen ungeeigneter Dateien.
 Die native Generierung auf dem Ziel-Pi ist noch separat abzunehmen.
 
 Der erste native Versuch am 06.11.2026 bestand die Isolation und beendete das
-CGI mit Exit 0, lieferte aber keine vom Werkzeug akzeptierte `logger.conf`.
-Die damalige gemeinsame Fehlermeldung unterschied fehlende Datei, Symlink und
-Übergröße noch nicht; der konkrete Grund ist damit noch nicht belegt. Es wurde
-kein Logger gestartet. Das Werkzeug meldet diese Zustände nun getrennt und
-behandelt auch eine unveränderte Altdatei als Fehler. Ein Regressionstest deckt
-Exit 0 ohne erzeugte Konfiguration ab. Vor einem erneuten Generatorlauf den
-vorhandenen privaten Bericht auswerten; weder eine leere Konfiguration anlegen
-noch Exit 0 als Erfolg der Generierung behandeln.
+CGI mit Exit 0, schrieb aber nur zwei Antwortbytes. `logger.conf`,
+`logger.conf.new` und `wmr928eval.conf` fehlten tatsächlich. Ursache war der
+falsch übernommene Parameter `-2`: In einem lokal untersuchten älteren
+ARM-Referenzbinary gibt dieser einen Zahlenwert aus; `-1` ruft dagegen die
+Konfigurationsschreiber einschließlich `logger.conf` auf. Diese Untersuchung
+ist kein Ausführungsnachweis für das konkrete 5.0s-Binary auf dem Ziel-Pi.
+Der korrigierte native Lauf muss dort noch erfolgreich abgenommen werden.
+
+Die bisherigen synthetischen Tests prüften die Isolation und Aufrufübergabe,
+aber bestätigten den irrtümlich vorausgesetzten Parameter. Die Testattrappe
+unterscheidet nun Zahlenabfrage und Konfigurationsgenerierung. Zusätzlich
+werden die vollständige private Sicherung ohne Symlink-Verfolgung sowie
+Exit 0 ohne Datei und eine unveränderte Altdatei geprüft. Das Werkzeug
+wertet diese Fälle als Fehler; eine leere Konfiguration darf nicht als
+Ersatz angelegt werden. Es wurde bislang kein Logger gestartet.
 
 ### B6. Noch offene native Installation und Abnahme
 

@@ -71,7 +71,9 @@ class SummaryTests(unittest.TestCase):
             if name=='bin/meteohub.cgi':
                 data=b'''#!/bin/sh
 set -eu
-[ "$#" = 1 ] && [ "$1" = -2 ]
+[ "$#" = 1 ]
+if [ "$1" = -2 ]; then printf 0; exit 0; fi
+[ "$1" = -1 ]
 [ -z "${REQUEST_METHOD-}" ] && [ -z "${QUERY_STRING-}" ]
 [ "${METEO_PREPARING-}" = 1 ]
 printf '%s\\n' '@DATAPATH /data/weather/' '@ERRORLOG /data/log/meteohub.log' '@WEATHERSTATION 0 9 5 private-placeholder' > /home/meteohub/logger.conf
@@ -82,6 +84,9 @@ printf '%s\\n' '@DATAPATH /data/weather/' '@ERRORLOG /data/log/meteohub.log' '@W
         for parent,_,names in os.walk(fixture.top):
             os.chown(parent,65534,65534)
             for name in names:os.chown(Path(parent)/name,65534,65534,follow_symlinks=False)
+        private_home=fixture.runtime/'root/home/meteohub'
+        (private_home/'backup-link').symlink_to('/etc/passwd')
+        original=(private_home/'meteohub.conf').read_bytes()
         output=io.StringIO()
         with mock.patch.object(sys,'argv',['probe-cgi.py',str(candidate),'--runtime',str(fixture.runtime),'--generate-logger-config']),mock.patch.object(os,'getuid',return_value=65534),mock.patch.object(os,'geteuid',return_value=65534),mock.patch.object(os,'getgid',return_value=65534),redirect_stdout(output):
             code=probe.main()
@@ -89,7 +94,14 @@ printf '%s\\n' '@DATAPATH /data/weather/' '@ERRORLOG /data/log/meteohub.log' '@W
         self.assertIn('GENERATED: logger.conf',output.getvalue())
         self.assertNotIn('private-placeholder',output.getvalue())
         self.assertTrue((fixture.runtime/'root/home/meteohub/logger.conf').is_file())
-        print('PASS: actual isolated CGI -2 invocation, clean environment, private generated config')
+        reports=list(fixture.top.glob('cgi-probe-*'))
+        self.assertEqual(len(reports),1)
+        backup=reports[0]/'home-before'
+        self.assertEqual((backup/'meteohub.conf').read_bytes(),original)
+        self.assertTrue((backup/'backup-link').is_symlink())
+        self.assertEqual(os.readlink(backup/'backup-link'),'/etc/passwd')
+        self.assertFalse((backup/'logger.conf').exists())
+        print('PASS: actual isolated CGI -1 invocation, clean environment, private generated config')
 
 
 if __name__=='__main__':unittest.main()

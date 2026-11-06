@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import time
@@ -144,7 +145,7 @@ def main():
     mode.add_argument('--isolation-only', action='store_true',
                         help='Run only the harmless isolation preflight, not the CGI')
     mode.add_argument('--generate-logger-config', action='store_true',
-                      help='Run native CGI -2 in the private runtime; do not start loggerd')
+                      help='Run native CGI -1 in the private runtime; do not start loggerd')
     args = parser.parse_args()
     if os.geteuid() == 0:
         parser.error('Run as the normal login user; sudo is used only for systemd-run')
@@ -167,6 +168,9 @@ def main():
             (runtime / 'root/home/meteohub/meteohub.conf').read_bytes())
     previous_logger=None
     if args.generate_logger_config:
+        # The native generator writes several configuration files, not only logger.conf.
+        # Preserve links as links; never follow them outside the private runtime.
+        shutil.copytree(runtime/'root/home/meteohub', report/'home-before', symlinks=True)
         logger_config=runtime/'root/home/meteohub/logger.conf'
         if logger_config.is_symlink():raise ValueError('Linked logger.conf refused')
         if logger_config.exists():
@@ -252,7 +256,7 @@ print("PASS: resolver file present; isolated routing table readable and empty")
         print('PASS: isolation-only check complete; CGI not started.')
         return 0
     command += ['/home/meteohub/bin/meteohub.cgi']
-    if args.generate_logger_config:command += ['-2']
+    if args.generate_logger_config:command += ['-1']
     with (report / 'response.txt').open('wb') as stdout, (report / 'stderr.txt').open('wb') as stderr:
         try:
             result = subprocess.run(command, stdin=subprocess.DEVNULL,
