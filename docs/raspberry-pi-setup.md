@@ -1219,6 +1219,64 @@ ein Aufruf im Browser sowie Zugangsschutz, CGI-GET/POST und die bewusste Annahme
 der Bedingungen sind noch zu prüfen. Eine produktive Freigabe oder ein Zugriff
 auf die USB-Wetterstation ist damit noch nicht verbunden.
 
+Der Anwender bestätigte folgenden Plan auf dem Pi: vier neue Pakete
+`lighttpd` (1.4.79-2), `apache2-utils` (2.4.69-1~deb13u1), `libapr1t64`
+(1.7.5-1) und `libaprutil1t64` (1.6.3-3+deb13u1). `curl`
+(8.14.1-2+deb13u7) ist bereits aktuell. Keine Aktualisierungen oder Entfernungen.
+Die beiden APR-Bibliotheken werden für `apache2-utils` benötigt. PHP und die
+zusätzlich empfohlenen lighttpd-Module gehören nicht zum geprüften Plan.
+Die Portprüfung zeigte ausschließlich SSH auf TCP 22, IPv4 und IPv6.
+
+#### B5m. Webwerkzeuge installieren, Standarddienste gesperrt halten
+
+Vor der Installation die mitgelieferten Standard-Units gezielt maskieren.
+Neben `lighttpd.service` enthält das Paket einen Wartungsdienst mit Timer.
+Die geprüften ARM64-Installationsskripte von lighttpd 1.4.79-2 verwenden
+`invoke-rc.d --skip-systemd-native` und `deb-systemd-invoke`; die von Hand
+angelegten systemd-Maskierungen werden durch `deb-systemd-helper unmask` nicht
+aufgehoben, solange sie nicht von diesem Helper selbst verwaltet wurden.
+Auf dem neu aufgebauten Pi ist lighttpd bisher nicht installiert.
+
+```sh
+(
+set -e
+sudo systemctl mask lighttpd.service \
+  lighttpd-maint.service lighttpd-maint.timer
+
+sudo apt-get install --no-install-recommends \
+  lighttpd apache2-utils curl
+
+sudo dpkg --audit
+/usr/sbin/lighttpd -v
+command -v htpasswd
+systemctl show lighttpd.service lighttpd-maint.service \
+  lighttpd-maint.timer -p Id -p LoadState -p ActiveState
+sudo ss -ltnp
+)
+```
+
+Beim Maskieren noch nicht installierter Units kann systemd darauf hinweisen,
+dass die Unit noch nicht existiert, und legt trotzdem die `/dev/null`-Links an.
+Ein anderer Fehler, insbesondere eine bereits vorhandene eigene Unit-Datei,
+ist vor der Paketinstallation zu klären; nicht mit `--force` überschreiben.
+APT vor Bestätigung erneut gegen den obigen Paketplan prüfen. Keine
+unangeforderten automatischen Paketentfernungen ausführen.
+
+Erwartet: leeres dpkg-Audit, lighttpd-Versionsausgabe und ein vorhandenes
+`htpasswd`, alle drei Units `LoadState=masked`, `ActiveState=inactive`,
+weiterhin kein Web-Listener. Die Installation kann Hinweise ausgeben, dass die
+maskierten Units nicht aktiviert oder gestartet werden; das ist hier beabsichtigt.
+Den tatsächlichen Paketstatus und die Listener trotzdem separat prüfen.
+
+Die Maskierungen bleiben für diese Installation bestehen, weil die eigene
+Testoberfläche später andere Unit-Namen verwendet. Sie gelten nur für die drei
+genannten Units; weder SSH noch andere Dienstneustarts werden unterdrückt.
+Ein späterer bewusster Wechsel auf den Distributions-Standarddienst kann sie
+mit `sudo systemctl unmask lighttpd.service lighttpd-maint.service lighttpd-maint.timer`
+entfernen; vorher muss dessen Konfiguration geprüft werden. Das Entsperren
+gehört **nicht** zum nächsten Testschritt. Installation und Nachprüfung auf dem
+Ziel-Pi sind noch offen.
+
 ### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
