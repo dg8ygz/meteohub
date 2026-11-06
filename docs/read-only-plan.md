@@ -80,8 +80,11 @@ RO-Umstellung behaupten.
 - RAM: 905 MiB insgesamt, 707 MiB verfügbar, 197 MiB benutzt. Das ist eine
   Momentaufnahme vor dem nativen Dauerbetrieb, kein freigegebenes RAM-Budget.
 - Aktiver Swap: `/dev/zram0`, 905 MiB logische Größe, 2,7 MiB belegt. Zusätzlich
-  erscheint `loop0` mit 905 MiB und Swap-Signatur. Ob dieses Gerät als ZRAM-
-  Writeback dient, ist **offen**. Die ZRAM-Größe ist kein zusätzlicher physischer RAM.
+  erscheint `loop0` mit 905 MiB und Swap-Signatur. Die nachfolgende Betreiberprüfung
+  bestätigt `backing_dev=/dev/loop0` und dessen Datei `/var/swap` auf der
+  Root-SD. `bd_stat` war `0 0 0`: noch keine Belegung/Lese-/Schreibvorgänge
+  im aktuellen Statistikzeitraum. Writeback ist dennoch konfiguriert.
+  Die ZRAM-Größe ist kein zusätzlicher physischer RAM.
 - SD: Bootpartition 512 MiB und Rootpartition 29,2 GiB, beide RW. Ein eigener
   persistenter Datenbereich ist in der vorgelegten Partitionierung nicht vorhanden.
   Freie Extents sind damit noch nicht separat vermessen.
@@ -104,3 +107,44 @@ Nutzung und Lese-/Schreibzähler. Erst zusammen mit dem Loop-Dateipfad lässt si
 feststellen, ob Auslagerungen die SD betreffen. Details:
 [ZRAM-Writeback und Statistik](https://docs.kernel.org/admin-guide/blockdev/zram.html#writeback).
 Ein momentaner Schreibzähler von null beweist nicht, dass Writeback deaktiviert ist.
+
+## ZRAM ohne SD-Writeback vorbereiten
+
+Für Systeme mit dem Raspberry-Pi-Paket `rpi-swap` ist `[Main] Mechanism=zram`
+der vorgesehene Modus für komprimierten RAM-Swap ohne Hintergrunddatei. Die
+[Herstellerdokumentation](https://github.com/raspberrypi/rpi-swap/blob/main/man/man5/swap.conf.5)
+verlangt zur Anwendung der Änderung einen Neustart. Ein `daemon-reload` allein
+stellt den aktiven Swap nicht um. Kein manuelles `swapoff`, Loop-Detach oder
+Löschen einer noch benutzten Swapdatei im laufenden Betrieb.
+
+Der folgende Schritt bereitet nur die Einstellung vor. Er setzt voraus, dass
+`rpi-swap` installiert ist, lässt die Hauptkonfiguration unverändert und
+überschreibt kein bestehendes eigenes Drop-in:
+
+```bash
+(
+set -e
+test "$(dpkg-query -W -f='${Status}' rpi-swap)" = "install ok installed"
+sudo install -d -m 0755 /etc/rpi/swap.conf.d
+sudo sh -c '
+set -eu
+set -C
+printf "[Main]\nMechanism=zram\n" > /etc/rpi/swap.conf.d/90-meteohub-zram-only.conf
+'
+systemd-analyze cat-config rpi/swap.conf
+)
+```
+
+Die zusammengeführte Konfiguration vor dem Neustart prüfen: Eine später sortierte
+Datei kann die Einstellung wieder überschreiben. Dieser Befehl verändert noch
+keine aktiven Swap-/Dateisystem-Mounts. Der reine ZRAM-Modus wird erst nach
+Neustart abgenommen (`swapon --show`, `backing_dev`, `losetup --list`). Erwartet:
+ZRAM aktiv, kein zugewiesenes Backing-Gerät. Nach Umstellung fehlt die zusätzliche
+SD-Auslagerungsreserve; RAM-Limits und Messwertpuffer deshalb gesondert dimensionieren.
+
+Rückbau der eigens angelegten Einstellung: ausschließlich
+`/etc/rpi/swap.conf.d/90-meteohub-zram-only.conf` entfernen und erneut starten.
+Die bisherige Hauptkonfiguration und andere Drop-ins bleiben dabei unverändert.
+Bei diesem Zwischenstand gehen die temporären Web-/Indexer-Units beim Neustart
+verloren; Wiederanlauf ist in [installer.md](installer.md#unterbrechen-wieder-aufnehmen-und-neustart)
+beschrieben. Dies ist weiterhin keine vollständige RO-Umstellung.
