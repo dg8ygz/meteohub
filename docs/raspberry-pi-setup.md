@@ -677,10 +677,48 @@ sudo readelf -d /mnt/meteohub-original/home/meteohub/loggerd | grep NEEDED
 
 Dies liest ELF-Metadaten; der Logger wird nicht gestartet. Bei abweichenden
 Pfaden die Image-Verzeichnisse prüfen, nicht Dateien aus dem laufenden System
-als Ersatz verwenden. Die Ausgabe dieses Schritts ist zunächst noch offen.
-Mount- und Binärprüfung müssen vor der Übernahme bestätigt werden. Zum späteren
+als Ersatz verwenden. Auf dem Pi 4 bestätigt: Mount `ro,nosuid,nodev,noexec`
+mit `norecovery`, beide Anwendungsverzeichnisse vorhanden. Der Image-Logger ist
+ELF32 ARM EABI5 mit Interpreter `/lib/ld-linux-armhf.so.3` und den direkten
+Abhängigkeiten `libm.so.6` und `libc.so.6`. Seine Build-ID ist
+`918ce211ae1010bd9eb24c3360ffeab8c4ebf3e0`; sie unterscheidet sich von der zuvor
+untersuchten Stationskopie. Dieser Metadatenbefund ist noch kein Laufzeittest.
+Zum späteren
 Aushängen `sudo umount /mnt/meteohub-original` verwenden, dann das zugehörige
 Loop-Gerät wie oben beschrieben lösen.
+
+#### B5d. Programme und Symlinks vollständig in den Anwendungsverzeichnissen erfassen
+
+Das Werkzeug `tools/inspect-original.py` liest unter `home/meteohub` und
+`srv/www` die ELF-Metadaten aller regulären Binärdateien, deren Prüfsummen,
+Dateianzahlen und Symlink-Ziele. Es folgt keinen Symlinks innerhalb dieser
+Verzeichnisbäume und startet keine Image-Programme. Textkonfigurationen werden
+nicht ausgegeben. Die Untersuchung umfasst weder sämtliche Systemprogramme
+des Images noch die von Shellskripten dynamisch aufgerufenen Werkzeuge; deren
+Prüfung folgt vor der eigentlichen Installation.
+
+Als Benutzer auf dem Pi ausführen:
+
+```sh
+(
+set -e
+set -o pipefail
+umask 077
+cd "$HOME/src/meteohub"
+git pull --ff-only
+sudo python3 tools/inspect-original.py /mnt/meteohub-original |
+  tee "$HOME/meteohub-original/original-inventory.txt"
+)
+```
+
+Vor dem Aufruf muss das zuvor geprüfte Image weiterhin an diesem Mountpunkt
+schreibgeschützt eingehängt sein. Bei einem zwischenzeitlichen Reboot den
+Loop-/Mount-Aufbau erneut prüfen. Die Berichtdatei bleibt außerhalb von Git.
+Am Ende wird die Anzahl der ELF-Dateien und Lesefehler ausgegeben. Ein Fehler
+oder null gefundene Programme liefert einen Fehlerstatus. Das Werkzeug wurde
+am Vorbereitungsrechner an der zuvor gesicherten Stationskopie geprüft:
+39 ELF-Dateien, keine Fehler. Das Ergebnis des Herstellerimages auf dem Pi
+steht noch aus und kann davon abweichen.
 
 ### B6. Noch offene native Installation und Abnahme
 

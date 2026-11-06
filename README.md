@@ -78,6 +78,7 @@ und das Einbettungsbeispiel unter [Anzeige und Datenbehandlung](#anzeige-und-dat
 
 | Dateien | Aufgabe |
 | --- | --- |
+| `tools/inspect-original.py` | Liest ELF-Metadaten und Symlinks aus dem separat geöffneten Originalimage, ohne dessen Programme auszuführen. |
 | `cgi_compat.sh` | Ergänzt bei leerem GET des nativen Haupt-CGI die Startseite. |
 | `gnuplot_compat.py` | Übersetzt alte Plot-Präambeln für das Distributions-gnuplot; verändert keine Roharchive. |
 | `prepare_logger.py`, `rcloggerd` | Begrenzen den nativen Logger auf die isolierte Pluginquelle und steuern dessen systemd-Dienst. |
