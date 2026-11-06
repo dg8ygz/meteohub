@@ -1174,9 +1174,50 @@ Vier lokale Tests einschließlich tatsächlichem systemd-Testdienst bestanden:
 Resolver-Ergänzung/wiederholter Aufruf, Erhalt abweichender Dateien,
 Symlink-Verweigerung, unveränderte Anwendungskonfiguration sowie lesbare leere
 Routingtabelle und bestehende Isolationsgrenzen. Die Ziel-Pi-Wiederholung dieses
-Schrittes ist noch offen. Die Lizenzbedingungen werden durch den GET-Aufruf
-weiterhin nicht angenommen; das erfolgt später bewusst durch den Anwender
-in der Oberfläche.
+Schrittes ist nun bestätigt: Resolver-Datei ergänzt, gesamte Isolation bestanden
+(269 ms). Das CGI erzeugte 15945 Bytes (196 ms) und zeigte die Lizenztexte ohne
+die vorherigen Dateifehler. Die CGI-Fehlerausgabe selbst enthielt keine Meldung;
+systemd meldete weiterhin Exit 1. Dieser Rückgabewert ist noch nicht abschließend
+erklärt und wird nicht als erfolgreiche Vollabnahme gewertet.
+
+Statt der fehlenden Routingdatei zeigt die Seite nun eine Warnung über eine
+nicht korrekt konfigurierte Netzwerkschnittstelle mit Hinweis auf die historische
+Fallback-IP `192.168.1.77`. Das CGI sieht hier die Original-Konfigurationskopie
+und sein isoliertes Netz. Die Warnung belegt keine Fehlkonfiguration der echten
+Pi-Adresse. Weder die Host-IP ändern noch eine künstliche Default-Route in den
+Test einbauen, um die Warnung zu unterdrücken. Die Lizenzbedingungen werden
+durch den GET-Aufruf weiterhin nicht angenommen; das erfolgt später bewusst
+durch den Anwender in der Oberfläche.
+
+#### B5l. Paketplan für die Browser-Testoberfläche prüfen
+
+Der nächste Schritt ist eine eigene Browser-Testoberfläche für dieselbe private
+Anwendungsumgebung. Dafür ist lighttpd vorgesehen; das Paket unterstützt CGI,
+siehe [Debians Paketbeschreibung](https://packages.debian.org/trixie/lighttpd).
+`apache2-utils` liefert das Werkzeug `htpasswd` für einen separat gewählten
+Webzugang, installiert selbst aber keinen Apache-Server. `curl` dient den
+HTTP- und Authentifizierungsprüfungen. Keine alten Webkennwörter übernehmen.
+
+Zunächst nur den Paketplan und bereits belegte TCP-Ports erfassen:
+
+```sh
+(
+set -e
+apt-cache policy lighttpd apache2-utils curl
+apt-get -s --no-install-recommends install lighttpd apache2-utils curl
+sudo ss -ltnp
+)
+```
+
+Dies installiert noch nichts und verändert keine Dienste. Der reale Plan muss
+auf zusätzliche Abhängigkeiten, Aktualisierungen, Entfernungen und Platzbedarf
+geprüft werden. Vor der tatsächlichen Installation ist ein ungewollter Start
+des Distributions-Webservers zu behandeln; die Testoberfläche erhält eine eigene
+Konfiguration und bleibt von den alten Netzwerk-/Dienstdateien getrennt.
+Die vorgesehene erste Erreichbarkeit ist über Loopback und SSH-Portweiterleitung;
+ein Aufruf im Browser sowie Zugangsschutz, CGI-GET/POST und die bewusste Annahme
+der Bedingungen sind noch zu prüfen. Eine produktive Freigabe oder ein Zugriff
+auf die USB-Wetterstation ist damit noch nicht verbunden.
 
 ### B6. Noch offene native Installation und Abnahme
 
