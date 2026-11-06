@@ -797,8 +797,9 @@ sudo dpkg --audit
 
 Erwartet sind installierte Paketversionen, eine erfolgreiche Python-
 Importprüfung und ein leeres dpkg-Audit. Wenn der reale Paketplan unerwartet
-abweicht, vor der Bestätigung neu prüfen. Die Installation auf dem Pi ist bis
-zur nächsten Anwenderausgabe noch offen. Sie passt noch keine Originalprogramme
+abweicht, vor der Bestätigung neu prüfen. Der Anwender bestätigte die Installation
+aller fünf Pakete, OpenSSL `3.5.7-1~deb13u3+rpt1`, pyelftools `0.32-1`, den
+erfolgreichen Import (`pyelftools 0.32`) und ein leeres dpkg-Audit. Sie passt noch keine Originalprogramme
 an, startet keinen Meteohub-Dienst und ersetzt keine Aktivierung. Eine spätere
 ELF-Anpassung muss mit unverändertem Original und nachvollziehbaren Änderungen
 in einer separaten Arbeitskopie erfolgen; Bibliotheksauflösung und tatsächliche
@@ -809,6 +810,38 @@ unter `/home/meteohub`, das auf dem neuen Pi bereits das persönliche
 Benutzerverzeichnis ist. Diesen Pfad nicht pauschal mit dem Image-Verzeichnis
 überschreiben. Anwendung, persönliche Dateien, Datenpfade und Symlinks sind
 vor dem Einrichten der Dienste getrennt zu behandeln.
+
+#### B5f. Exportierte Funktionen der neuen Bibliothek abgleichen
+
+Als Nächstes die installierte ARM-Bibliothek und die mitgelieferte CGI-
+Bibliothek statisch untersuchen. Die folgende Liste umfasst die 17 verschiedenen
+OpenSSL-Funktionsnamen aus B5e. Erwartet werden definierte Exporte mit
+`OPENSSL_3.0.0`; fehlende oder anders versionierte Funktionen vor jeder Anpassung
+klären. Die Ausgabe ist ein Symbolabgleich, kein Beleg für identische ABI oder
+Semantik. Die Bibliotheken werden hierbei nicht geladen oder ausgeführt.
+
+```sh
+(
+set -e
+set -o pipefail
+meteohub_crypto=/usr/lib/arm-linux-gnueabihf/libcrypto.so.3
+meteohub_gcgi=/mnt/meteohub-original/usr/local/lib/libgcgi.so.0.0.0
+test -f "$meteohub_crypto"
+test -f "$meteohub_gcgi"
+file -L "$meteohub_crypto" "$meteohub_gcgi"
+readelf -W --dyn-syms "$meteohub_crypto" |
+  awk '$7 != "UND" && $8 ~ /^(MD5|BIO_ctrl|BIO_f_base64|BIO_free|BIO_free_all|BIO_new|BIO_new_mem_buf|BIO_push|BIO_read|BIO_s_mem|BIO_set_flags|BIO_write|EVP_PKEY_free|EVP_PKEY_get1_RSA|PEM_read_bio_PUBKEY|RSA_new|RSA_public_decrypt)@/ {print}'
+sha256sum "$meteohub_gcgi"
+readelf -W -d "$meteohub_gcgi" |
+  awk '/NEEDED|SONAME|RPATH|RUNPATH/'
+readelf -W --version-info "$meteohub_gcgi"
+)
+```
+
+Die Prüfung von `libgcgi` erfasst die konkrete Originaldatei samt Hash,
+Abhängigkeiten und Versionsanforderungen für eine spätere private Übernahme.
+Noch keine Bibliothek nach `/usr/lib` kopieren und keine Kompatibilitätssymlinks
+im System anlegen. Der Ziel-Pi-Abgleich dieses Schrittes steht noch aus.
 
 ### B6. Noch offene native Installation und Abnahme
 
