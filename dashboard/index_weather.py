@@ -17,7 +17,12 @@ def ingest(db,path,live=False):
    try:
     if live:
      row=json.loads(line)
-     if 'plugin' in row:
+     if row.get('pressure_only') is True:
+      parts=row['source'].split();ts=timestamp(parts.pop(0))
+      fmt=row['source_format']
+      if fmt not in ('plugin','recorded'):raise ValueError('pressure source format')
+      pressure_fields=pressure_only(parts[0],parts[1:],raw=fmt=='recorded')
+     elif 'plugin' in row:
       ts=timestamp(row['source'].split()[0]);parts=row['plugin'].split();pressure_fields=None
      elif row.get('reason','').startswith('source temperature'):
       parts=row['rejected'].split();ts=timestamp(parts.pop(0));pressure_fields=pressure_only(parts[0],parts[1:],raw=len(parts)==7)
