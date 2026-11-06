@@ -9,6 +9,30 @@ from pathlib import Path
 import pwd
 import stat
 
+RESOLVER = (
+    b'# Isolated CGI test only; no DNS service or external network is enabled.\n'
+    b'nameserver 127.0.0.1\noptions timeout:1 attempts:1\n'
+)
+
+
+def ensure_resolver(runtime):
+    runtime = runtime.resolve(strict=True)
+    load_tool('probe-cgi').verify_runtime(runtime)
+    target = runtime / 'root/etc/resolv.conf'
+    if target.is_symlink():
+        raise ValueError('Resolver symlink refused; no file changed')
+    try:
+        with target.open('xb') as stream:
+            stream.write(RESOLVER)
+        target.chmod(0o600)
+    except FileExistsError:
+        if target.read_bytes() != RESOLVER:
+            raise ValueError('Existing resolver differs; leaving it unchanged')
+        print('UNCHANGED: private test resolver already present')
+        return
+    print('ADDED:', target)
+    print('Loopback placeholder only; host DNS and network unchanged.')
+
 
 def load_tool(name):
     spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(name + '.py'))
@@ -109,6 +133,7 @@ def materialize(destination, copies, uid, gid, username):
     write('etc/group', f'root:x:0:\nprobe:x:{gid}:\n'.encode())
     write('etc/nsswitch.conf', b'passwd: files\ngroup: files\nhosts: files dns\n')
     write('etc/hosts', b'127.0.0.1 localhost\n::1 localhost\n')
+    write('etc/resolv.conf', RESOLVER)
     # Timezone is taken from the new host, never from the 2016 image.
     localtime = Path('/etc/localtime').resolve(strict=True)
     write('etc/localtime', localtime.read_bytes())
@@ -124,12 +149,21 @@ def materialize(destination, copies, uid, gid, username):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('image_root', type=Path)
-    parser.add_argument('candidate', type=Path)
-    parser.add_argument('destination', type=Path)
+    parser.add_argument('image_root', type=Path, nargs='?')
+    parser.add_argument('candidate', type=Path, nargs='?')
+    parser.add_argument('destination', type=Path, nargs='?')
+    parser.add_argument('--ensure-resolver', type=Path,
+                        help='Add only the missing private resolver to an existing test root')
     args = parser.parse_args()
     if os.geteuid() == 0:
         parser.error('Run as the normal login user, without sudo')
+    if args.ensure_resolver is not None:
+        if any((args.image_root, args.candidate, args.destination)):
+            parser.error('--ensure-resolver takes only the existing runtime path')
+        ensure_resolver(args.ensure_resolver)
+        return
+    if not all((args.image_root, args.candidate, args.destination)):
+        parser.error('Provide image_root, candidate and destination')
     root = args.image_root.resolve(strict=True)
     candidate = args.candidate.resolve(strict=True)
     destination = args.destination.absolute()

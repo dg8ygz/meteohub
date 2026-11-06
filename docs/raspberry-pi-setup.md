@@ -1125,7 +1125,58 @@ Verweigerung eines vorhandenen Ziels sowie die tatsächlichen Schreib- und
 Isolationsgrenzen. Ohne `--isolation` laufen die beiden Dateitests ohne root;
 der systemd-Test wird dann explizit übersprungen. Alle Fixtures sind synthetisch,
 keine proprietären Dateien gehören zu den Tests. Der ARM-CGI-Lauf mit dem
-Hersteller-Konfigurationsbestand ist auf dem Ziel-Pi noch offen.
+Hersteller-Konfigurationsbestand wurde danach auf dem Ziel-Pi ausgeführt:
+22 Dateien übernommen, Isolation einschließlich privater Schreibbereiche
+bestanden (262 ms). Das CGI erzeugte 15780 Bytes einschließlich der tatsächlichen
+Lizenztexte (209 ms), Exit 1. Die vorherigen Fehler für Anwendungskonfiguration,
+`/data`, thttpd, NTP, Samba und Lizenztexte erschienen nicht mehr in der gezeigten
+Ausgabe. Offen blieben eine fehlende private `/etc/resolv.conf`, die ausgeblendete
+Routingtabelle und erwartungsgemäß keine Wetterstation/kein Gateway im Test.
+Eine vollständige Anwendungsabnahme ist das weiterhin nicht.
+
+#### B5k. Private Resolver-Datei ergänzen und isolierte Routingtabelle lesen
+
+Neu erzeugte Runtime-Verzeichnisse enthalten jetzt bereits eine minimale
+`etc/resolv.conf`. Für den oben erprobten älteren Stand ergänzt der folgende
+Aufruf **nur diese fehlende Datei im privaten Runtime-Baum**. Eine vorhandene
+abweichende Datei oder ein Symlink wird nicht überschrieben. Die
+Anwendungskonfiguration wird dabei nicht zurückgesetzt.
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 tools/stage-runtime.py --ensure-resolver \
+  "$HOME/meteohub-staging/5.0s-runtime"
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.0s-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.0s-runtime"
+)
+```
+
+Die Datei verwendet `127.0.0.1` mit kurzem Timeout als ausdrücklich markierten
+Testplatzhalter. Es wird kein DNS-Dienst gestartet und kein externer DNS-Zugriff
+freigegeben. Diese Datei ist keine Empfehlung für die produktive DNS-Konfiguration.
+Die echte `/etc/resolv.conf` des Pi bleibt unverändert.
+
+Im Runtime-Modus blendet der Probelauf die nicht-prozessbezogenen `/proc`-
+Einträge nicht mehr aus. Dadurch kann das CGI `/proc/net/route` lesen, jedoch
+nur die Routingtabelle seines weiterhin getrennten Netzwerk-Namensraums.
+Die Isolationsprüfung verlangt ausdrücklich eine lesbare **leere** Routingtabelle
+und prüft weiter, dass keine ausgehende Route existiert. Ein fehlendes Gateway
+ist daher weiterhin erwartbar und wird nicht durch eine erfundene Route kaschiert.
+`ProtectProc=invisible`, Geräteabschirmung, private Root-Ansicht und die übrigen
+Schutzmaßnahmen bleiben aktiv. Der erste Probelauf ohne `--runtime` behält seine
+bisherige eingeschränkte `/proc`-Ansicht.
+
+Vier lokale Tests einschließlich tatsächlichem systemd-Testdienst bestanden:
+Resolver-Ergänzung/wiederholter Aufruf, Erhalt abweichender Dateien,
+Symlink-Verweigerung, unveränderte Anwendungskonfiguration sowie lesbare leere
+Routingtabelle und bestehende Isolationsgrenzen. Die Ziel-Pi-Wiederholung dieses
+Schrittes ist noch offen. Die Lizenzbedingungen werden durch den GET-Aufruf
+weiterhin nicht angenommen; das erfolgt später bewusst durch den Anwender
+in der Oberfläche.
 
 ### B6. Noch offene native Installation und Abnahme
 

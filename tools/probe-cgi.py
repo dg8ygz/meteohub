@@ -49,7 +49,7 @@ def properties(candidate, runtime=None):
     ]
     if runtime is not None:
         result = [value for value in result if value.split('=', 1)[0] not in
-                  ('ProtectHome', 'InaccessiblePaths', 'BindReadOnlyPaths')]
+                  ('ProtectHome', 'InaccessiblePaths', 'BindReadOnlyPaths', 'ProcSubset')]
         result += [
             'RootDirectory=' + str(runtime / 'root'), 'MountAPIVFS=yes',
             'ReadWritePaths=+/home/meteohub +/data',
@@ -165,7 +165,12 @@ else:
 assert os.path.isfile("/opt/etc/ntp/ntp.conf")
 assert os.path.isdir("/opt/share/zoneinfo-posix")
 assert os.path.isfile("/home/meteohub/meteohub-license-5.txt")
+assert os.path.isfile("/etc/resolv.conf")
+routes = open("/proc/net/route").read().splitlines()
+assert routes and routes[0].startswith("Iface")
+assert len(routes) == 1, "unexpected routes in isolated test namespace"
 print("PASS: private config/data writable; system fixtures read-only; resources present")
+print("PASS: resolver file present; isolated routing table readable and empty")
 '''
     preflight = [('--unit=' + unit + '-check') if arg == '--unit=' + unit else arg
                  for arg in command]

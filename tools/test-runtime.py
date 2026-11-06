@@ -73,6 +73,26 @@ class RuntimeTests(unittest.TestCase):
             stage.prepare(self.image)
         self.assertFalse(self.runtime.exists())
 
+    def test_resolver_completion_is_narrow_and_preserves_existing(self):
+        stage.materialize(self.runtime, stage.prepare(self.image), os.getuid(), os.getgid(), 'probe')
+        config = self.runtime / 'root/home/meteohub/meteohub.conf'
+        before = config.read_bytes()
+        resolver = self.runtime / 'root/etc/resolv.conf'
+        self.assertEqual(resolver.read_bytes(), stage.RESOLVER)
+        resolver.unlink()  # Simulate a previously prepared runtime.
+        stage.ensure_resolver(self.runtime)
+        self.assertEqual(resolver.read_bytes(), stage.RESOLVER)
+        stage.ensure_resolver(self.runtime)
+        resolver.write_text('custom resolver')
+        with self.assertRaisesRegex(ValueError, 'differs'):
+            stage.ensure_resolver(self.runtime)
+        self.assertEqual(resolver.read_text(), 'custom resolver')
+        resolver.unlink()
+        resolver.symlink_to('/etc/resolv.conf')
+        with self.assertRaisesRegex(ValueError, 'symlink'):
+            stage.ensure_resolver(self.runtime)
+        self.assertEqual(config.read_bytes(), before)
+
     @unittest.skipUnless(ISOLATION, 'enable --isolation for actual systemd test')
     def test_real_isolation(self):
         if os.geteuid() != 0:
