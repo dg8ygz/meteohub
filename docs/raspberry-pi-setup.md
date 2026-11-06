@@ -984,11 +984,65 @@ RSA-/BIO-/MD5-Pfade, Archivfunktionen oder Exportziele.
 Entwicklungsnachweis: Die tatsächliche systemd-Isolationsprüfung lief auf dem
 x86-Vorbereitungsrechner mit systemd 257 erfolgreich. Dabei wurde ein Konflikt
 mit `InaccessiblePaths=/run` gefunden und vor Veröffentlichung durch eine
-leere schreibgeschützte `/run`-Ansicht ersetzt. Die Ziel-Pi-Isolationsprüfung
-und der ARM-CGI-Probelauf sind noch offen. Die verwendeten Mechanismen sind in
+leere schreibgeschützte `/run`-Ansicht ersetzt. Die verwendeten Mechanismen sind in
 [systemd.exec](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html)
 und [systemd-run](https://www.freedesktop.org/software/systemd/man/latest/systemd-run.html)
 beschrieben.
+
+Der Anwender bestätigte anschließend auf dem Pi:
+
+- Isolationstest erfolgreich, Exit 0, Laufzeit 209 ms.
+- ARM-CGI ausgeführt, 9142 Bytes HTML einschließlich `Content-Type` und
+  Lizenzseite erzeugt; Exit 1, Laufzeit 425 ms. Kein Loader-/Symbolfehler oder
+  Absturz in der gezeigten Ausgabe. Das ist ein erfolgreicher Startnachweis,
+  aber noch keine bestandene Anwendungsabnahme.
+- Fehlend gemeldet: `/etc/network/interfaces`, `/data`, `/etc/thttpd.conf`,
+  `/opt/etc/ntp/ntp.conf`, `/etc/samba/smb.conf`, die Anwendungskonfiguration
+  `/home/meteohub/meteohub.conf` und Lizenztext-Ressourcen.
+- `/proc/net/route` ist durch `ProcSubset=pid` absichtlich ausgeblendet; außerdem
+  hat der Test sein eigenes Netz ohne externe Route. `No gateway found` ist
+  hier keine Diagnose der tatsächlichen Pi-Netzverbindung.
+- Das CGI kündigt das Erzeugen einer Standardkonfiguration an, meldet danach
+  aber einen Dateifehler. Der Kandidat ist schreibgeschützt; eine erfolgreiche
+  Konfigurationserzeugung ist damit nicht nachgewiesen.
+
+#### B5i. Ressourcen für eine eigene Anwendungsumgebung erfassen
+
+Als nächstes die im Herstellerimage vorhandenen Pfade erfassen. Das bestehende
+Inventurwerkzeug unterstützt dazu `--runtime-files`: Es zeigt ausschließlich
+Dateitypen, Größen, Rechte, Linkziele und Lizenzdateinamen. Konfigurationsinhalte,
+Kennwörter und Aktivierungswerte werden nicht gelesen oder ausgegeben.
+Auch Symlinks in übergeordneten Verzeichnissen werden nicht verfolgt, damit
+ein absoluter Link im Image nicht versehentlich auf Dateien des neuen Pi führt.
+
+```sh
+(
+set -e
+set -o pipefail
+umask 077
+cd "$HOME/src/meteohub"
+git pull --ff-only
+findmnt /mnt/meteohub-original
+sudo python3 tools/inspect-original.py --runtime-files \
+  /mnt/meteohub-original |
+  tee "$HOME/meteohub-original/runtime-files.txt"
+)
+```
+
+Der ursprüngliche Mount muss weiterhin schreibgeschützt sein. `MISSING` ist
+bei dieser Bestandsaufnahme ein Befund, keine Aufforderung, eine Datei im
+laufenden System anzulegen. `SYMLINK ... [not followed]` bedeutet, dass die
+angezeigte Zielstruktur separat innerhalb des Images aufgelöst werden muss.
+Zugriffsfehler werden als `ERROR` mit Fehlerstatus gemeldet.
+
+Die nächste Testumgebung benötigt eigene beschreibbare Konfigurations- und
+Datenverzeichnisse sowie die passenden Herstellertexte/Webressourcen.
+Alte Netzwerk-, NTP-, Samba- oder thttpd-Dateien dürfen dafür nicht über die
+Host-Konfiguration kopiert werden. Etwaige Kompatibilitätsdateien gehören nur
+in die getrennte Anwendungssicht. Lizenztexte und eine spätere bewusste Annahme
+der Bedingungen werden von Aktivierung und Hardwarebindung unterschieden;
+vorhandene Annahmemarker aus einer anderen Installation werden nicht übernommen.
+Die Bestandsaufnahme auf dem Ziel-Pi und der Aufbau dieser Umgebung sind offen.
 
 ### B6. Noch offene native Installation und Abnahme
 

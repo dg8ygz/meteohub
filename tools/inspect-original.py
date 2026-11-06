@@ -11,6 +11,58 @@ import subprocess
 import sys
 
 
+def inspect_runtime(root):
+    """Report path metadata only; never follow even a parent-directory symlink."""
+    errors = 0
+
+    def describe(relative):
+        nonlocal errors
+        path = root
+        try:
+            for component in Path(relative).parts:
+                path /= component
+                info = path.lstat()
+                if stat.S_ISLNK(info.st_mode):
+                    print(f"SYMLINK {path.relative_to(root)} -> {os.readlink(path)}"
+                          f" [not followed; requested {relative}]")
+                    return None
+            kind = ('DIRECTORY' if stat.S_ISDIR(info.st_mode) else
+                    'FILE' if stat.S_ISREG(info.st_mode) else 'SPECIAL')
+            print(f"{kind} {relative}: mode={stat.S_IMODE(info.st_mode):04o}"
+                  f" bytes={info.st_size}")
+            return path
+        except FileNotFoundError:
+            print(f"MISSING {relative} [first absent: {path.relative_to(root)}]")
+        except OSError as error:
+            errors += 1
+            print(f"ERROR {relative}: {error}")
+        return None
+
+    for name in (
+        'etc/network/interfaces', 'etc/thttpd.conf', 'opt/etc/ntp/ntp.conf',
+        'etc/samba/smb.conf', 'opt/share/zoneinfo-posix', 'usr/share/zoneinfo',
+        'home/meteohub/meteohub.conf', 'data', 'root/data',
+        'srv/www', 'srv/www/cgi-bin', 'var/run',
+    ):
+        describe(name)
+    home = describe('home/meteohub')
+    if home is not None and home.is_dir():
+        try:
+            names = sorted(p.name for p in home.iterdir())
+            found = [name for name in names if 'license' in name.lower()
+                     or name.endswith('.lic')]
+            if not found:
+                print('MISSING license-related filenames in home/meteohub')
+            for name in found:
+                describe('home/meteohub/' + name)
+        except OSError as error:
+            errors += 1
+            print(f"ERROR license filename listing: {error}")
+    print(f"RESULT: runtime path inventory; {errors} read errors;"
+          " no file contents read or programs executed")
+    return int(errors != 0)
+
+
 def inspect(root):
     errors = 0
     binaries = 0
@@ -79,10 +131,14 @@ def inspect(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("image_root", type=Path, help="Root of the read-only mounted image")
+    parser.add_argument("--runtime-files", action="store_true",
+                        help="Only report configuration/resource path metadata, not contents")
     args = parser.parse_args()
     root = args.image_root.resolve(strict=True)
     if root == Path("/") or not root.is_dir():
         parser.error("Use a separate mounted image directory, not the running root filesystem")
+    if args.runtime_files:
+        return inspect_runtime(root)
     if not shutil.which("readelf"):
         parser.error("readelf is missing; install binutils")
     return inspect(root)
