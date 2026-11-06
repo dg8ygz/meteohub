@@ -1542,6 +1542,47 @@ Exit 0 ohne Datei und eine unveränderte Altdatei geprüft. Das Werkzeug
 wertet diese Fälle als Fehler; eine leere Konfiguration darf nicht als
 Ersatz angelegt werden. Es wurde bislang kein Logger gestartet.
 
+#### B5q. Zielversion 5.1e vom Hersteller beziehen
+
+Das [offizielle Update-Verzeichnis](https://wiki.meteohub.de/wiki/index.php/Updates)
+führt 5.1e als neuestes Update. Das zuvor verwendete vollständige RPi-Image
+enthält hingegen 5.0s. Für eine Installation mit Zielstand 5.1e wird zusätzlich
+[update-v5.1e.upd](https://www.meteohub.de/files/update-v5.1e.upd) benötigt.
+Laut Hersteller enthalten die Updates die vorherigen Änderungen; eine Kette
+aller Zwischenversionen ist nicht erforderlich.
+
+Als normaler Benutzer zunächst ausschließlich herunterladen und prüfen:
+
+```sh
+(
+set -e
+umask 077
+mkdir -p "$HOME/meteohub-original"
+cd "$HOME/meteohub-original"
+test ! -e update-v5.1e.upd
+curl --fail --location --output update-v5.1e.upd \
+  https://www.meteohub.de/files/update-v5.1e.upd
+printf '%s  %s\n' \
+  725bf80186fe2e426e0caad80d6b5994c013fe7f918506fbfb62f5aef2826ad4 \
+  update-v5.1e.upd | sha256sum -c -
+file update-v5.1e.upd
+)
+```
+
+Am 06.11.2026 heruntergeladen und lokal untersucht: 18584769 Bytes,
+gzip-komprimiertes Tar-Archiv mit 404 Einträgen, darunter `rpi/loggerd`,
+`rpi/meteohub.cgi` und weitere Raspberry-Pi-Programme. Der SHA256-Wert oben
+ist unser Vergleichswert des über HTTPS bezogenen Downloads, keine separat
+vom Hersteller veröffentlichte Signatur.
+
+Das Paket enthält auch alte Betriebssystemdateien, eine Bash-Binärdatei,
+Debian-Pakete und Startskripte. Deshalb den historischen Updateablauf nicht
+ungeprüft auf Trixie ausführen und das Archiv nicht über das Host-Dateisystem
+entpacken. Der nächste Schritt ist eine getrennte Vorbereitung der benötigten
+Anwendungsdateien. Die bisherigen Hashlisten und OpenSSL-Anpassungen für 5.0s
+sind noch keine Freigabe für 5.1e. Native Ausführung und Loggerbetrieb dieser
+Version auf dem neuen Pi bleiben bis zur gesonderten Prüfung offen.
+
 ### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat

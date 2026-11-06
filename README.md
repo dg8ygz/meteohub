@@ -122,6 +122,9 @@ nicht in diesen Ordner oder dessen Git-Historie.
 
 ### Original-Binaries beschaffen
 
+Für Zielversion 5.1e zusätzlich das Hersteller-Update verwenden; Download und
+Prüfstatus stehen in [Abschnitt B5q der Pi-Anleitung](docs/raspberry-pi-setup.md#b5q-zielversion-51e-vom-hersteller-beziehen).
+
 1. Die offizielle [Downloadseite, Abschnitt Raspberry PI](https://wiki.meteohub.de/wiki/index.php/Images)
    öffnen. Dort ist bei Prüfung am 05.11.2026 das
    [RPi-Image 5.0s (`mhrpi-v5.0s.rar`)](https://www.meteohub.de/files/mhrpi-v5.0s.rar)
