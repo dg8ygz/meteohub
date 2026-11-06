@@ -717,8 +717,63 @@ Loop-/Mount-Aufbau erneut prüfen. Die Berichtdatei bleibt außerhalb von Git.
 Am Ende wird die Anzahl der ELF-Dateien und Lesefehler ausgegeben. Ein Fehler
 oder null gefundene Programme liefert einen Fehlerstatus. Das Werkzeug wurde
 am Vorbereitungsrechner an der zuvor gesicherten Stationskopie geprüft:
-39 ELF-Dateien, keine Fehler. Das Ergebnis des Herstellerimages auf dem Pi
-steht noch aus und kann davon abweichen.
+39 ELF-Dateien, keine Fehler. Auch der Anwenderlauf auf dem Pi fand im
+Herstellerimage 39 ELF-Dateien und keine Fehler. Dort wurden 68 reguläre
+Dateien (2977089 Bytes) unter `home/meteohub` und 34 (1891614 Bytes) unter
+`srv/www` erfasst.
+
+#### B5e. Zusätzliche Bibliotheken und OpenSSL-Kompatibilität prüfen
+
+Die Inventur des Images 5.0s ergab folgende zusätzliche Anforderungen:
+
+| Programme | Direkte zusätzliche Anforderungen |
+| --- | --- |
+| `meteohub.cgi` | `libgcgi.so.0`, `libssl.so.1.0.0`, `libcrypto.so.1.0.0` |
+| `meteonet`, `meteoschedule` | `libssl.so.1.0.0`, `libcrypto.so.1.0.0` |
+| `meteometar` | `libssl.so.1.0.0` |
+| Weitere native CGI-Programme | teilweise `libgcgi.so.0` |
+| `hidlog`, `em1010`, `wsxxx`, `wsyyy` | je nach Programm alte USB-/FTDI-ABI |
+| `lju3` | `liblabjackusb.so` |
+
+Die USB-Helfer sind nicht alle für jede Wetterstation nötig. Die vorhandene
+Station verwendet beispielsweise eine serielle Pluginquelle. Die endgültige
+Hardwarekonfiguration muss vor Auswahl der dafür nötigen Helfer feststehen.
+
+Im vorherigen Trixie-Labor wurden die OpenSSL-Abhängigkeiten ausgewählter
+Programme auf OpenSSL 3 angepasst, nach Prüfung ihrer importierten Funktionen.
+Wegen abweichender Binaries im Herstellerimage diesen Nachweis nicht ungeprüft
+übertragen. Kein Symlink von `libssl.so.1.0.0` auf eine neue Bibliothek und keine
+alten OpenSSL-Pakete über das Trixie-System installieren. Auch eine erfolgreiche
+Auflösung aller Symbole allein ist noch kein vollständiger ABI-/Funktionstest.
+
+Zunächst nur die betreffenden Funktionsimporte und die CGI-Bibliotheksdateien
+anzeigen, danach den Paketplan für die moderne ARM-Laufzeit simulieren:
+
+```sh
+(
+set -e
+set -o pipefail
+for name in home/meteohub/meteometar home/meteohub/meteonet \
+  home/meteohub/meteoschedule srv/www/cgi-bin/meteohub.cgi; do
+  printf '\nPROGRAMM: %s\n' "$name"
+  readelf -W --dyn-syms "/mnt/meteohub-original/$name" |
+    awk '/ UND / && /OPENSSL_|BIO_|EVP_|RSA_|PEM_|MD5|SSL_|CRYPTO_/'
+done
+sudo find /mnt/meteohub-original/usr/local/lib -maxdepth 1 -name 'libgcgi.so*' -ls
+apt-get -s --no-install-recommends install libssl3t64:armhf python3-pyelftools
+)
+```
+
+Dieser Schritt installiert noch keine Pakete und verändert keine Binaries.
+`python3-pyelftools` ist ein Analysewerkzeug für die folgende ELF-Prüfung;
+`libssl3t64:armhf` stellt die aktuelle 32-Bit-OpenSSL-Laufzeit bereit. Die
+konkrete Paketauflösung und Funktionsliste auf dem Pi sind noch zu prüfen.
+
+Außerdem wichtig für die folgende Übernahme: Das Image erwartet Programme
+unter `/home/meteohub`, das auf dem neuen Pi bereits das persönliche
+Benutzerverzeichnis ist. Diesen Pfad nicht pauschal mit dem Image-Verzeichnis
+überschreiben. Anwendung, persönliche Dateien, Datenpfade und Symlinks sind
+vor dem Einrichten der Dienste getrennt zu behandeln.
 
 ### B6. Noch offene native Installation und Abnahme
 
