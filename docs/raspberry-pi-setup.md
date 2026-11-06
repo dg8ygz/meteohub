@@ -559,6 +559,44 @@ zur Dateientnahme schreibgeschützt geöffnet, nicht über die Trixie-SD-Karte
 geschrieben. Originalprogramme aus dem Image müssen vor ihrer Verwendung gegen
 die im Labor untersuchte Version und deren Abhängigkeiten geprüft werden.
 
+#### B5a. Image entpacken und Partitionstabelle lesen
+
+Beim Download auf dem Pi 4 am 6. November 2026 meldete der Anwender diese
+SHA256-Prüfsumme für das RAR-Archiv:
+
+```text
+eb0ba98acc31580de9416d1b3609ab38287aadb9af4edf1935edcbdff0ef11b2
+```
+
+Die Inhaltsliste enthielt genau `mhrpi-v5.0s.img` mit 1970274304 Bytes
+(rund 1,97 GB). Das ist ein dokumentierter Downloadbefund, keine vom Hersteller
+veröffentlichte Signatur oder Prüfsumme. Vor dem Entpacken ausreichend freien
+Platz prüfen; zusätzlich zum Archiv werden etwa 2 GB für das Image benötigt.
+
+Als normaler Benutzer ausführen:
+
+```sh
+(
+set -e
+umask 077
+cd "$HOME/meteohub-original"
+df -h .
+test ! -e mhrpi-v5.0s.img
+unrar-free -x mhrpi-v5.0s.rar
+stat -c '%n: %s Bytes' mhrpi-v5.0s.img
+file mhrpi-v5.0s.img
+sudo fdisk -l mhrpi-v5.0s.img
+)
+```
+
+Existiert das Image bereits, stoppt `test` den Block vor dem Entpacken. Eine
+vorhandene Datei zunächst prüfen, statt sie zu überschreiben. Falls `fdisk`
+fehlt, das Paket `fdisk` installieren und nur den letzten Befehl wiederholen.
+`fdisk -l` liest die Partitionstabelle der angegebenen Image-Datei; es schreibt
+weder diese Datei noch eine SD-Karte. Sektorgröße, Partitionsanfänge und Größen
+aus der Ausgabe festhalten. Noch keine Partitionsnummer oder Mount-Offsets
+annehmen. Das spätere Öffnen muss schreibgeschützt erfolgen.
+
 ### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
