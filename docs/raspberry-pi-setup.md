@@ -393,9 +393,9 @@ sudo dpkg --audit
 In einer bereits geöffneten Root-Shell kann `sudo` entfallen. Erwartet werden
 eine Versionsausgabe des 32-Bit-Loaders und keine Meldung von `dpkg --audit`.
 Das prüft die grundlegende 32-Bit-Ausführung, noch nicht die Meteohub-Anwendung
-oder deren vollständige Bibliotheksabhängigkeiten. Beim Dokumentieren dieses
-Schritts war die Simulation geprüft; die Installation und Ausführungsprüfung
-auf dem echten Pi standen noch aus.
+oder deren vollständige Bibliotheksabhängigkeiten. Am 6. November 2026 hat der
+Anwender die drei geplanten Pakete auf dem echten Pi 4 installiert. Der Loader
+gab `GLIBC 2.41-12+rpt1+deb13u4` aus; `dpkg --audit` blieb ohne Ausgabe.
 
 ### B3. Basissystem aktualisieren und neu starten
 
@@ -429,7 +429,7 @@ wichtig; die alte Sitzung vor dem Neustart genügt nicht als Zugangsprüfung.
 **Auf dem Pi**, als normaler Benutzer, nicht dauerhaft in einer Root-Shell:
 
 ```sh
-sudo apt-get install --no-install-recommends git python3 ca-certificates
+sudo apt-get install --no-install-recommends git python3 ca-certificates file binutils
 mkdir -p "$HOME/src"
 cd "$HOME/src"
 git clone https://github.com/dg8ygz/meteohub.git
@@ -444,6 +444,13 @@ Erwartet beim dokumentierten Stand: 13 Tests im ersten Lauf, vier im zweiten,
 anschließend eine `PASS`-Zeile des Prozesstests. Dieser verwendet Testdaten und
 benötigt keine Wetterstation. `git rev-parse HEAD` notiert die genaue Version,
 damit ein späterer Fehlerbericht zugeordnet werden kann.
+
+`file` und `readelf` (aus `binutils`) werden anschließend zur Prüfung der
+originalen ARM-Programme benötigt. Sie analysieren deren Format und
+Bibliotheksanforderungen, ohne den Stationslogger starten zu müssen.
+Ein GitHub-Klon enthält nur veröffentlichte Commits. Noch ausschließlich lokal
+vorhandene Korrekturen sind darin nicht enthalten; vor einer Installation den
+vorgesehenen Quellstand mit `git rev-parse HEAD` abgleichen.
 
 **Bis hier ist ein aktuelles Linux mit getesteten Projektquellen eingerichtet.
 Noch keine Meteohub-Weboberfläche und noch kein Stationslogger.** Ein Browser-
