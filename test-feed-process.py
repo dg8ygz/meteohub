@@ -17,3 +17,24 @@ with tempfile.TemporaryDirectory() as d:
   print('PASS: real process defers wind, emits actual t2 before wind, no replay after restart')
  finally:
   if proc.poll() is None:proc.kill();proc.wait()
+
+# A closed reader must end the plugin, allowing loggerd's pclose/reconnect.
+# A failed write must not be reported as a successfully forwarded record.
+with tempfile.TemporaryDirectory() as d:
+ p=pathlib.Path(d);f=p/'feed.json';state=p/'state'
+ ts=time.strftime('%Y%m%d%H%M%S',time.gmtime())
+ f.write_text(json.dumps({'source_read_at':time.time(),'source_format':'plugin',
+                         'lines':[ts+' t2 90']}))
+ proc=subprocess.Popen([sys.executable,str(script),str(f),str(state)],
+                       stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+ proc.stdout.close()
+ try:
+  assert proc.wait(timeout=5)==1
+  err=proc.stderr.read().decode()
+  assert 'reader closed; exiting' in err,err
+  rows=[json.loads(x) for x in (state/'provenance.jsonl').read_text().splitlines()]
+  assert not any('plugin' in r for r in rows),rows
+  assert not (state/'cursor.json').exists(), 'failed delivery checkpointed'
+  print('PASS: closed reader exits promptly without false delivery or checkpoint')
+ finally:
+  if proc.poll() is None:proc.kill();proc.wait()

@@ -82,12 +82,19 @@ def main():
                             else:rejected.append((oldraw,'startup wind expired waiting for t2'))
                         pending=[]
                 for raw,converted,age in deliver:
-                    log.write(json.dumps({'received_at':now,'source':raw,'plugin':converted,'age_seconds':age})+'\n')
                     print(converted,flush=True)
+                    log.write(json.dumps({'received_at':now,'source':raw,'plugin':converted,'age_seconds':age})+'\n')
                 for raw,reason in rejected:
                     log.write(json.dumps({'received_at':now,'rejected':raw,'reason':reason})+'\n')
                 temp=cp.with_suffix('.tmp');temp.write_text(json.dumps({'last':c.last,'seen':dict(c.seen),'pending_wind':pending}));os.replace(temp,cp)
                 previous=b
+            except BrokenPipeError:
+                # The native logger closes this pipe before waiting for its
+                # plugin to exit. Retrying forever deadlocks that reconnect.
+                print('FEED reader closed; exiting for logger reconnect',file=sys.stderr,flush=True)
+                # Avoid a second flush of the broken pipe during interpreter exit.
+                with open(os.devnull,'w') as sink: os.dup2(sink.fileno(),sys.stdout.fileno())
+                raise SystemExit(1)
             except (OSError,ValueError,KeyError) as e: print('FEED unavailable: '+str(e),file=sys.stderr,flush=True)
             time.sleep(2)
 if __name__=='__main__':main()

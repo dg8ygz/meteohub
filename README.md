@@ -222,6 +222,9 @@ Betriebsbelege werden nicht in ein öffentliches Repository exportiert.
 
 ## Bekannte Grenzen und noch ausstehende Arbeit
 
+Hinweise zum sicheren Mitlesen und zum behobenen Pipe-Hänger stehen in
+[Feed und Logger-Wiederanlauf](docs/feed-recovery.md).
+
 - Die durchgehende 24-Stunden-Abnahme und der vollständige Datensatzabgleich
   sind noch nicht abgeschlossen. Frühere Punktprüfungen ersetzen dies nicht.
 - Produktive Archiv-/Aggregat-/Exportintegration, vollständige Wartungsabnahme
