@@ -638,8 +638,49 @@ Zum späteren Rückbau zuerst eventuell eingehängte Image-Partitionen aushänge
 danach ausschließlich das überprüfte zugehörige Loop-Gerät mit
 `sudo losetup --detach /dev/loopN` lösen (`loopN` durch die ermittelte Nummer
 ersetzen). Erst anschließend die Merkerdatei entfernen. Kein `--detach-all`
-verwenden. Ein erfolgreicher Loop-Aufbau und Dateisystemtyp sind bis zur
-nächsten Anwenderausgabe noch nicht bestätigt.
+verwenden. Der Anwender bestätigte anschließend `/dev/loop1` mit `RO=1` für
+Gerät und alle drei Partitionen; Partition 2 ist ext3, UUID
+`136bbacc-bdec-4347-823a-a3eb4178aa9e`. Diese Loop-Nummer gilt nur für diese
+Sitzung, nicht für andere Installationen oder nach einem Reboot.
+
+#### B5c. Linux-Partition ohne Journal-Wiederherstellung mounten
+
+Zuerst die gespeicherte Gerätezuordnung und den Schreibschutz prüfen. Danach
+die Image-Partition mit `ro,noload,nodev,nosuid,noexec` einhängen. `noload`
+verhindert die Journal-Wiederherstellung; siehe die
+[Kernel-Dokumentation](https://www.kernel.org/doc/html/latest/admin-guide/ext4.html#options).
+Bei Hinweisen auf ein inkonsistentes Dateisystem nicht schreibbar remounten
+oder das Originalimage reparieren, sondern den Befund zuerst klären.
+
+```sh
+(
+set -e
+cd "$HOME/meteohub-original"
+meteohub_loop=$(cat image-loop.device)
+test "$(sudo losetup --noheadings --raw --output BACK-FILE "$meteohub_loop")" = "$PWD/mhrpi-v5.0s.img"
+test "$(sudo blockdev --getro "$meteohub_loop")" = 1
+sudo mkdir -p /mnt/meteohub-original
+if mountpoint -q /mnt/meteohub-original; then
+  echo "STOP: Image-Verzeichnis ist bereits gemountet."
+  exit 1
+fi
+test -z "$(ls -A /mnt/meteohub-original)"
+sudo mount -t ext3 -o ro,noload,nodev,nosuid,noexec "${meteohub_loop}p2" /mnt/meteohub-original
+findmnt /mnt/meteohub-original
+sudo ls -ld /mnt/meteohub-original/home/meteohub /mnt/meteohub-original/srv/www
+sudo file /mnt/meteohub-original/home/meteohub/loggerd
+sudo readelf -h /mnt/meteohub-original/home/meteohub/loggerd
+sudo readelf -l /mnt/meteohub-original/home/meteohub/loggerd | grep interpreter
+sudo readelf -d /mnt/meteohub-original/home/meteohub/loggerd | grep NEEDED
+)
+```
+
+Dies liest ELF-Metadaten; der Logger wird nicht gestartet. Bei abweichenden
+Pfaden die Image-Verzeichnisse prüfen, nicht Dateien aus dem laufenden System
+als Ersatz verwenden. Die Ausgabe dieses Schritts ist zunächst noch offen.
+Mount- und Binärprüfung müssen vor der Übernahme bestätigt werden. Zum späteren
+Aushängen `sudo umount /mnt/meteohub-original` verwenden, dann das zugehörige
+Loop-Gerät wie oben beschrieben lösen.
 
 ### B6. Noch offene native Installation und Abnahme
 
