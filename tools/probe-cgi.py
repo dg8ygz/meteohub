@@ -6,6 +6,7 @@ from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import time
@@ -90,17 +91,42 @@ def verify(candidate):
             raise ValueError('Candidate hash mismatch: ' + item['target'])
 
 
+def logger_config_summary(path):
+    """Only report routing/type directives, never credentials or full configuration."""
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 262144:
+        raise ValueError('Missing, linked or oversized logger.conf')
+    result=[]
+    for line in path.read_text(errors='replace').splitlines():
+        parts=line.split()
+        if not parts:continue
+        if parts[0]=='@WEATHERSTATION':
+            if len(parts)<4 or any(not re.fullmatch(r'[0-9]+',s) for s in parts[1:4]):
+                raise ValueError('Unexpected weather station directive')
+            result.append(' '.join(parts[:4])+' [remaining settings withheld]')
+        elif parts[0] in ('@DATAPATH','@ERRORLOG'):
+            if len(parts)==2 and re.fullmatch(r'/[A-Za-z0-9_./-]+',parts[1]):
+                result.append(' '.join(parts))
+            else:result.append(parts[0]+' [value withheld]')
+    if not result:raise ValueError('No expected logger directives generated')
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('candidate', type=Path)
     parser.add_argument('--runtime', type=Path, help='Private test root from stage-runtime.py')
-    parser.add_argument('--isolation-only', action='store_true',
+    mode=parser.add_mutually_exclusive_group()
+    mode.add_argument('--isolation-only', action='store_true',
                         help='Run only the harmless isolation preflight, not the CGI')
+    mode.add_argument('--generate-logger-config', action='store_true',
+                      help='Run native CGI -2 in the private runtime; do not start loggerd')
     args = parser.parse_args()
     if os.geteuid() == 0:
         parser.error('Run as the normal login user; sudo is used only for systemd-run')
     candidate = args.candidate.resolve(strict=True)
     runtime = args.runtime.resolve(strict=True) if args.runtime else None
+    if args.generate_logger_config and runtime is None:
+        parser.error('--generate-logger-config requires --runtime')
     # systemd path-list syntax has separators/expansions; do not interpolate them.
     if any(c.isspace() or c in ':\\%"\'' for c in str(candidate) + str(runtime or '')):
         parser.error('Use a candidate path without whitespace or systemd special characters')
@@ -114,6 +140,13 @@ def main():
         # Preserve the mutable application config before each GET probe.
         (report / 'meteohub.conf.before').write_bytes(
             (runtime / 'root/home/meteohub/meteohub.conf').read_bytes())
+    previous_logger=None
+    if args.generate_logger_config:
+        logger_config=runtime/'root/home/meteohub/logger.conf'
+        if logger_config.is_symlink():raise ValueError('Linked logger.conf refused')
+        if logger_config.exists():
+            previous_logger=(logger_config.stat().st_ino,logger_config.stat().st_mtime_ns)
+            (report/'logger.conf.before').write_bytes(logger_config.read_bytes())
     unit = 'meteohub-cgi-probe-' + str(time.time_ns())
     command = [
         'sudo', '-n', 'systemd-run', '--wait', '--pipe', '--collect',
@@ -126,13 +159,18 @@ def main():
         '/usr/bin/env', '-i', 'PATH=/usr/bin:/bin', 'HOME=/home/meteohub',
         'LANG=C', 'LD_BIND_NOW=1',
         'LD_LIBRARY_PATH=/home/meteohub/lib:/usr/lib/arm-linux-gnueabihf',
-        'GATEWAY_INTERFACE=CGI/1.1', 'SERVER_PROTOCOL=HTTP/1.1',
+    ]
+    if args.generate_logger_config:
+        command += ['METEO_PREPARING=1']
+    else:
+        command += ['GATEWAY_INTERFACE=CGI/1.1', 'SERVER_PROTOCOL=HTTP/1.1',
         'SERVER_NAME=localhost', 'SERVER_PORT=80', 'REMOTE_ADDR=127.0.0.1',
         'REQUEST_METHOD=GET', 'QUERY_STRING=page=0',
         'SCRIPT_NAME=/cgi-bin/meteohub.cgi', 'DOCUMENT_ROOT=/srv/www',
-    ]
+        ]
     print('REPORT:', report, flush=True)
-    print(('Isolation preflight only; CGI will not be started.' if args.isolation_only else
+    print(('Private logger configuration generation; no logger started; 30s limit.' if args.generate_logger_config else
+           'Isolation preflight only; CGI will not be started.' if args.isolation_only else
            'One CGI request, no network/USB access, no actual home access; 30s limit.'), flush=True)
     # Exercise the same isolation before allowing the proprietary executable.
     check = '''import errno, os, socket
@@ -189,6 +227,7 @@ print("PASS: resolver file present; isolated routing table readable and empty")
         print('PASS: isolation-only check complete; CGI not started.')
         return 0
     command += ['/home/meteohub/bin/meteohub.cgi']
+    if args.generate_logger_config:command += ['-2']
     with (report / 'response.txt').open('wb') as stdout, (report / 'stderr.txt').open('wb') as stderr:
         try:
             result = subprocess.run(command, stdin=subprocess.DEVNULL,
@@ -200,10 +239,23 @@ print("PASS: resolver file present; isolated routing table readable and empty")
             code = 124
     (report / 'result.json').write_text(json.dumps({
         'unit': unit, 'systemd_run_exit': code,
-        'status': 'CGI smoke test only; functionality and activation not accepted',
+        'status': ('Logger config generation only; no logger/archive acceptance' if args.generate_logger_config else
+                   'CGI smoke test only; functionality and activation not accepted'),
         'properties': properties(candidate, runtime),
     }, indent=2) + '\n')
     print('SYSTEMD_RUN_EXIT:', code)
+    if args.generate_logger_config:
+        if code:
+            print('STOP: generator failed; private diagnostics:',report/'stderr.txt')
+            return code
+        summary=logger_config_summary(logger_config)
+        current=(logger_config.stat().st_ino,logger_config.stat().st_mtime_ns)
+        if current==previous_logger:
+            raise ValueError('Existing logger.conf was not regenerated; do not use stale settings')
+        print('GENERATED: logger.conf;',logger_config.stat().st_size,'bytes')
+        print('\n'.join(summary))
+        print('No logger started. Full configuration and previous copies remain private.')
+        return 0
     print('RESPONSE_BYTES:', (report / 'response.txt').stat().st_size)
     print('--- launcher / CGI stderr (first 6000 characters) ---')
     print((report / 'stderr.txt').read_text(errors='replace')[:6000])

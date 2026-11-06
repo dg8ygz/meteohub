@@ -1467,6 +1467,62 @@ prüfen Teilzeilen, fehlerhafte/überlange Eingaben, ausbleibende Sendebefehle,
 Verbindungswiederaufnahme, das Verwerfen alter Snapshots sowie die Übergabe an
 den vorhandenen Plugin-Parser. Die zugehörigen Testdaten sind synthetisch.
 
+Native Abnahme des reinen Zubringers am 06.11.2026 auf dem neuen Pi:
+90,19 Sekunden, 15 Datensätze, eine Verbindung, keine Formatverwerfungen,
+keine unvollständigen Zeilen und kein Überlauf. Empfangen wurden Wind,
+Außentemperatur, Solarstrahlung, UV, generische Daten sowie die weiteren
+Temperatur-/Kombisensoren. Regen wurde in diesem kurzen Fenster nicht
+empfangen; daraus folgt kein Ausfallnachweis. Der native Logger lief dabei
+noch nicht.
+
+Von THB-Kombisensoren wird im Spiegelpfad nur Druck in den Anzeigeindex
+übernommen. Temperatur und Feuchte dieser Sensoren werden nicht weitergegeben;
+auch eine plausible THB-Temperatur wird nicht als Ersatzquelle genutzt.
+Details und Abgrenzung zum nativen Roharchiv stehen in
+[feed-recovery.md](feed-recovery.md#druck-aus-dem-kombisensor-getrennt-übernehmen).
+
+#### B5p. Native Logger-Konfiguration vorbereiten
+
+Vor dem Start muss die aktuelle native Konfiguration geprüft werden. Dazu
+führt der bestehende Probelauf das vorbereitete CGI einmal mit `-2` aus.
+Das geschieht mit denselben Datei-, Geräte- und Netzwerkgrenzen wie der
+CGI-Probelauf. `meteohub.conf` und eine bereits vorhandene `logger.conf`
+werden zuvor im privaten Berichtverzeichnis gesichert. Währenddessen keine
+Einstellungen in der Browseroberfläche ändern.
+
+Als normaler Benutzer auf dem Pi (Pfade auf die tatsächlich verwendete
+Testkopie anpassen):
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+PYTHONDONTWRITEBYTECODE=1 python3 test-feed-process.py
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.0s-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.0s-runtime" \
+  --generate-logger-config
+)
+```
+
+Erwartet werden ein erfolgreicher Generatorlauf und `GENERATED: logger.conf`.
+Die Ausgabe zeigt nur Daten-/Logpfade und numerische Stationskennungen;
+weitere Stationsparameter und Zugangsdaten bleiben privat. Eine alte, nicht
+neu erzeugte Konfiguration wird ausdrücklich abgewiesen. Dieser Schritt
+startet noch keinen Logger und installiert keinen Bootdienst.
+
+Die Stationsart muss vor dem eigentlichen Spiegelbetrieb zum Plugin-Eingang
+passen; vorhandene Direkt-USB-Einstellungen dürfen nicht ungeprüft übernommen
+werden. Die dauerhafte TCP-Aufnahme, der Dateizugriff aus der isolierten
+Loggerumgebung und die tatsächliche native Archivierung werden danach geprüft.
+
+Entwicklungstest: Ein synthetisches CGI hat unter den tatsächlichen
+systemd-Isolationsregeln `-2` und die bereinigte Umgebung geprüft und seine
+Konfiguration ausschließlich im privaten Testbaum geschrieben. Zwei weitere
+Tests prüfen die begrenzte Ausgabe und das Zurückweisen ungeeigneter Dateien.
+Die native Generierung auf dem Ziel-Pi ist noch separat abzunehmen.
+
 ### B6. Noch offene native Installation und Abnahme
 
 Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
