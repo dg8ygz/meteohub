@@ -897,8 +897,11 @@ einschließlich unveränderter ausführbarer Abschnitte, Manifestabgleich,
 unbekannter Importe, erneuter Anpassung, Hashfehler, Symlinks und belegtem
 Zielverzeichnis. Diese Stationskopie unterscheidet sich vom Herstellerimage;
 der eigentliche Import verweigerte sie erwartungsgemäß wegen Hashabweichung,
-bevor ein Zielverzeichnis entstand. Der obige native Lauf mit dem konkreten
-5.0s-Image steht noch aus.
+bevor ein Zielverzeichnis entstand. Der Anwender bestätigte anschließend auch
+den nativen Lauf mit dem konkreten 5.0s-Image: drei Testmethoden bestanden,
+sechs Dateien erfolgreich vorbereitet. Logger und `libgcgi` blieben bytegleich;
+bei `meteometar` wurde ein Metadateneintrag geändert, bei `meteonet`,
+`meteoschedule` und `meteohub.cgi` jeweils vier.
 
 Das Zielverzeichnis muss neu sein. Bei einem Abbruch nicht blind löschen oder
 denselben Kandidaten überschreiben; zuerst die Ursache und das Manifest prüfen.
@@ -929,6 +932,63 @@ Dies ist weder eine vollständige Prüfung aller Funktionsaufrufe noch ein
 Meteohub-Betriebstest. Diesen Schritt nicht durch einen direkten Programmstart
 ersetzen: Betriebsverzeichnisse, Konfiguration, Rechte und Dienstisolation sind
 erst noch einzurichten.
+
+Der Anwender bestätigte die erfolgreiche Loader-Prüfung aller fünf Programme.
+OpenSSL 3 und die weiteren ARM-Bibliotheken werden aus
+`/usr/lib/arm-linux-gnueabihf` geladen; nur `libgcgi.so.0` kommt aus dem privaten
+Kandidatenverzeichnis. Keine fehlenden Bibliotheken oder Versionsfehler in der
+Ausgabe. Ein versehentlich mitkopierter Erklärungssatz verursachte lediglich
+`Wenn: Kommando nicht gefunden`; die beiden Befehlsblöcke liefen erfolgreich.
+Nur Inhalte der Befehlsblöcke ins Terminal kopieren.
+
+#### B5h. Einmaliger CGI-Probelauf in einer abgeschirmten Umgebung
+
+`tools/probe-cgi.py` prüft zuerst die Hashes der vorbereiteten Dateien gegen
+ihr Manifest. Anschließend startet es über `sudo systemd-run` einen kurzlebigen
+Testdienst unter der normalen Benutzer-ID. Das wirkliche Homeverzeichnis wird
+ausgeblendet; nur der Kandidat erscheint schreibgeschützt unter
+`/home/meteohub`. Netzwerk und Geräte werden getrennt, Host-Laufzeitsockets
+ausgeblendet und Änderungen am Systemdateibaum gesperrt. Laufzeitlimit 30 s,
+Speicherlimit 128 MiB, keine dauerhafte Unit und kein Autostart.
+
+Ein harmloser Python-Prozess prüft zunächst in derselben Umgebung Benutzer-ID,
+sichtbares Home, Schreibschutz, fehlende Host-Sockets/USB-Geräte und fehlende
+ausgehende Route. Nur wenn diese Prüfung besteht, folgt ein CGI-Aufruf mit
+`GET page=0` und `LD_BIND_NOW=1`. Letzteres erzwingt die sofortige Auflösung
+der regulären dynamischen Funktionsverweise; tatsächlich benutzte Funktionen
+und nachgeladene Bibliotheken müssen trotzdem gesondert geprüft werden.
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.0s-openssl3"
+)
+```
+
+Als normaler Benutzer starten, nicht mit `sudo python3`. Das Werkzeug fragt
+selbst nach sudo für die zeitlich begrenzten Dienste. Berichte entstehen in
+einem neuen privaten `cgi-probe-*`-Verzeichnis neben dem Kandidaten: vollständige
+CGI-Ausgabe, Fehlerausgabe, Isolationstest und (nach CGI-Ausführung) Ergebnis.
+Ein Fehler im Isolationstest verhindert den CGI-Aufruf. Ein Prozessfehler oder
+Timeout ist ein Diagnosebefund, kein bestandener Funktionstest.
+
+Hier fehlen absichtlich noch die Anwendungs-Konfiguration und Webressourcen.
+Eine Meldung über fehlende Dateien oder Aktivierung kann daher auftreten. Es
+wird keine Lizenz angenommen, keine Hardwareidentität ersetzt und noch kein
+Logger gestartet. Der GET-Probelauf allein testet insbesondere nicht sämtliche
+RSA-/BIO-/MD5-Pfade, Archivfunktionen oder Exportziele.
+
+Entwicklungsnachweis: Die tatsächliche systemd-Isolationsprüfung lief auf dem
+x86-Vorbereitungsrechner mit systemd 257 erfolgreich. Dabei wurde ein Konflikt
+mit `InaccessiblePaths=/run` gefunden und vor Veröffentlichung durch eine
+leere schreibgeschützte `/run`-Ansicht ersetzt. Die Ziel-Pi-Isolationsprüfung
+und der ARM-CGI-Probelauf sind noch offen. Die verwendeten Mechanismen sind in
+[systemd.exec](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html)
+und [systemd-run](https://www.freedesktop.org/software/systemd/man/latest/systemd-run.html)
+beschrieben.
 
 ### B6. Noch offene native Installation und Abnahme
 
