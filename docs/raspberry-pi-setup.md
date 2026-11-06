@@ -1785,6 +1785,67 @@ die Dropbear-Prüfung kein Statusnachweis für den tatsächlichen OpenSSH-Dienst
 des Pi. Loggerstart, Stationsauswahl und Messwertarchivierung sind weiterhin
 nicht abgenommen.
 
+**6. Station als Plug-in konfigurieren und den Adapter vorbereiten:**
+
+In der Weboberfläche unter Weather Station eine benutzerdefinierte Station
+anlegen und Anschlussart **Plug-in** mit Pfad `/home/meteohub/plugin.sh`
+einstellen. Name, tatsächliche Standorthöhe und Berechnungseinstellungen sind
+stationsbezogen zu wählen. Für diesen Spiegeltest ist genau eine Station mit
+Index 0 vorgesehen. Eine Meldung „Data Logging restarted“ in der Oberfläche
+ist kein Nachweis für einen laufenden Logger in der isolierten Testumgebung.
+Keine USB-Schnittstelle öffnen: Die Originalstation bleibt alleiniger Leser
+ihrer angeschlossenen Konsole.
+
+Am 07.11.2026 meldete der Betreiber Station 0 (User-defined), Anschlussart
+Plug-in und den vorgesehenen Plugin-Pfad; Data Logging stand weiterhin auf
+stopped. Noch keine Sensorzuweisung. Die Anzeige ist ein UI-Befund; im nächsten
+Schritt muss die daraus generierte native Konfiguration dazu passen.
+
+Nach dem Speichern während der folgenden Befehle keine parallelen
+Web-Konfigurationsänderungen vornehmen:
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-tcp-plugin-prepare.py
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime" \
+  --generate-logger-config
+python3 tools/prepare-tcp-plugin.py \
+  "$HOME/meteohub-staging/5.1e-runtime"
+)
+```
+
+Der neue Helfer akzeptiert ausschließlich eine native Stationszeile mit
+`@WEATHERSTATION 0 9 5 /home/meteohub/plugin.sh` sowie die privaten Daten- und
+Logpfade aus Schritt 4. Er erzeugt den Wrapper und die geprüfte Python-Datei
+nur im privaten `runtime/root/home/meteohub`, nicht im wirklichen Login-Home.
+Vorhandene Dateien werden nicht überschrieben. Das native `logger.conf` wird
+bei diesem Vorbereitungsschritt nicht umgeschrieben.
+
+Der spätere TCP-Zubringer schreibt auf dem Host nach
+`5.1e-runtime/root/data/tcp-feed/feed.json`; das isolierte Plugin liest dieselbe
+Datei als `/data/tcp-feed/feed.json`. Es benötigt dafür weder einen eigenen
+Netzwerkzugang noch USB-Geräte. Sein Zustand und seine Herkunftsnachweise
+liegen unter `/data/tcp-feed/state`. Noch wird kein TCP-Zubringer oder Logger
+gestartet; eine fehlende `feed.json` ist in diesem Zustand normal.
+
+Die Druckregel gilt weiter: Nur der plausible THB-Druck wird separat als
+`pressure_only` in den Herkunftsnachweisen gehalten und kann vom Anzeigeindex
+übernommen werden. THB-Temperatur und -Feuchtigkeit gelangen nicht zum nativen
+Logger. Ein nativer THB-Roharchiveintrag wird dadurch nicht erzeugt; die
+getrennte Druckanzeige muss später zusammen mit dem Index eingerichtet werden.
+
+Vier lokale Vorbereitungstests bestanden: tatsächliche Plugin-Datei und
+unveränderte Konfiguration, Ablehnung falscher/fehlender/mehrerer Stationen,
+abweichender Pfade, bestehender Ziele und Symlinks. Die vorhandenen echten
+Prozesstests prüfen zusätzlich Temperatur-vor-Wind, Wiederanlauf ohne Replay,
+Drucktrennung samt Index sowie das Beenden nach geschlossenem Leser. Der
+Produktionsnachweis mit frischem TCP-Eingang und nativem Logger bleibt offen.
+
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
 Versions- und Buildanzeige, generierte Logger-Konfiguration und echte

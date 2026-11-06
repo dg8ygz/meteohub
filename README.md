@@ -84,6 +84,7 @@ und das Einbettungsbeispiel unter [Anzeige und Datenbehandlung](#anzeige-und-dat
 | `tools/probe-cgi.py` | Führt nach einer echten Isolationsprüfung einen CGI-Probelauf oder die native Konfigurationsgenerierung (`-1`) aus; keine Webserver- oder Loggerinstallation. |
 | `tools/stage-runtime.py`, `tools/test-runtime.py` | Bereiten einen privaten Konfigurations-/Datenbaum für den CGI-Test vor und prüfen Dateiauswahl sowie optional die tatsächliche systemd-Isolation. |
 | `tools/web-test.py`, `tools/test-web.py` | Passwortgeschützte Browser-Testoberfläche über Loopback/SSH und echte HTTP-Tests mit synthetischem CGI; keine Bootfreigabe oder Loggerinstallation. |
+| `tools/prepare-tcp-plugin.py`, `tools/test-tcp-plugin-prepare.py` | Prüfen die native Plug-in-Konfiguration und legen den Snapshot-Adapter im privaten Testbaum an; starten weder TCP-Zubringer noch Logger. |
 | `tools/tcp-feed.py`, `tools/test-tcp-feed.py` | Empfangen den bestehenden Plugin-Kopierstrom einer Station ausschließlich lesend und erstellen begrenzte JSON-Snapshots für das Spiegel-Plugin. |
 | `cgi_compat.sh` | Ergänzt bei leerem GET des nativen Haupt-CGI die Startseite. |
 | `gnuplot_compat.py` | Übersetzt alte Plot-Präambeln für das Distributions-gnuplot; verändert keine Roharchive. |
