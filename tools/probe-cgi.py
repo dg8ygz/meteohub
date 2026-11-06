@@ -94,6 +94,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('candidate', type=Path)
     parser.add_argument('--runtime', type=Path, help='Private test root from stage-runtime.py')
+    parser.add_argument('--isolation-only', action='store_true',
+                        help='Run only the harmless isolation preflight, not the CGI')
     args = parser.parse_args()
     if os.geteuid() == 0:
         parser.error('Run as the normal login user; sudo is used only for systemd-run')
@@ -130,7 +132,8 @@ def main():
         'SCRIPT_NAME=/cgi-bin/meteohub.cgi', 'DOCUMENT_ROOT=/srv/www',
     ]
     print('REPORT:', report, flush=True)
-    print('One CGI request, no network/USB access, no actual home access; 30s limit.', flush=True)
+    print(('Isolation preflight only; CGI will not be started.' if args.isolation_only else
+           'One CGI request, no network/USB access, no actual home access; 30s limit.'), flush=True)
     # Exercise the same isolation before allowing the proprietary executable.
     check = '''import errno, os, socket
 assert os.geteuid() != 0
@@ -182,6 +185,9 @@ print("PASS: resolver file present; isolated routing table readable and empty")
     if checked.returncode:
         print('STOP: isolation check failed; CGI NOT started.')
         return checked.returncode
+    if args.isolation_only:
+        print('PASS: isolation-only check complete; CGI not started.')
+        return 0
     command += ['/home/meteohub/bin/meteohub.cgi']
     with (report / 'response.txt').open('wb') as stdout, (report / 'stderr.txt').open('wb') as stderr:
         try:

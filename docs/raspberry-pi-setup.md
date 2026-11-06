@@ -1275,7 +1275,114 @@ Ein späterer bewusster Wechsel auf den Distributions-Standarddienst kann sie
 mit `sudo systemctl unmask lighttpd.service lighttpd-maint.service lighttpd-maint.timer`
 entfernen; vorher muss dessen Konfiguration geprüft werden. Das Entsperren
 gehört **nicht** zum nächsten Testschritt. Installation und Nachprüfung auf dem
-Ziel-Pi sind noch offen.
+Ziel-Pi sind bestätigt: alle vier Pakete eingerichtet, leeres dpkg-Audit,
+`lighttpd/1.4.79`, `/usr/bin/htpasswd` vorhanden, alle drei Units maskiert/inaktiv
+und weiterhin ausschließlich SSH als TCP-Listener. Die ausgegebenen
+`Failed to preset unit`-Meldungen entstanden durch die vorgesehenen Maskierungen;
+die Paketinstallation selbst wurde abgeschlossen.
+
+#### B5n. Passwortgeschützte Browser-Testoberfläche über SSH
+
+`tools/web-test.py` verwendet die bereits geprüften Kandidaten und den privaten
+Runtime-Baum. Die Vorbereitung fragt interaktiv zweimal nach einem **neuen
+Webpasswort** für den Benutzernamen `meteohub`. Das ist unabhängig vom SSH-Konto.
+Das Passwort nicht in Befehlsargumente, Git oder Chat schreiben. Nur sein
+bcrypt-Hash wird privat unter `root/opt/meteohub-web/users.htpasswd` gespeichert.
+Eine bereits vorhandene Vorbereitung wird nicht überschrieben.
+
+```sh
+(
+set -e
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 tools/web-test.py prepare \
+  "$HOME/meteohub-staging/5.0s-openssl3" \
+  "$HOME/meteohub-staging/5.0s-runtime"
+python3 tools/web-test.py start \
+  "$HOME/meteohub-staging/5.0s-openssl3" \
+  "$HOME/meteohub-staging/5.0s-runtime"
+)
+```
+
+`start` prüft zuerst Hashes, Runtime-Eigentümer, Passwortdateirechte, unveränderte
+Webkonfiguration und die tatsächliche Isolation. Danach folgen lighttpds
+Konfigurations-/Modulprüfung und eine private Sicherung der aktuellen
+Meteohub-Konfiguration. Erst dann wird die temporäre Socket-/Dienstkombination
+`meteohub-web-test` gestartet. Der abschließende lokale Abruf **ohne** Anmeldung
+muss HTTP 401 liefern; sonst stoppt das Werkzeug Socket und Dienst wieder.
+
+Nur systemd lauscht auf **127.0.0.1:18090** und reicht den bereits geöffneten
+Socket an lighttpd weiter. Der Webprozess läuft als normaler Benutzer im
+privaten Root und weiterhin in seinem isolierten Netz ohne ausgehende Route.
+Die Browser-Verbindung funktioniert über diesen übergebenen Socket; dafür wird
+das Netz des CGI nicht mit dem Host-Netz zusammengelegt. Programme/Bibliotheken
+bleiben schreibgeschützt; Schreibzugriff besteht nur auf die privaten
+Anwendungs-/Datenverzeichnisse und temporäre Dateien. Authentifizierung gilt
+auch für statische Ressourcen. Der CGI-Launcher führt ausschließlich das
+vorbereitete `meteohub.cgi` aus und ergänzt beim leeren GET `page=0`.
+
+Nach `READY` auf dem **eigenen PC**, nicht in der Pi-Shell, eine zweite
+SSH-Verbindung mit lokaler Portweiterleitung öffnen. Beispiel bei funktionierender
+Namensauflösung (sonst `raspberrypi.local` durch die bekannte Pi-IP ersetzen):
+
+```sh
+ssh -o ExitOnForwardFailure=yes -N \
+  -L 18090:127.0.0.1:18090 meteohub@raspberrypi.local
+```
+
+Dieses Terminal offen lassen. Bei PuTTY stattdessen unter
+**Connection → SSH → Tunnels** `Source port: 18090`,
+`Destination: 127.0.0.1:18090`, Typ **Local**, dann **Add** und **Apply** in der
+bestehenden Sitzung einstellen. Keine Freigabe lokaler Ports für andere Hosts
+aktivieren. Der Hostschlüssel muss dem vorher geprüften Pi entsprechen.
+
+Im Browser auf dem PC öffnen:
+
+```text
+http://127.0.0.1:18090/cgi-bin/meteohub.cgi
+```
+
+Mit Webbenutzer `meteohub` und dem gerade gewählten **Webpasswort** anmelden.
+Den SSH-Tunnel mit dem SSH-Kennwort beziehungsweise Schlüssel authentifizieren,
+nicht mit diesem Webpasswort. HTTP bleibt innerhalb der lokalen Endpunkte;
+der Transport zwischen PC und Pi läuft durch SSH.
+
+Die Bedingungen in der Oberfläche selbst lesen und nur bei Einverständnis
+bestätigen. Das Werkzeug nimmt nichts automatisch an und importiert keine
+Aktivierung. Diese erste Testoberfläche ist keine produktive Wetterstation.
+Insbesondere spiegeln die alten Netzwerk-/NTP-/Samba-Einstellungsseiten nicht
+die tatsächlichen Hostdienste wider; Änderungen dort nicht als Hostkonfiguration
+ausgeben. Der bisherige Netzwerkhinweis im isolierten Test kann weiterhin
+erscheinen. Stationsaufnahme, Datenübernahme, Aktivierung und dauerhafter
+Bootbetrieb bleiben eigene Abnahmeschritte.
+
+Stoppen auf dem Pi:
+
+```sh
+sudo systemctl stop meteohub-web-test.socket meteohub-web-test.service
+```
+
+Die Units sind temporär, nicht für Boot aktiviert. Sie laufen bis zum Stoppen
+oder Neustart; es gilt kein 30-Sekunden-Limit wie beim einzelnen CGI-Probelauf.
+Zum erneuten Start nur `web-test.py start` mit denselben Pfaden ausführen, nicht
+die Passwort-/Konfigurationsvorbereitung wiederholen. Bei einem Startfehler:
+
+```sh
+sudo systemctl status meteohub-web-test.socket meteohub-web-test.service --no-pager
+sudo journalctl -u meteohub-web-test.service -n 60 --no-pager
+```
+
+Entwicklungsnachweis: Zehn tatsächliche HTTP-Fälle mit lighttpd 1.4.79 auf x86
+bestanden: fehlende/falsche Anmeldung, authentifizierte GETs inklusive leerer
+Query, POST, statische Datei sowie Abweisung anderer CGI-/privater Pfade.
+Das synthetische CGI liefert absichtlich Exit 1 nach gültigen CGI-Headern; die
+HTTP-Antwort wird trotzdem vollständig mit Status 200 übertragen. Das erklärt
+noch nicht den internen Rückgabewert des proprietären CGI, zeigt aber, dass
+dieser allein den Browserbetrieb nicht verhindern muss. Socket-Aktivierung
+und getrenntes Netz wurden mit einem tatsächlich gestarteten Testdienst geprüft.
+Die optionale Wiederholung heißt `sudo python3 tools/test-web.py`; sie verwendet
+zufällige lokale Testports, temporäre Testkennwörter und keine Original-Binaries.
+Der echte ARM-Browserlauf auf dem Ziel-Pi ist noch offen.
 
 ### B6. Noch offene native Installation und Abnahme
 
@@ -1307,9 +1414,9 @@ müssen.
 
 Deshalb stehen hier keine geratenen Kopier-, Bibliotheks- oder Dienstbefehle,
 die anschließend eine fertige Installation behaupten. Für den vorhandenen Pi 4
-mit 1 GB ist **B1–B4** die konkrete Vorbereitung für den nächsten Hardwaretest.
-Erst nach dieser nativen Abnahme lässt sich B6 durch eine belastbare Folge von
-Installationsbefehlen ersetzen.
+mit 1 GB führen **B1–B5n** bis zur isolierten Browser-Testoberfläche.
+Die produktive Stationsaufnahme ist damit noch nicht eingerichtet. Die offenen
+Schritte werden nach ihrer nativen Prüfung als Installationsbefehle ergänzt.
 
 ## 7. Eine fertige SD-Karte als Image sichern
 
