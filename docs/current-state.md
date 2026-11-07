@@ -147,6 +147,26 @@ vor dem Index. Eine stille Quelle und Loggerpufferung sind damit noch nicht
 voneinander unterschieden. Nur aktueller UTC-Monat und letzte 256 KiB werden
 untersucht; kein vollständiger historischer Lückentest.
 
+Beobachtung des Betreibers vom 7. November, **15:06:47 bis 15:10:47 UTC**:
+In jeder Probe waren Archiv- und Indexzeitstempel gleich; Indexläufe lagen
+jeweils unter zehn Sekunden zurück, ohne Fehler. Das Roharchiv blieb bei
+22.275 Bytes stehen, wuchs dann einmal um 733 Bytes auf 23.008 Bytes; der Index
+übernahm 25 Zeilen. Danach blieb die Datei bis zum Ende unverändert (letzte
+Schreibänderung 193,5 Sekunden alt). Wind erreichte 193,5, schnelle andere
+Kanäle bis 238,5 Sekunden Messalter. Damit ist die Verzögerung vor dem Index
+belegt. Ob native Loggerpufferung oder die vorgelagerte Lieferung sie verursacht,
+ist noch nicht durch Mitschnitt am Prozess nachgewiesen. Kein Eingriff am
+Original-Pi und kein zusätzlicher Leser am Stationsport.
+
+Anzeige-Anpassung vorbereitet: getrennte Archivverzögerung von 240 Sekunden
+konfigurierbar, ergibt bei Standard-Sensorintervall 60 Sekunden insgesamt
+360 Sekunden Altersgrenze. THB/t1 mit 300 Sekunden Sensorintervall bleiben bei
+660 Sekunden. Keine Zeitstempelumschreibung; weitere Verzögerungen können
+weiterhin sichtbar veralten. Echte API-/SVG-Tests prüfen die Beobachtung mit
+vier Minuten alten Werten, weiterhin wirksame Ablaufgrenzen und Indexausfall.
+Installation/Bestätigung auf dem Pi steht noch aus; siehe
+[Anleitung](installer.md#messintervalle-für-dashboard-und-svg).
+
 ### 3. Native MAC-/Netzwerkwarnung diagnostizieren
 
 Noch offen:

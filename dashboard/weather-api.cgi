@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import datetime,json,os,pathlib,sqlite3,sys,time,urllib.parse,zoneinfo,math
 sys.path.insert(0,os.environ.get('METEO_DASHBOARD_LIB','/usr/local/lib/meteohub-dashboard'))
-from weather_data import FIELDS
+from weather_data import FIELDS,freshness_limit
 BASE=pathlib.Path(os.environ.get('METEO_DASHBOARD_STATE','/var/lib/meteohub-dashboard'));now=time.time()
 def output(data,status='200 OK'):
  print('Status: '+status+'\r\nContent-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\n\r\n'+json.dumps(data,ensure_ascii=False,allow_nan=False))
@@ -13,7 +13,7 @@ db=None
 try:
  db=sqlite3.connect('file:'+str(BASE/'weather.sqlite')+'?mode=ro',uri=True,timeout=3)
  cadence_file=pathlib.Path(os.environ.get('METEO_DASHBOARD_CONFIG','/etc/meteohub-dashboard.json'))
- cadence=json.loads(cadence_file.read_text()).get('sensor_intervals_seconds',{}) if cadence_file.exists() else {}
+ cadence=json.loads(cadence_file.read_text()) if cadence_file.exists() else {}
  duration=ranges[selected];since=int(now-duration);step=max(15,math.ceil(duration/600));metrics=[]
  day=datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Berlin')).replace(hour=0,minute=0,second=0,microsecond=0).timestamp()
  for sensor,field in db.execute('SELECT DISTINCT sensor,field FROM samples'):
@@ -27,9 +27,7 @@ try:
    for key in ('min','max'):
     if metric['today'][key] is not None:metric['today'][key]*=3.6
    metric['series']=[[r[0],r[1]*3.6,r[2]*3.6,r[3]*3.6,r[4]] for r in rows]
-  interval=cadence.get(sensor,60)
-  if not isinstance(interval,(int,float)) or isinstance(interval,bool) or not 1<=interval<=86400:raise ValueError('Invalid sensor interval')
-  metric['max_age']=max(90,2*interval+60)
+  metric['max_age']=freshness_limit(cadence,sensor)
   metrics.append(metric)
  wind=db.execute("SELECT (CAST((d.value+22.5)/45 AS INTEGER)%8),avg(s.value)*3.6,max(g.value)*3.6,count(*) FROM samples d JOIN samples s ON s.sensor=d.sensor AND s.ts=d.ts AND s.field='speed' JOIN samples g ON g.sensor=d.sensor AND g.ts=d.ts AND g.field='gust' WHERE d.sensor='wind0' AND d.field='direction' AND d.ts>=? GROUP BY 1",(since,)).fetchall()
  status=json.loads((BASE/'status.json').read_text())

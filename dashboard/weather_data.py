@@ -1,5 +1,16 @@
 """Meteohub formats, following manual v4.7 appendices B/C. No source mutation."""
 import calendar,datetime,math,re,functools
+def freshness_limit(config, sensor):
+ """Allow sensor cadence and explicit archive delay without changing measurement time."""
+ if not isinstance(config,dict):raise ValueError('Invalid dashboard configuration')
+ cadence=config.get('sensor_intervals_seconds',{})
+ if not isinstance(cadence,dict):raise ValueError('Invalid sensor intervals')
+ interval=cadence.get(sensor,60);delay=config.get('archive_delay_seconds',0)
+ for value,low,high in ((interval,1,86400),(delay,0,3600)):
+  if not isinstance(value,(int,float)) or isinstance(value,bool) or not low<=value<=high:
+   raise ValueError('Invalid freshness configuration')
+ return max(90,2*interval+60,interval+delay+60)
+
 FIELDS={'temperature':('Temperatur','°C'),'humidity':('Luftfeuchte','%'),'pressure':('Stationsdruck','hPa'),'sea_pressure':('Luftdruck auf Meereshöhe','hPa'),'speed':('Wind','m/s'),'gust':('Böen','m/s'),'direction':('Windrichtung','°'),'chill':('Windchill','°C'),'rain_rate':('Regenrate','mm/h'),'rain_total':('Regenzähler','mm'),'uv':('UV-Index',''),'solar':('Solarstrahlung','W/m²'),'value':('Messwert','')}
 @functools.lru_cache(maxsize=4096)
 def timestamp(s):

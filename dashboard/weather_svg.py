@@ -1,10 +1,11 @@
 """Small standalone weather image. Only weather readings; no browser dependencies."""
 import os, datetime, html, json, math, pathlib, sqlite3, time, zoneinfo
+from weather_data import freshness_limit
 BASE = pathlib.Path(os.environ.get('METEO_DASHBOARD_STATE','/var/lib/meteohub-dashboard'))
 
 def read_weather(now):
     cadence_path = pathlib.Path(os.environ.get('METEO_DASHBOARD_CONFIG','/etc/meteohub-dashboard.json'))
-    cadence = json.loads(cadence_path.read_text()).get('sensor_intervals_seconds', {}) if cadence_path.exists() else {}
+    cadence = json.loads(cadence_path.read_text()) if cadence_path.exists() else {}
     status = json.loads((BASE / 'status.json').read_text())
     index_ok = not status.get('error') and -5 <= now - status.get('last_success', 0) < 60
     db = sqlite3.connect('file:' + str(BASE / 'weather.sqlite') + '?mode=ro', uri=True, timeout=2)
@@ -12,12 +13,10 @@ def read_weather(now):
         items = {}
         for sensor, field in [('t2','temperature'),('wind0','speed'),('wind0','gust'),('wind0','direction'),('thb0','pressure'),('rain0','rain_rate'),('sol0','solar'),('uv0','uv')]:
             row = db.execute('SELECT ts,value FROM samples WHERE sensor=? AND field=? ORDER BY ts DESC LIMIT 1', (sensor, field)).fetchone()
-            interval = cadence.get(sensor, 60)
-            if not isinstance(interval,(int,float)) or isinstance(interval,bool) or not 1 <= interval <= 86400:
-                raise ValueError('invalid cadence')
+            max_age = freshness_limit(cadence, sensor)
             if row and math.isfinite(row[1]):
                 age = now - row[0]
-                items[field] = {'value':row[1], 'fresh':index_ok and -5 <= age < max(90,2*interval+60), 'ts':row[0]}
+                items[field] = {'value':row[1], 'fresh':index_ok and -5 <= age < max_age, 'ts':row[0]}
         wind = db.execute("SELECT CAST((d.value+22.5)/45 AS INTEGER)%8,avg(s.value)*3.6,max(g.value)*3.6,count(*) FROM samples d JOIN samples s ON s.sensor=d.sensor AND s.ts=d.ts AND s.field='speed' JOIN samples g ON g.sensor=d.sensor AND g.ts=d.ts AND g.field='gust' WHERE d.sensor='wind0' AND d.field='direction' AND d.ts>=? GROUP BY 1", (now-86400,)).fetchall()
         return {'items':items,'wind':wind,'index_ok':index_ok,'history_importing':status.get('history_importing',False)}
     finally:

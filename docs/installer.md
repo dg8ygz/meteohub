@@ -201,7 +201,8 @@ Produktivbetrieb gesondert abzugleichen.
 
 ### Messintervalle für Dashboard und SVG
 
-Die Altersgrenze beträgt `max(90, 2 × Sensorintervall + 60)` Sekunden.
+Die Altersgrenze beträgt ohne Archivverzögerung
+`max(90, 2 × Sensorintervall + 60)` Sekunden.
 Ohne Konfiguration sind das **180 Sekunden**. Ein Sensor, der nur alle fünf
 Minuten sendet, wird damit schon vor der nächsten normalen Messung ausgeblendet.
 Das Intervall anhand der eigenen Station und des Roharchivs festlegen, nicht
@@ -228,6 +229,36 @@ Rückweg: die ausgegebene Sicherung als Konfigurationsdatei wiederherstellen.
 Falls das Werkzeug die Datei erstmals angelegt hat, entfernt das Löschen dieser
 Datei alle darin gesetzten Intervalle und aktiviert wieder die Standardwerte.
 Roharchive, Messzeitstempel und nativer Logger werden nicht verändert.
+
+Bei nachgewiesener verzögerter Veröffentlichung des Roharchivs kann zusätzlich
+`--archive-delay SEKUNDEN` gesetzt werden. Das ist eine separate Anzeigetoleranz,
+kein geändertes Sensorintervall und keine Reparatur des Empfangs/Loggers.
+Die gemeinsame Grenze für API und SVG lautet dann:
+
+```text
+max(90, 2 × Sensorintervall + 60, Sensorintervall + Archivverzögerung + 60)
+```
+
+Beispiel: 60 Sekunden Sensorintervall und 240 Sekunden erlaubte Archivverzögerung
+ergeben 360 Sekunden Altersgrenze. Ein Fünf-Minuten-Sensor behält seine bisherige
+660-Sekunden-Grenze. Das echte Messalter bleibt erhalten. Ein aktueller Indexlauf
+macht alte Messungen nicht neu; bei ausbleibenden Daten läuft die Grenze weiterhin
+ab. Eine gestörte Indexaufbereitung wird unabhängig davon erkannt.
+
+Als Anwendungsbenutzer nach Aktualisierung des Git-Checkouts:
+
+```bash
+python3 install-pi.py extension-update
+python3 tools/dashboard-interval.py \
+  "$HOME/meteohub-staging/5.1e-runtime" --archive-delay 240
+```
+
+Der erste Befehl installiert die neue Anzeige-Version und startet nur deren
+Indexer neu; der native Logger bleibt in Betrieb. Der zweite ändert nur die
+private Konfiguration. Rückweg zur bisherigen Altersberechnung: denselben
+Befehl mit `--archive-delay 0` ausführen. Messintervallwerte bleiben erhalten.
+240 Sekunden sind die zunächst gewählte Toleranz unserer Beispielstation,
+keine allgemeine Vorgabe und kein Langzeitnachweis einer maximalen Verzögerung.
 
 Rückweg zum vorherigen **Extension-Update** (nach mindestens zwei verschiedenen
 installierten Ausgaben):
