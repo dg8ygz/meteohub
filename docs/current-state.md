@@ -164,7 +164,15 @@ konfigurierbar, ergibt bei Standard-Sensorintervall 60 Sekunden insgesamt
 660 Sekunden. Keine Zeitstempelumschreibung; weitere Verzögerungen können
 weiterhin sichtbar veralten. Echte API-/SVG-Tests prüfen die Beobachtung mit
 vier Minuten alten Werten, weiterhin wirksame Ablaufgrenzen und Indexausfall.
-Installation/Bestätigung auf dem Pi steht noch aus; siehe
+Der Betreiber hat die Installation von Commit `53874a3` auf dem Pi bestätigt:
+`extension-update` erfolgreich, persistenter Indexer wieder aufgenommen,
+Bootkonfiguration erhalten. Anschließend `t1` auf 300 Sekunden und die
+Archivverzögerung auf 240 Sekunden gesetzt; die bestehenden Sensorintervalle
+blieben erhalten. Erweiterungskennung:
+`cc70c15689c3b729b04fdddd5606764e1c80c38f91b2c6e8363d2786b553c769`.
+Die Wirkung in Dashboard und SVG über den nächsten Archivzyklus ist noch
+zu bestätigen. Dies ist keine Behebung oder abschließende Ursachenklärung
+der vorgelagerten Lieferverzögerung. Siehe
 [Anleitung](installer.md#messintervalle-für-dashboard-und-svg).
 
 ### 3. Native MAC-/Netzwerkwarnung diagnostizieren
