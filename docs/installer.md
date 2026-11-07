@@ -732,3 +732,18 @@ systemd-Testende, nicht zu einem nachgewiesenen Absturz. Die reguläre private
 Webumgebung wurde wiederhergestellt. Logger und Empfang sind anschließend
 gestoppt; Dauerbetrieb und Autostart bleiben ausstehend. Die oben beschriebene
 MAC-/Netzwerkmeldung ist weiterhin offen.
+
+Der Betreiber las anschließend die neue native Archivzeile aus:
+
+```text
+20261107130349 thb0 1289 100 1289 9816 -1 10211
+```
+
+Sie enthält für 7. November 2026, 13:03:49 UTC (14:03:49 CET), Stationsdruck
+981,6 hPa und nativen Meereshöhendruck 1021,1 hPa. Beide Werte stimmen mit den
+zuvor angezeigten Druckwerten überein; eine unabhängige Kalibrierprüfung ist
+das nicht. Die ursprünglichen THB-Werte für Temperatur, Feuchte und Taupunkt
+bleiben im Roharchiv erhalten. Der tatsächliche Dashboard-Decoder wurde lokal
+mit genau dieser Zeile geprüft: Er liefert ausschließlich
+`{'pressure': 981.6}`, keine THB-Temperatur oder -Feuchte. Die Übernahme dieser
+Zeile in die laufende Pi-Anzeige ist damit noch nicht gesondert nachgewiesen.
