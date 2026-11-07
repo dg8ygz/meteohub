@@ -20,6 +20,21 @@ als Quelle für die Grunddateien und für die ersten Verträglichkeitsprüfungen
 Vor Logger-Abnahme und produktivem Betrieb folgt zwingend das
 [5.1e-Update in B5q](#b5q-zielversion-51e-vom-hersteller-beziehen).
 
+## Geltungsbereich der Beispiele
+
+Allgemeine Einrichtungsschritte und konkrete Betriebsnachweise stehen hier
+nebeneinander. **Datierte Pi-4-Ausgaben, Messwerte und Sensorzuordnungen beziehen
+sich auf unsere Beispielstation.** Sie sind keine Vorgabe für andere Standorte.
+Das [Stationsbeispiel](station-example.md) erklärt insbesondere `t1`/`t2`,
+THB-Druck und die noch festen Vorgaben der Anzeige. Eigene Sensorfunktionen,
+Höhe, Messintervalle und Berechnungsquellen vor der Nutzung selbst zuordnen.
+
+Für neue Installationen nach der OS-Vorbereitung den
+[gebündelten Installer](installer.md) verwenden. Die ausführlichen B5-Proben
+bleiben als Entwicklungs- und Fehlerdiagnosereferenz erhalten; sie sind nicht
+zusätzlich alle nacheinander auszuführen. Der frühere JSON-/Plugin-Pfad ist
+für den direkten TCP-Umzug nicht erforderlich.
+
 ## Zuerst den richtigen Installationsweg wählen
 
 Es gibt zwei unterschiedliche Wege. Bitte nicht deren Schritte vermischen:
@@ -283,18 +298,19 @@ eigenen Karte. Diese Basisprüfung ist noch keine Meteohub-Funktionsabnahme.
 **Ist Trixie bereits installiert und bootfähig, direkt mit B2 beginnen.**
 Eine vorhandene 64-Bit-Installation nicht vorsorglich überschreiben. Zuerst
 Modell, Paketarchitektur und die Laufzeitbedingungen der alten ARM-Programme
-prüfen. Der unten beschriebene 32-Bit-Weg ist eine Vorbereitungsempfehlung für
-eine neue Karte, kein Grund zum Löschen einer bestehenden Installation.
+prüfen. Der aktuelle Installer setzt einen ARM64-Userspace voraus und ergänzt
+die ARMHF-Laufzeit für die alten Programme. Eine vorhandene Installation nicht
+ungeprüft überschreiben; eine abweichende Basis zuerst klären.
 
 Diese Schritte verwenden eine eigene Karte; nicht die funktionierende
 Originalstation überschreiben.
 
 1. Raspberry Pi Imager starten und das genaue Pi-Modell auswählen.
-2. **Raspberry Pi OS Lite (32-bit), Trixie** auswählen. Lite bedeutet ohne
-   grafischen Desktop. Nicht das alte Meteohub-Image und nicht versehentlich
-   eine ältere Raspberry-Pi-OS-Version verwenden. Unsere ursprünglichen
-   Programme sind ARM-32-Bit-Binaries; deshalb ist hier ein 32-Bit-Userspace
-   vorgesehen. Ein 64-Bit-Kernel allein sagt nichts über den Userspace aus.
+2. **Raspberry Pi OS Lite (64-bit), Trixie** auswählen. Lite bedeutet ohne
+   grafischen Desktop. Dieser Installer benötigt Paketarchitektur `arm64`.
+   Die alten Meteohub-Programme sind ARM-32-Bit-Binaries; ihre zusätzliche
+   `armhf`-Laufzeit wird gesondert vorbereitet. Ein 64-Bit-Kernel allein
+   bestätigt noch keinen ARM64-Userspace.
 3. Hostname beispielsweise `meteohub`, Benutzername beispielsweise `wetter`,
    ein eigenes Passwort und die passende Zeitzone eintragen.
 4. SSH aktivieren. Eigenen SSH-Schlüssel eintragen oder für die erste Einrichtung
@@ -305,7 +321,7 @@ Originalstation überschreiben.
 
 Die [Raspberry-Pi-Anleitung](https://www.raspberrypi.com/documentation/computers/getting-started.html)
 erläutert Imager und die Ersteinrichtung. Falls Imager bei deinem Modell keinen
-passenden Trixie-/32-Bit-Eintrag anbietet, keine andere Architektur als vermeintlich
+passenden Trixie-/64-Bit-Eintrag anbietet, keine andere Architektur als vermeintlich
 gleichwertigen Ersatz wählen; zuerst das ausgewählte Image klären.
 
 ### B2. Erste Anmeldung und System prüfen
@@ -334,9 +350,10 @@ timedatectl status
 ```
 
 Erwartet sind Trixie als Versionsname und das tatsächlich verwendete Pi-Modell.
-Bei einer Installation nach B1 ist die Paketarchitektur `armhf`. Bei `arm64`
-bleibt das bestehende System zunächst erhalten: Die Laufzeit für die alten
-32-Bit-Programme muss gesondert vorbereitet und geprüft werden. Beim untersuchten
+Für den aktuellen Installer muss `dpkg --print-architecture` **`arm64`** melden.
+Die Laufzeit für die alten 32-Bit-Programme muss zusätzlich vorbereitet und
+geprüft werden. Ein `armhf`-Userspace wird von diesem Installer nicht unterstützt.
+Beim untersuchten
 Original-Logger handelt es sich um ein ARM-32-Bit-Programm mit dem Loader
 `/lib/ld-linux-armhf.so.3`. Daraus folgt noch keine erfolgreiche Ausführung auf
 einem konkreten 64-Bit-Pi. Kernel-Unterstützung, Bibliotheken und die übrigen

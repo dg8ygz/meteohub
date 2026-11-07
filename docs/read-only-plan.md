@@ -9,8 +9,8 @@ bislang absichtlich weder Boot noch Dateisysteme auf Read-only um.
 
 Die aktuelle private Laufzeitumgebung benötigt Schreibzugriffe auf
 `/home/meteohub` (Konfiguration und Logger-Konfiguration) und `/data`.
-Der TCP-Zubringer ersetzt `feed.json`; das Plugin schreibt Cursor und
-Herkunftsprotokoll. Der Dashboard-Indexer schreibt SQLite samt WAL und Status.
+Beim älteren Plugin-Spiegelweg kommen `feed.json`, Cursor und Herkunftsprotokoll
+hinzu; beim aktuellen direkten TCP-Weg entstehen diese Schreibzugriffe nicht. Der Dashboard-Indexer schreibt SQLite samt WAL und Status.
 Der native Logger wird zusätzlich Roharchive, Status und Protokolle schreiben;
 seine vollständigen Schreibpfade sind auf dem neuen Pi noch nicht abgenommen.
 Diese Funktionen würden auf einer unverändert schreibgeschützten Installation
@@ -76,6 +76,11 @@ vollem RAM-Puffer und fehlgeschlagener Sicherung. Bis dahin keine erfolgreiche
 RO-Umstellung behaupten.
 
 ## Erster Pi-4-Befund (7. November 2026, Betreiber-Ausgabe)
+
+**Ab hier Betriebsnachweise und konkrete ZRAM-Schritte unserer Beispielstation.**
+RAM-Größen, Geräte, Dateipfade und Paketbestand sind keine universellen Vorgaben.
+Die ZRAM-Konfiguration setzt insbesondere das tatsächlich installierte Paket
+`rpi-swap` voraus; sie ist keine allgemeine Debian-Swap-Anleitung.
 
 - RAM: 905 MiB insgesamt, 707 MiB verfügbar, 197 MiB benutzt. Das ist eine
   Momentaufnahme vor dem nativen Dauerbetrieb, kein freigegebenes RAM-Budget.

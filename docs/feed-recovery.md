@@ -20,6 +20,17 @@ Logger neue Datensätze archiviert. Prüfen:
 
 ## Druck aus dem Kombisensor getrennt übernehmen
 
+**Stationsspezifische Entscheidung mit derzeit globaler Umsetzung in der
+Anzeige:** Die folgenden `t1`/`t2`- und THB-Regeln entstanden wegen der Messwerte
+unserer [Beispielstation](station-example.md). Sie sind keine allgemeine
+Anweisung, funktionierende Temperatur-/Feuchtesensoren anderer Stationen zu
+ignorieren. Die Anzeige unterdrückt diese THB-Felder derzeit dennoch generell;
+eine konfigurierbare Auswahl ist noch nicht implementiert.
+
+Die Plugin-Schritte in diesem Abschnitt gelten nur für den älteren Spiegelpfad.
+Beim [direkten nativen TCP-Empfang](installer.md#direkter-nativer-meteohub-tcp-empfang)
+läuft dieses Plugin nicht und ist kein `plugin-update` erforderlich.
+
 Seit der Betreiberentscheidung vom 7. November 2026 wird der vollständige
 ursprüngliche `thbN`-Datensatz an den nativen Logger gegeben. Beispiel:
 `thb0 1289 100 9839` bleibt unverändert. Die auffällige Temperatur und Feuchte
@@ -44,8 +55,9 @@ kein Nachweis früherer nativer Archivierung. Bereits durchlaufene Quellwerte
 werden bei der Aktualisierung nicht neu eingespielt.
 
 Die native THB-Anzeige selbst kann die mitgelieferten Temperatur-/Feuchtewerte
-weiterhin zeigen und Ableitungen berechnen. Für Nutzanzeigen und Exporte nur
-den Druck auswählen; Temperaturquellen explizit `t1`/`t2` belassen. Nicht
+weiterhin zeigen und Ableitungen berechnen. **Bei unserer Station** für
+Nutzanzeigen und Exporte nur den Druck auswählen; die tatsächlich eingerichteten
+Temperaturquellen `t1`/`t2` belassen. Nicht
 behaupten, die proprietäre Anwendung unterdrücke diese Felder intern.
 
 Bestehende Pi-Installationen mit `python3 install-pi.py plugin-update` umstellen,

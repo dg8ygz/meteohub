@@ -13,6 +13,25 @@ Der ältere JSON-/Plugin-Spiegelpfad unten bleibt als Diagnosehistorie erhalten.
 Er ist für die Übernahme vom vorhandenen Meteohub nicht erforderlich;
 `plugin-update` dafür nicht ausführen.
 
+## Allgemeine Schritte und Stationsbeispiele
+
+Die Installationsbefehle gelten für die jeweils genannte Plattform. Adressen
+wie `STATIONS_IP`, `PI_IP` und `BENUTZER` sind durch eigene Werte zu ersetzen.
+Sensor-IDs, Außen-/Innentemperatur, Stationshöhe, Druckreduktion, Windchill,
+Messintervalle und Exportziele werden anhand der **eigenen** Station eingerichtet.
+Eine ID wie `t2` bedeutet nicht automatisch „Außentemperatur“.
+
+**Stationsbeispiel / Betriebsnachweis:** Die datierten Pi-4-Prüfungen und die
+konkreten Zuordnungen in dieser Dokumentation betreffen unsere Teststation.
+Sie bleiben als nachvollziehbare Beispiele erhalten und sind keine Vorgabe für
+andere Stationen. Das [Stationsprofil und die aktuellen Softwarevorgaben](station-example.md)
+trennen diese beiden Dinge ausdrücklich. Insbesondere ist die Beschränkung der
+THB-Anzeige auf Druck derzeit im Code enthalten, kein allgemeines Meteohub-Gebot.
+
+Für eine neue Einrichtung: Ausgangspunkt → Oberfläche →
+[direkter nativer TCP-Empfang](#direkter-nativer-meteohub-tcp-empfang) →
+Dashboard/SVG. Die als historisch markierten Plugin-Tests sind dabei auszulassen.
+
 ## Ausgangspunkt
 
 Raspberry Pi 3 Model B/B+ oder Pi 4 Model B mit Raspberry Pi OS Lite **Trixie,
@@ -88,10 +107,15 @@ vollständige Betriebsabnahme sind davon getrennt.
 
 Für den bereits vorhandenen TCP-Messwertkopie-Dienst auf der alten Station:
 
-- Unter Weather Stations Station 0 als **User-defined / Plug-in** anlegen.
-- Plug-in path: **`/home/meteohub/plugin.sh`**.
-- Name und Höhe entsprechend dem eigenen Standort setzen.
-- Die Warnung zu noch nicht zugewiesenen Sensoren zunächst stehen lassen.
+- Die im Abschnitt [direkter TCP-Empfang](#direkter-nativer-meteohub-tcp-empfang)
+  beschriebene Station 0 als **User-defined / TCP/IP Meteohub** einrichten.
+- Quelladresse und Stationsport des eigenen alten Meteohubs verwenden.
+- Name, Höhe und Berechnungsquellen entsprechend dem eigenen Standort setzen.
+- Sensoren während des begrenzten Empfangstests erkennen und passend zuordnen.
+
+Dieser Testweg setzt eine vorhandene Meteohub-TCP-Quelle voraus. Für eine neue
+USB-Station ohne alten Meteohub ist die direkte Hardware-Anbindung noch nicht
+als automatisierter Installationsweg umgesetzt.
 
 Die isolierte Oberfläche hat absichtlich keinen Zugriff auf USB oder das echte
 Hostnetz. Ihre Angaben „kein Gateway“, „IP inactive“, fehlende alte PID-Dateien
@@ -99,6 +123,10 @@ oder eine falsche Modellbezeichnung beschreiben nicht den Netzwerk-/SSH-Zustand
 des neuen Pi. Nicht versuchen, mit dieser alten Oberfläche dessen Hostnetz zu ändern.
 
 ## Befristeten Messwerttest ausführen
+
+**Historischer Plugin-Diagnoseweg, nicht Teil der aktuellen TCP-Installation.**
+Er verlangt die frühere Plug-in-Konfiguration. Nicht nach der oben beschriebenen
+TCP-Einrichtung zusätzlich ausführen; dort stattdessen `direct-test` verwenden.
 
 Der Quellhost muss ausdrücklich angegeben werden. `STATIONS_IP` durch die Adresse
 des bestehenden **TCP-Kopiedienstes** ersetzen, nicht durch einen seriellen Port:
@@ -261,6 +289,8 @@ RO-Modus und keinen Sicherungstimer.
 
 ## Pi-4-Zielprüfung am 7. November 2026
 
+**Betriebsnachweis unserer Beispielstation; keine allgemeine Sensorvorgabe.**
+
 Betreiber-Ausgabe nach dem ZRAM-Neustart, ausgeführt als `meteohub`:
 
 - Browser-Test wieder gestartet; Isolationsprüfung bestanden, ohne Anmeldung
@@ -392,6 +422,10 @@ Archivtest nach Zuordnung kann zeigen, ob weitere Hindernisse bestehen.
 
 ### Sensoren erstmals zuordnen
 
+**Historischer Plugin-Test mit dem Sensorprofil unserer Station.** Die folgenden
+konkreten IDs sind Beispiele. Bei einer anderen Station Typ, Kanal und reale
+Funktion selbst bestimmen; für den aktuellen TCP-Weg den späteren Abschnitt nutzen.
+
 Der native Logger muss für die Sensorerkennung laufen. Dazu einen begrenzten
 zehnminütigen Test starten (als normaler Anwendungsbenutzer im Repository):
 
@@ -445,6 +479,8 @@ Erst frische native Roharchivzeilen belegen die erfolgreiche Aufzeichnung.
 
 ### Native Aufzeichnung nach Sensorzuordnung bestätigt
 
+**Betriebsnachweis unserer Beispielstation; keine allgemeine Sensorvorgabe.**
+
 Der anschließende Betreiberlauf vom 7. November 2026 mit 300 Sekunden
 Soll-Laufzeit erfasste 45 TCP-Datensätze ohne Verwerfung und schrieb **24 neue,
 frische native Archivzeilen** nach `202611/raw` (560 zusätzliche Bytes):
@@ -490,12 +526,14 @@ Die bisherige ausschließliche Speicherung des Drucks im Anzeigeindex war für
 eine vollständige Meteohub-Migration unzureichend. Mit Betreiberfreigabe wird
 der ursprüngliche THB-Datensatz jetzt vollständig an den nativen Logger
 weitergegeben. Dashboard/SVG nutzen daraus weiterhin nur Stationsdruck.
-Die native THB-Sensoransicht kann auch die ursprünglichen Temperatur- und
-Feuchtewerte anzeigen. Diese nicht als Temperatur-/Feuchtequelle für Anzeigen,
-Wetterexporte oder Berechnungen auswählen. `t1`/`t2` bleiben die gewählten
-Temperaturkanäle; die vorhandene Windchill-Auswahl bleibt `t2`.
-Für die Druckreduktion bei Station 0 die vorhandene Einstellung
-„based on station's altitude“ belassen; keine THB-Temperatur dafür auswählen.
+**Für unsere Beispielstation:** Die native THB-Sensoransicht enthält unplausible
+Temperatur-/Feuchtewerte. Deshalb werden diese dort nicht für Wetterexporte oder
+Berechnungen verwendet. `t1`/`t2` sind unsere Temperaturkanäle, Windchill nutzt
+`t2`, die Druckreduktion „based on station's altitude“.
+Das ist keine allgemeine Empfehlung gegen funktionierende THB-Sensoren.
+Andere Stationen müssen ihre tatsächlichen Quellen und Berechnungen selbst
+festlegen. Die Anzeige-Erweiterung unterdrückt THB-Temperatur/-Feuchte derzeit
+allerdings für alle Stationen; siehe [Softwarevorgaben](station-example.md#derzeit-feste-vorgaben-der-anzeige).
 
 Im dokumentierten Hersteller-Pluginformat ist Druck Teil von THB:
 Temperatur in Zehntelgrad, relative Feuchte und Stationsdruck in Zehntel-hPa.
@@ -602,8 +640,16 @@ Auf dem neuen Pi im bestehenden Meteohub-Webinterface:
 2. **Type of Connection** von **Plug-in** auf **TCP/IP Meteohub** stellen.
 3. Im Geräte-/Adressfeld statt des Pluginpfads `STATIONS_IP:5500` eintragen.
    `STATIONS_IP` durch die IPv4-Adresse des alten Meteohubs ersetzen.
-4. Name, Höhe, Druckberechnung nach Höhe und Windchill-Temperaturquelle `t2`
-   sowie die vorhandenen Sensorzuordnungen beibehalten. **Save** drücken.
+4. Eigenen Stationsnamen, tatsächliche Höhe und passende Druckberechnung
+   eintragen. Für Windchill den tatsächlich außen messenden Temperatursensor
+   auswählen; vorhandene korrekte Sensorzuordnungen beibehalten. **Save** drücken.
+   `t2` und die höhenbasierte Druckreduktion sind nur die Auswahl unserer
+   [Beispielstation](station-example.md).
+
+Der aktuelle Helfer verlangt auf dem Ziel Station 0, Typ User-defined und diese
+TCP-Verbindungsart. Das ist eine Werkzeuggrenze, keine allgemeine Meteohub-Grenze.
+Port 5500 steht im Beispiel für die erste Quellstation. Bei einem anderen
+Quellport sowohl das Gerätefeld als auch `--source-port` entsprechend anpassen.
 
 Dann als normaler Anwendungsbenutzer im Repository:
 
@@ -644,14 +690,19 @@ die reguläre Web-Testunit mit privatem Netzwerk wiederhergestellt. Bei einem
 Fehler dieses Rückwegs nennt das Werkzeug dies ausdrücklich. Dann die
 konkreten Web-Testunits prüfen; keinen zweiten Logger starten.
 
-Beim ersten Lauf **Sensors** öffnen, den tatsächlich erkannten THB-Kanal 0
-als **`thb0`** zuordnen und **Save** drücken. Die anderen Zuordnungen beibehalten.
+Beim ersten Lauf **Sensors** öffnen, die tatsächlich empfangenen Sensorkanäle
+identifizieren, passende eindeutige IDs vergeben und **Save** drücken. Vorhandene
+korrekte Zuordnungen beibehalten. **Beispiel unserer Station:** THB-Kanal 0 wird
+`thb0`. Das ist nur bei einem entsprechenden eigenen Sensor zu übernehmen;
+ein Gerät ohne THB-Sensor muss keinen solchen Datensatz liefern.
 Die Kopie der Logger-Konfiguration bleibt während dieses Tests fest. Nach dem
 Test die Konfiguration erneut mit `--generate-logger-config` erzeugen und
-`direct-test` wiederholen, damit die neue THB-Zuordnung aktiv wird.
+`direct-test` wiederholen, damit die neuen Sensorzuordnungen aktiv werden.
 Die native THB-Ansicht enthält die ursprünglichen Temperatur-/Feuchtewerte;
-Dashboard/SVG nutzen davon ausschließlich Druck. Temperatur-/Feuchtequellen
-für Nutzanzeigen oder Exporte nicht auf diesen Kombisensor umstellen.
+Dashboard/SVG nutzen THB derzeit ausschließlich für Druck. Für unsere Station
+bleiben die getrennten Temperaturquellen gewählt, weil die THB-Temperatur nicht
+plausibel ist. Andere Stationen benötigen eine eigene fachliche Zuordnung;
+die festen Anzeigevorgaben sind dabei ausdrücklich zu berücksichtigen.
 
 ### Auswertung und verbleibende Arbeit
 
@@ -660,8 +711,11 @@ der Archive, stdout/stderr, natives Journal und `result.json`. Frische neue
 Roharchivzeilen sind für PASS erforderlich; alte Daten, ein aktiver Dienst
 oder eine gelungene TCP-Verbindung allein reichen nicht. Der Bericht enthält
 keine unabhängigen TCP-Empfangszähler: Es läuft kein zusätzlicher Collector.
-`pressure_archive_observed` meldet separat, ob frische `thb0`-Zeilen vorliegen;
-deren Druckwerte sind anschließend gegen Quelle und Anzeige zu prüfen.
+`pressure_archive_observed` meldet derzeit speziell frische `thb0`-Zeilen.
+Das ist eine Grenze des Testberichts: Andere THB-IDs erscheinen im Feld `sensors`,
+setzen dieses Kennzeichen aber nicht. Die Abnahme muss die tatsächlich
+konfigurierten IDs und Messintervalle berücksichtigen. Druckwerte anschließend
+gegen Quelle und Anzeige prüfen; keine Sensoren nur für ein grünes Testfeld umbenennen.
 Während dieses Wegs kommen keine neuen JSON-Provenienzwerte hinzu. Der
 Dashboard-Indexer kann weiterhin die nativen Roharchive lesen.
 
@@ -682,6 +736,8 @@ Loopback-Backendzugriff, Dashboard/API/SVG und geschützte Dateien.
 Diese Entwicklungsprüfungen führen den originalen ARM-Logger nicht aus.
 
 ### Erster direkter ARM-Lauf bestätigt
+
+**Betriebsnachweis unserer Beispielstation; keine allgemeine Sensorvorgabe.**
 
 Betreiberlauf am 7. November 2026: Der originale 5.1e-Logger auf dem Pi las den
 Stationsport direkt und schrieb innerhalb des begrenzten Fünfminutentests
@@ -707,6 +763,8 @@ Ihre Ursache ist noch nicht nachgewiesen; weder die reale Host-IP noch die
 MAC-Adresse werden deshalb geändert. Kein Dauerbetrieb oder Autostart aktiv.
 
 ### Direkte native THB-Archivierung bestätigt
+
+**Betriebsnachweis unserer Beispielstation; keine allgemeine Sensorvorgabe.**
 
 Der anschließende Betreiberlauf vom 7. November 2026 verwendete eine neu
 erzeugte Logger-Konfiguration mit der vorab geprüften Zuordnung
