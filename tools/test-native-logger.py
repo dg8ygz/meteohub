@@ -124,6 +124,9 @@ def run_test(candidate,runtime,host,port,duration):
         started=time.time();native_exit=None
         print('REPORT:',report,flush=True)
         print('Starting real TCP collector and native logger for',duration,'seconds; no autostart.',flush=True)
+        if not any(line.split()[:2]==['@SENSORIDMAP','0'] for line in config.splitlines()):
+            print('NO SENSOR MAPPINGS: use the Sensors page while this test is running to assign station 0 IDs and Save.',flush=True)
+            print('This run uses a fixed configuration copy. After it ends, regenerate logger.conf and rerun for archive acceptance.',flush=True)
         # Isolation preflight does not run the native application.
         subprocess.run(['python3',str(TOOLS/'probe-cgi.py'),str(candidate),'--runtime',str(runtime),
                         '--isolation-only'],check=True)

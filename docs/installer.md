@@ -363,7 +363,7 @@ Vier Tests bestanden am 7. November 2026, einschließlich echter TCP-Verbindung,
 echtem Plugin, einem ausdrücklich **synthetischen** Archivschreiber, privater
 Loopback-Verbindung zwischen Units und zeitlich begrenztem Cgroup-Stop.
 Der originale ARM-Logger auf dem Ziel-Pi wurde durch diesen lokalen Test
-nicht geprüft; dessen erster Lauf steht noch aus.
+nicht geprüft; das nachfolgende Betreiberergebnis ist davon getrennt.
 
 ### Erstes natives Pi-Ergebnis: Archivierung noch fehlgeschlagen
 
@@ -373,10 +373,69 @@ sein Laufzeitlimit (`Result=timeout`, Hauptprozess-Exit 0 beim Beenden), und die
 Prüfung meldete folgerichtig `archive_observed=false`. Keine gekürzten oder
 ersetzten Archive wurden beobachtet. Collector und Logger wurden beendet.
 
-Damit ist der Netzwerkempfang erneut belegt, der native Empfangs-/Archivpfad
-aber nicht abgenommen. Die zuvor gemeldete fehlende Sensorzuordnung ist ein
-möglicher Zusammenhang, noch keine nachgewiesene Ursache. Auch Plugin-Start,
-Dateipfade und Schreibrechte müssen anhand von `stdout.txt`, `stderr.txt`,
-`native-journal.txt` im privaten Testbericht sowie dem privaten
-`root/data/log/meteohub.log` eingegrenzt werden. Vor dieser Auswertung keinen
-Dauerbetrieb oder RO-Modus aktivieren und den Test nicht blind wiederholen.
+Die anschließende Betreiberdiagnose bestätigt: Die verwendete Konfiguration
+enthielt `@LOGINTERVAL 0`, aber keine `@SENSORIDMAP`-Einträge. Plugin-Cursor und
+Provenienz wurden während des Tests bis 12:56:50 CET aktualisiert; die letzten
+Ausgaben enthielten `sol0`, `data0` und `uv0`. Der native Logger meldete Start,
+Plugin-Verbindung und geordnetes Beenden durch das Testlimit, keinen Absturz.
+Die Plugin-Ausgabe ist damit belegt, ihre Übernahme ins native Archiv noch nicht.
+
+Die fehlende Zuordnung ist ein konkretes Hindernis: Laut
+[Herstellerhandbuch, Abschnitt 2.5 Sensors](https://www.meteohub.de/files/meteohub-v4.6en.pdf)
+werden Sensoren ohne zugewiesene ID nicht aufgezeichnet. Erst der erneute
+Archivtest nach Zuordnung kann zeigen, ob weitere Hindernisse bestehen.
+
+### Sensoren erstmals zuordnen
+
+Der native Logger muss für die Sensorerkennung laufen. Dazu einen begrenzten
+zehnminütigen Test starten (als normaler Anwendungsbenutzer im Repository):
+
+```bash
+python3 install-pi.py web
+python3 install-pi.py native-test --source-host STATIONS_IP --source-port 5500 --duration 600
+```
+
+Während der Befehl läuft, die bisherige Weboberfläche über den SSH-Tunnel
+öffnen und auf **Sensors** wechseln. Etwa zwei Minuten auf die unterschiedlich
+häufig sendenden Sensoren warten und die Seite neu laden. Für Station 0 die
+angezeigten Typen und ursprünglichen Kanalnummern prüfen und eindeutige IDs
+zuweisen. Bei der bisher geprüften Quelle sind dies Temperatur Kanal 1 → `t1`,
+Temperatur Kanal 2 → `t2`, Wind Kanal 0 → `wind0`, Solar Kanal 0 → `sol0`,
+UV Kanal 0 → `uv0` und Daten Kanal 0 → `data0`. Nur tatsächlich erkannte Kanäle
+zuordnen und **Save** drücken. Namen sind optional. Fehlende oder abweichende
+Kanäle zuerst klären; keine Rohdaten oder Zuordnungen erfinden.
+
+`thb0` wird absichtlich nicht an den nativen Logger ausgegeben: Nur dessen
+Druckwert bleibt separat für Dashboard/SVG erhalten. Die unerwünschten
+THB-Temperatur-/Feuchtewerte bleiben ausgeschlossen.
+
+Dieser Test benutzt eine feste, separate Logger-Konfiguration. Ein Speichern
+im Browser ändert diese laufende Kopie nicht. Eine Meldung „Data Logging
+restarted“ aus der alten Oberfläche belegt hier keinen Neustart unseres
+systemd-Testprozesses. Den Test regulär auslaufen lassen; ein negatives
+Archivergebnis ist bei der noch unzugeordneten Startkonfiguration zu erwarten.
+Keine parallelen Tests starten.
+
+Nach Ende des Tests die gespeicherten UI-Einstellungen in eine neue
+Logger-Konfiguration übertragen:
+
+```bash
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime" \
+  --generate-logger-config
+
+grep -E '^@SENSORIDMAP[[:space:]]' \
+  "$HOME/meteohub-staging/5.1e-runtime/root/home/meteohub/logger.conf"
+```
+
+Sind weiterhin keine Zuordnungen vorhanden, den Speichervorgang untersuchen.
+Andernfalls mit der neuen Konfiguration die Archivprüfung wiederholen:
+
+```bash
+python3 install-pi.py native-test --source-host STATIONS_IP --source-port 5500 --duration 180
+```
+
+Erst frische native Roharchivzeilen belegen die erfolgreiche Aufzeichnung.
+Sensorzuordnung und erneute Archivabnahme auf dem Ziel-Pi stehen noch aus.
+Dauerbetrieb, Boot-Autostart und RO-Modus sind weiterhin nicht eingerichtet.
