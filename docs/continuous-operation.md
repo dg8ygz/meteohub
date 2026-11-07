@@ -201,3 +201,25 @@ Rechnerneustart wird dabei verwendet. Geprüft sind echter TCP-Empfang und Archi
 exklusive Empfangssperre, geteilter flüchtiger PID-Bereich, HTTP-Authentifizierung,
 Prozessabbruch/Wiederanlauf, Extension-Update ohne Logger-Neustart, gemeinsamer
 Stop/Start, Ablehnung veränderter Units und Rückkehr zur privaten Webumgebung.
+
+## Erster Dauerbetriebsbefund unserer Beispielstation
+
+Betreiber-Ausgabe vom 7. November 2026, etwa 14:57 CET, auf dem Pi 4:
+Installation erfolgreich, Target und drei Anwendungsdienste aktiv,
+`boot_enabled=true`, jeweils `NRestarts=0`. Seit Installation wurden 23 neue
+native Roharchivzeilen (662 Bytes) beobachtet: `data0` 3, `sol0` 4, `uv0` 4,
+`t2` 2, `thb0` 1, `t1` 1 und `wind0` 8. Keine ungültigen neuen Zeilen und
+keine gekürzten oder ersetzten Archive. Die native Sensors-Seite hatte zuvor
+ebenfalls aktuelle Empfangswerte gezeigt.
+
+Der letzte archivierte Windwert war bei der Statusabfrage rund 86 Sekunden
+alt, die übrigen letzten Archivwerte rund 116–205 Sekunden. Diese Beobachtung
+ist noch nicht als normale Pufferung oder als Empfangslücke eingeordnet.
+Der Indexer meldete einen erfolgreichen aktuellen Lauf ohne Verwerfungen;
+`records_added=0` beschreibt nur diesen einzelnen Indexdurchlauf und widerlegt
+die bereits nachgewiesenen neuen Roharchivzeilen nicht.
+
+Dies belegt gestarteten Dauerbetrieb und erste native Aufzeichnung, aber noch
+keinen Neustart-Wiederanlauf, keine vollständige Lückenprüfung und keinen
+Langzeittest. Die MAC-/Netzwerkwarnung im nativen CGI bleibt offen. RO-/RAM-
+Umstellung und tägliche Sicherung sind weiterhin nicht aktiviert.
