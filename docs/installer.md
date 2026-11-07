@@ -437,5 +437,36 @@ python3 install-pi.py native-test --source-host STATIONS_IP --source-port 5500 -
 ```
 
 Erst frische native Roharchivzeilen belegen die erfolgreiche Aufzeichnung.
-Sensorzuordnung und erneute Archivabnahme auf dem Ziel-Pi stehen noch aus.
-Dauerbetrieb, Boot-Autostart und RO-Modus sind weiterhin nicht eingerichtet.
+
+### Native Aufzeichnung nach Sensorzuordnung bestätigt
+
+Der anschließende Betreiberlauf vom 7. November 2026 mit 300 Sekunden
+Soll-Laufzeit erfasste 45 TCP-Datensätze ohne Verwerfung und schrieb **24 neue,
+frische native Archivzeilen** nach `202611/raw` (560 zusätzliche Bytes):
+
+| Archiv-ID | Neue Zeilen |
+| --- | ---: |
+| `t1` | 4 |
+| `t2` | 1 |
+| `sol0` | 7 |
+| `uv0` | 7 |
+| `data0` | 5 |
+
+Keine ungültigen neuen Zeilen, keine gekürzten oder ersetzten Archive.
+`archive_observed=true`; der Test meldete PASS. Nach 302,37 Sekunden war
+auch das kontrollierte Beenden abgeschlossen. `Result=timeout` und der
+systemd-run-Rückgabecode 1 gehören hier zum absichtlich gesetzten Laufzeitlimit;
+der Hauptprozess beendete sich mit Status 0. Collector und Logger sind danach
+gestoppt. Die geringere Anzahl an Archivzeilen gegenüber TCP-Zeilen ist allein
+kein Verlustnachweis: Nicht alle eingehenden Sensorkanäle werden nativ
+aufgezeichnet, und Druck wird separat verarbeitet.
+
+Damit ist die Kette TCP-Kopie → Plugin → nativer ARM-Logger → Roharchiv für
+die aufgeführten IDs belegt. Die zuvor fehlende Sensorzuordnung war eine
+bestätigte Ursache der leeren Archive. Der erfolgreiche Lauf verwendete noch
+Temperaturkanal 2 → `t1` und Temperaturkanal 1 → `t2`; Wind war nicht zugeordnet.
+Die im Browser möglicherweise inzwischen korrigierten Zuordnungen müssen
+erneut mit `--generate-logger-config` übernommen und kontrolliert werden.
+Wind-Aufzeichnung, endgültige Temperaturzuordnung, Langzeittest, dauerhafter
+Betrieb, Boot-Autostart und RO-Modus bleiben offen. Dieser begrenzte Test
+ist keine laufende Überwachung oder vollständige Produktionsabnahme.
