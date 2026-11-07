@@ -223,3 +223,24 @@ Dies belegt gestarteten Dauerbetrieb und erste native Aufzeichnung, aber noch
 keinen Neustart-Wiederanlauf, keine vollständige Lückenprüfung und keinen
 Langzeittest. Die MAC-/Netzwerkwarnung im nativen CGI bleibt offen. RO-/RAM-
 Umstellung und tägliche Sicherung sind weiterhin nicht aktiviert.
+
+### Betreiberprüfung nach dem Pi-Neustart
+
+Die nächste Betreiber-Ausgabe vom 7. November 2026, etwa 15:05 CET, bestätigt
+`boot_changed_since_install=true`, weiterhin aktivierten Autostart und aktive
+Logger-/Web-/Indexdienste aus den dauerhaften Unit-Dateien. Alle drei melden
+`NRestarts=0`; `systemctl --failed` zeigt keine fehlgeschlagenen Units.
+
+Seit Installation sind nun 77 neue Archivzeilen (2238 Bytes) gezählt, also 54
+mehr als bei der vorherigen Abfrage. Verteilung: `data0` 10, `sol0` 13, `uv0` 13,
+`t2` 6, `thb0` 2, `t1` 2 und `wind0` 31. Keine ungültigen Zeilen und keine
+gekürzten oder ersetzten Archive. Der jüngste Windzeitstempel ist 14:03:33 UTC;
+die jüngsten Temperatur-1-/THB-Zeitstempel liegen bei 13:58:49/13:58:48 UTC.
+
+Die 77 Zeilen zählen ausdrücklich **seit Installation, nicht seit Boot**.
+Der genaue Bootzeitpunkt fehlt in dieser Ausgabe; deshalb ist damit noch nicht
+jeder Sensor nach dem Neustart einzeln nachgewiesen. Die beobachteten Alter
+liegen bei 91 Sekunden für Wind, 136 Sekunden für die schnelleren übrigen
+Kanäle und 375–376 Sekunden für `t1`/`thb0`. Sensorintervalle und mögliche
+Archivpufferung sind separat abzugleichen. Kein Nachweis lückenlosen Langzeit-
+betriebs allein aus den aktiven Units oder diesen Summenzählern.
