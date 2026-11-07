@@ -148,3 +148,24 @@ Die bisherige Hauptkonfiguration und andere Drop-ins bleiben dabei unverändert.
 Bei diesem Zwischenstand gehen die temporären Web-/Indexer-Units beim Neustart
 verloren; Wiederanlauf ist in [installer.md](installer.md#unterbrechen-wieder-aufnehmen-und-neustart)
 beschrieben. Dies ist weiterhin keine vollständige RO-Umstellung.
+
+## ZRAM-Abnahme nach Neustart (7. November 2026)
+
+Die Betreiber-Ausgabe nach dem Neustart bestätigt:
+
+- `/dev/zram0` aktiv mit 905 MiB logischer Größe und 0 B Belegung.
+- `/sys/block/zram0/backing_dev` meldet `none`.
+- `losetup --list` zeigt keine eingerichteten Loop-Geräte mehr.
+- 722 MiB RAM verfügbar, 183 MiB benutzt; Momentaufnahme ohne Dauerlast.
+- `systemctl --failed`: keine fehlgeschlagenen Units.
+
+Damit ist **RAM-Swap ohne SD-Writeback** für diesen Start nachgewiesen. Daraus
+folgt weder ein schreibgeschütztes Root-Dateisystem noch ein eingerichteter
+RAM-Messwertpuffer oder täglicher Sicherungsjob. Diese Punkte bleiben offen.
+
+Für die Fortsetzung die vorhandene 5.1e-Testumgebung als normaler Benutzer
+mit `python3 install-pi.py web` starten. Ein erneutes Entpacken/Mounten des
+Herstellerimages ist dafür nicht nötig. Danach den befristeten `feed-test`
+mit der eigenen TCP-Quelladresse und `extension-update` ausführen. Der Test
+prüft den Empfangsweg; dauerhafte native Archivierung und Tageszuwachs bleiben
+noch gesondert zu messen.
