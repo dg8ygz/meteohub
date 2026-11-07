@@ -28,6 +28,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--lighttpd', type=Path, default=Path('/usr/sbin/lighttpd'))
     parser.add_argument('--modules', type=Path, default=Path('/usr/lib/lighttpd'))
+    parser.add_argument('--host-network', action='store_true')
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error('This optional integration test needs root for transient systemd units')
@@ -36,6 +37,7 @@ def main():
     case = fixture.RuntimeTests('test_selected_resources_and_existing_destination')
     case.setUp()
     unit = 'meteohub-http-check-' + str(time.time_ns())
+    backend = socket.socket();backend.bind(('127.0.0.1',0));backend.listen(1)
     try:
         fixture.stage.materialize(case.runtime, fixture.stage.prepare(case.image), 65534, 65534, 'nobody')
         candidate = case.top / 'candidate'
@@ -50,6 +52,9 @@ if [ "${REQUEST_METHOD-}" = POST ]; then cat; fi
 exit 1
 ''')
         cgi.chmod(0o700)
+        if args.host_network:
+            backend_probe="/usr/bin/python3 -c \"import socket; s=socket.create_connection(('127.0.0.1',"+str(backend.getsockname()[1])+")); s.close(); print('backend-connected')\""
+            cgi.write_text(cgi.read_text().replace('exit 1', '[ "$QUERY_STRING" != page=backend ] || '+backend_probe+'\nexit 1'))
         root = case.runtime / 'root'
         (root / 'srv/www/cgi-bin/meteohub.cgi').symlink_to('/home/meteohub/bin/meteohub.cgi')
         (root / 'srv/www/cgi-bin/other.cgi').write_text('SHOULD_NOT_LEAK')
@@ -89,7 +94,7 @@ exit 1
             extension.start_index(candidate, case.runtime)
         index_status = json.loads((root / 'data/dashboard/status.json').read_text())
         assert not index_status.get('error'), index_status
-        props = web.web_properties(candidate, case.runtime)
+        props = web.web_properties(candidate, case.runtime, args.host_network)
         props += [
             'RuntimeMaxSec=45s',
             'BindReadOnlyPaths=' + str(args.lighttpd.resolve()) + ':/opt/test-lighttpd '
@@ -123,6 +128,10 @@ exit 1
         assert status == 200 and b'QUERY=page=0' in body and b'METHOD=GET' in body, (status, body)
         status, body = request('/cgi-bin/meteohub.cgi?page=17', password)
         assert status == 200 and b'QUERY=page=17' in body, (status, body)
+        if args.host_network:
+            status, body = request('/cgi-bin/meteohub.cgi?page=backend', password)
+            assert status == 200 and b'backend-connected' in body, (status,body)
+            print('PASS: authenticated CGI reaches native host-loopback backend under restricted host networking')
         status, body = request('/cgi-bin/meteohub.cgi', password, b'probe=hello')
         assert status == 200 and b'METHOD=POST' in body and b'probe=hello' in body, (status, body)
         assert request('/cgi-bin/admin.html', password) == (200, b'test fixture\n')
@@ -148,8 +157,9 @@ exit 1
         assert request('/cgi-bin/weather-image.cgi', password, b'invalid=post')[0] == 405
         print('PASS: dashboard/API/SVG authentication, real pressure-only index, assets and method restriction')
         print('PASS: 10 real HTTP cases; authentication, GET/POST, static files, CGI exit 1, private paths')
-        print('PASS: inherited loopback socket served by lighttpd in the private runtime/network')
+        print('PASS: inherited loopback socket served by lighttpd in private runtime; host network:',args.host_network)
     finally:
+        backend.close()
         subprocess.run(['systemctl', 'stop', unit + '.socket', unit + '.service', unit + '-index.service'],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=10)
         case.doCleanups()

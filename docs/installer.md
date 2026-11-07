@@ -8,6 +8,11 @@ Archiv-/Aggregat-/Exportabnahme, dauerhafter Datenzubringer und Autostart bleibe
 separate Schritte. Er akzeptiert keine Lizenzbedingungen und wählt keine Station
 stellvertretend für den Anwender.
 
+**Aktueller Umzugsweg:** [Direkter nativer Meteohub-TCP-Empfang](#direkter-nativer-meteohub-tcp-empfang).
+Der ältere JSON-/Plugin-Spiegelpfad unten bleibt als Diagnosehistorie erhalten.
+Er ist für die Übernahme vom vorhandenen Meteohub nicht erforderlich;
+`plugin-update` dafür nicht ausführen.
+
 ## Ausgangspunkt
 
 Raspberry Pi 3 Model B/B+ oder Pi 4 Model B mit Raspberry Pi OS Lite **Trixie,
@@ -478,6 +483,9 @@ Ein begrenzter Test ist keine laufende Überwachung oder Produktionsabnahme.
 
 ## Native THB-Druckaufzeichnung aktualisieren
 
+**Durch den direkten TCP-Umzugsweg abgelöst.** Dieser Abschnitt dokumentiert die
+zuvor entwickelte Plugin-Korrektur; für den aktuellen Pi-Umzug nicht installieren.
+
 Die bisherige ausschließliche Speicherung des Drucks im Anzeigeindex war für
 eine vollständige Meteohub-Migration unzureichend. Mit Betreiberfreigabe wird
 der ursprüngliche THB-Datensatz jetzt vollständig an den nativen Logger
@@ -559,3 +567,116 @@ Die native THB-Verarbeitung auf dem Ziel-Pi ist mit dieser Änderung noch nicht
 abgenommen. Insbesondere muss der originale Logger den ungewöhnlichen
 ursprünglichen THB-Temperaturwert akzeptieren, ohne den Druckdatensatz zu
 verwerfen. Keine Produktionsfreigabe allein aus den lokalen Tests ableiten.
+
+## Direkter nativer Meteohub-TCP-Empfang
+
+Der ursprüngliche Meteohub stellt den Stationsdatenstrom selbst über TCP bereit:
+erste Station auf Port 5500, weitere Stationen auf 5501 usw.
+[Herstellerhandbuch v4.7, Abschnitte 2.4 und 4.3](https://www.meteohub.de/files/meteohub-v4.7en.pdf).
+In der vorhandenen Hersteller-Oberfläche für Stationstyp **User-defined** ist
+neben **Plug-in** auch **TCP/IP Meteohub** vorhanden (Verbindungstyp 4).
+Deshalb benötigen wir weder einen JSON-Zwischenspeicher noch ein eigenes
+Empfangsplugin. Auf dem alten Pi ist keine Änderung an `plugin.sh` erforderlich.
+
+```text
+alter Meteohub / Stationsdaten-Port → neuer originaler loggerd → natives Roharchiv
+                                                               ↓
+                                                         Dashboard / SVG
+```
+
+Der nachfolgende Test installiert noch keinen Dauerbetrieb. Die originale
+ARM-Anwendung muss diese Verbindungsart auf dem Ziel-Pi erfolgreich ausführen.
+Die Syntax und lokale Testmechanik sind geprüft; deren Erfolg ersetzt nicht
+den Nachweis frischer nativer Wetterdaten vom echten alten Meteohub.
+
+### Einstellungen im Browser
+
+Alle bisherigen begrenzten Feed-/Loggertests zuerst auslaufen lassen. Nicht
+parallel weitere Leser an den Stationsport hängen: Das Handbuch beschreibt
+für diesen Port nur eine gleichzeitige Verbindung. Die Originalstation und
+deren USB-Konsole bleiben unverändert; keine zweite serielle `cat`-Instanz.
+
+Auf dem neuen Pi im bestehenden Meteohub-Webinterface:
+
+1. **Weather Station 0 / User-defined** öffnen.
+2. **Type of Connection** von **Plug-in** auf **TCP/IP Meteohub** stellen.
+3. Im Geräte-/Adressfeld statt des Pluginpfads `STATIONS_IP:5500` eintragen.
+   `STATIONS_IP` durch die IPv4-Adresse des alten Meteohubs ersetzen.
+4. Name, Höhe, Druckberechnung nach Höhe und Windchill-Temperaturquelle `t2`
+   sowie die vorhandenen Sensorzuordnungen beibehalten. **Save** drücken.
+
+Dann als normaler Anwendungsbenutzer im Repository:
+
+```bash
+git pull --ff-only
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime" \
+  --generate-logger-config
+python3 install-pi.py direct-test --source-host STATIONS_IP --source-port 5500 --duration 300
+```
+
+Die Prüfung verlangt genau Station 0, Typ User-defined (9), Verbindung
+Meteohub TCP (4), die explizit angegebene IPv4/Port-Kombination sowie die privaten
+Archiv-/Logpfade. Andere Konfigurationen werden vor dem Start abgelehnt.
+Sie liest und startet weder `live_feed_plugin.py` noch `tcp-feed.py`; installierte
+ältere Plugin-Dateien und deren Cursor sind für diesen Weg unbenutzt.
+
+### Begrenzter Test und Webzugriff
+
+Die bisherige Testumgebung hat ein privates Netzwerk ohne externe Route. Für
+den direkten Test teilt der native Logger vorübergehend das Hostnetz. Seine
+cgroup-IP-Freigaben erlauben Loopback und die explizite Stations-IP. Die
+Webunit teilt für den Zugriff auf den nativen Loopback-Port 5555 ebenfalls
+vorübergehend das Hostnetz, erhält aber nur eine Loopback-IP-Freigabe.
+Die bestehenden unprivilegierten Benutzer, privaten Dateisysteme, Authentifizierung
+und der ausschließlich lokale HTTP-Listener `127.0.0.1:18090` bleiben erhalten.
+
+Vor dem Wechsel werden echte lokale Verbindungen geprüft: Ein eigens gestarteter
+nicht-Loopback-Testlistener ist mit expliziter Freigabe erreichbar und mit der
+vorgesehenen Sperre nicht; Loopback bleibt erreichbar. Funktioniert die
+Kernel-Durchsetzung nicht, startet die originale Anwendung nicht mit diesem
+Netzprofil. Keine hostweiten Firewallregeln oder Interfaces werden geändert.
+
+Die Web-Testunit wird zu Beginn kurz neu gestartet, damit die Sensors-Seite den
+laufenden Logger erreicht. Nach Ende des Tests wird der Logger beendet und
+die reguläre Web-Testunit mit privatem Netzwerk wiederhergestellt. Bei einem
+Fehler dieses Rückwegs nennt das Werkzeug dies ausdrücklich. Dann die
+konkreten Web-Testunits prüfen; keinen zweiten Logger starten.
+
+Beim ersten Lauf **Sensors** öffnen, den tatsächlich erkannten THB-Kanal 0
+als **`thb0`** zuordnen und **Save** drücken. Die anderen Zuordnungen beibehalten.
+Die Kopie der Logger-Konfiguration bleibt während dieses Tests fest. Nach dem
+Test die Konfiguration erneut mit `--generate-logger-config` erzeugen und
+`direct-test` wiederholen, damit die neue THB-Zuordnung aktiv wird.
+Die native THB-Ansicht enthält die ursprünglichen Temperatur-/Feuchtewerte;
+Dashboard/SVG nutzen davon ausschließlich Druck. Temperatur-/Feuchtequellen
+für Nutzanzeigen oder Exporte nicht auf diesen Kombisensor umstellen.
+
+### Auswertung und verbleibende Arbeit
+
+`native-direct-test-*` enthält private Konfigurationssicherung, Ausgangsgrößen
+der Archive, stdout/stderr, natives Journal und `result.json`. Frische neue
+Roharchivzeilen sind für PASS erforderlich; alte Daten, ein aktiver Dienst
+oder eine gelungene TCP-Verbindung allein reichen nicht. Der Bericht enthält
+keine unabhängigen TCP-Empfangszähler: Es läuft kein zusätzlicher Collector.
+`pressure_archive_observed` meldet separat, ob frische `thb0`-Zeilen vorliegen;
+deren Druckwerte sind anschließend gegen Quelle und Anzeige zu prüfen.
+Während dieses Wegs kommen keine neuen JSON-Provenienzwerte hinzu. Der
+Dashboard-Indexer kann weiterhin die nativen Roharchive lesen.
+
+Der Lauf endet nach der angeforderten Zeit. `Result=timeout` ist das erwartete
+Testende. Kein Hintergrundempfang, Autostart oder RO-Modus wird eingerichtet.
+Erst nach nativer Abnahme folgen Dauerbetrieb, Aggregation/Exporte, Langzeittest
+und Neustartprüfung. Beim späteren lokalen USB-Anschluss wird wieder die
+originale Plug-in-Verbindung mit der passenden seriellen `cat`-Quelle benutzt;
+keine proprietären Loggerprogramme werden dafür verändert.
+
+Lokale Prüfung: Konfigurationsablehnung bei falscher Quelle/Verbindungsart,
+reale systemd-IP-Filterprüfung, realer TCP-Empfang mit unveränderten Bytes,
+keine Quellbefehle aus dem **synthetischen** Testlogger, Archivzählung und
+Wiederherstellung des Web-Netzprofils. Ein absichtlich früh beendeter Testlogger
+darf die vorhandenen Archivzeilen nicht erneut als Erfolg zählen.
+Zusätzlich echte Lighttpd-/CGI-/HTTP-Tests im begrenzten Hostnetz: Authentifizierung,
+Loopback-Backendzugriff, Dashboard/API/SVG und geschützte Dateien.
+Diese Entwicklungsprüfungen führen den originalen ARM-Logger nicht aus.

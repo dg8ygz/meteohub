@@ -65,8 +65,12 @@ def probe_tool():
     return module
 
 
-def web_properties(candidate, runtime):
+def web_properties(candidate, runtime, host_network=False):
     values = probe_tool().properties(candidate, runtime)
+    if host_network:
+        values = [value for value in values if not value.startswith('PrivateNetwork=')]
+        values += ['PrivateNetwork=no','IPAddressDeny=any','IPAddressAllow=localhost',
+                   'RestrictAddressFamilies=AF_INET AF_UNIX']
     # This interactive test website runs until stopped/rebooted, unlike the 30s probe.
     return [value for value in values if not value.startswith('RuntimeMaxSec=')]
 
@@ -115,7 +119,7 @@ def prepare(candidate, runtime):
     print('PREPARED: private web configuration and password hash; no listener started.')
 
 
-def start(candidate, runtime):
+def start(candidate, runtime, host_network=False):
     check_paths(candidate, runtime)
     web = runtime / 'root/opt/meteohub-web'
     if web.is_symlink() or not web.is_dir():
@@ -150,7 +154,7 @@ def start(candidate, runtime):
         raise ValueError('Isolation check failed; website not started')
     common = ['sudo', '-n', 'systemd-run', '--uid=' + str(os.getuid()),
               '--gid=' + str(os.getgid()), '--expand-environment=no']
-    props = ['--property=' + value for value in web_properties(candidate, runtime)]
+    props = ['--property=' + value for value in web_properties(candidate, runtime, host_network)]
     syntax = common + ['--wait', '--pipe', '--collect',
                        '--unit=' + UNIT + '-config-' + str(time.time_ns())] + props
     subprocess.run(syntax + ['/usr/sbin/lighttpd', '-tt', '-f', WEB + '/lighttpd.conf'], check=True)

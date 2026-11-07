@@ -62,8 +62,10 @@ Die bisher einzeln ausgeführten Pi-Schritte sind jetzt in
 [`install-pi.py`](install-pi.py) gebündelt. Die
 [Installer-Anleitung](docs/installer.md) beschreibt Installation, Wiederaufnahme,
 manuelle Stationseinrichtung und den getrennten Befehl `extension-update` für
-Dashboard und SVG. `native-test` prüft anschließend befristet die Kette aus
-TCP-Zubringer, Plugin und nativem Rohdatenlogger. Bestehende Einstellungen bleiben erhalten. Der Stand richtet
+Dashboard und SVG. `direct-test` prüft anschließend befristet den direkten
+Empfang vom alten Meteohub durch den originalen Rohdatenlogger. Der ältere
+JSON-/Plugin-Test `native-test` ist für diesen Umzugsweg nicht erforderlich.
+Bestehende Einstellungen bleiben erhalten. Der Stand richtet
 die Testumgebung ein; nativer Dauerbetrieb und Boot-Autostart sind noch nicht
 Teil des Installers.
 
@@ -209,11 +211,12 @@ nativen Kompatibilitätshilfen unter anderem systemd, Lighttpd und gnuplot.
 ARM-Binaries benötigen eine passende ARM-Laufzeit; ein x86-Host allein genügt nicht.
 
 - Roharchive bleiben maßgeblich; der Anzeigeindex ist davon abgeleitet.
-- Das Plugin gibt den vollständigen ursprünglichen THB-Datensatz an den nativen
-  Logger weiter. Dashboard und SVG verwenden daraus nur plausiblen Stationsdruck;
+- Der native Empfang soll auch die ursprünglichen THB-Datensätze aufzeichnen.
+  Dashboard und SVG verwenden daraus nur plausiblen Stationsdruck;
   THB-Temperatur, Feuchte und Meeresspiegeldruck werden dort nicht angezeigt.
-  Bestehende Pi-Installationen benötigen `python3 install-pi.py plugin-update`
-  und eine native Sensorzuordnung für `thb0`; siehe [Druckaufzeichnung](docs/installer.md#native-thb-druckaufzeichnung-aktualisieren).
+  Für den Stationsumzug ist der [direkte native TCP-Empfang](docs/installer.md#direkter-nativer-meteohub-tcp-empfang)
+  vorgesehen: kein JSON-Zubringer oder eigenes Empfangsplugin. `thb0` benötigt
+  eine native Sensorzuordnung; die Druckarchivierung auf dem Ziel bleibt zu prüfen.
 - Eine gültige Regenrate wird auch bei negativem Gesamtzähler übernommen.
   Der negative Gesamtzähler wird verworfen, ohne eine Zählerkorrektur zu erfinden.
   Dadurch bleibt der Zeitstempel der aktuellen Regenrate erhalten.

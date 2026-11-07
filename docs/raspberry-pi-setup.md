@@ -4,6 +4,13 @@
 nachfolgend dokumentierten Vorbereitungsschritte. Vorhandene 5.1e-Verzeichnisse
 werden geprüft und wiederverwendet. Produktionsabnahme und Autostart bleiben offen.
 
+Für die Datenübernahme von einem laufenden Meteohub gilt inzwischen der
+[direkte native TCP-Weg](installer.md#direkter-nativer-meteohub-tcp-empfang).
+Die älteren JSON-/Plugin-Spiegelschritte dieser ausführlichen Anleitung
+dokumentieren die Entwicklung; für diesen Umzug sind sie nicht erforderlich.
+Der originale Logger liest den Stationsport selbst. Auf dem alten Pi wird
+dafür weder ein neuer Leser an der USB-Konsole noch ein neues Plugin eingerichtet.
+
 
 Stand: **7. November 2026**. Zielgeräte: **Raspberry Pi 3 Model B** und
 **Raspberry Pi 4 Model B, auch die Variante mit 1 GB RAM**.

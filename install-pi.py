@@ -185,7 +185,7 @@ class Installer:
             print('REUSE: running 5.1e browser test',flush=True)
         else:tool.start(self.candidate,self.runtime)
         print('WEB: http://127.0.0.1:18090/cgi-bin/meteohub.cgi (SSH tunnel)',flush=True)
-        print('Manual: read/accept licence terms, verify version/build, select station 0 Plug-in /home/meteohub/plugin.sh.',flush=True)
+        print('Manual: read/accept licence terms, verify version/build. For migration select station 0 User-defined / TCP/IP Meteohub; see docs/installer.md.',flush=True)
 
     def feed_test(self,host,port,duration):
         if not host:raise ValueError('Provide --source-host for the existing TCP-copy service')
@@ -234,7 +234,7 @@ class Installer:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('install','prepare','web','feed-test','native-test','plugin-update','extension-update','extension-rollback','storage-check','status','unmount-image'))
+    parser.add_argument('action',choices=('install','prepare','web','feed-test','native-test','direct-test','plugin-update','extension-update','extension-rollback','storage-check','status','unmount-image'))
     parser.add_argument('--source-host')
     parser.add_argument('--source-port',type=int,default=5500)
     parser.add_argument('--duration',type=int,default=120)
@@ -255,6 +255,9 @@ def main():
     if args.action=='native-test':
         if not args.source_host:parser.error('Provide --source-host for the existing TCP-copy service')
         helper('test-native-logger',app.candidate,app.runtime,'--host',args.source_host,'--port',str(args.source_port),'--duration',str(args.duration))
+    if args.action=='direct-test':
+        if not args.source_host:parser.error('Provide --source-host for the original Meteohub TCP service')
+        helper('test-native-direct',app.candidate,app.runtime,'--host',args.source_host,'--port',str(args.source_port),'--duration',str(args.duration))
     if args.action=='extension-update':helper('extension-update',app.candidate,app.runtime)
     if args.action=='extension-rollback':helper('extension-update',app.candidate,app.runtime,'--rollback')
     if args.action=='status':app.status()
