@@ -209,9 +209,11 @@ nativen Kompatibilitätshilfen unter anderem systemd, Lighttpd und gnuplot.
 ARM-Binaries benötigen eine passende ARM-Laufzeit; ein x86-Host allein genügt nicht.
 
 - Roharchive bleiben maßgeblich; der Anzeigeindex ist davon abgeleitet.
-- Vom auffälligen THB-Kombisensor wird ausschließlich plausibler Stationsdruck
-  übernommen. Temperatur, Feuchte und daraus abgeleiteter Meeresspiegeldruck
-  werden nicht angezeigt.
+- Das Plugin gibt den vollständigen ursprünglichen THB-Datensatz an den nativen
+  Logger weiter. Dashboard und SVG verwenden daraus nur plausiblen Stationsdruck;
+  THB-Temperatur, Feuchte und Meeresspiegeldruck werden dort nicht angezeigt.
+  Bestehende Pi-Installationen benötigen `python3 install-pi.py plugin-update`
+  und eine native Sensorzuordnung für `thb0`; siehe [Druckaufzeichnung](docs/installer.md#native-thb-druckaufzeichnung-aktualisieren).
 - Eine gültige Regenrate wird auch bei negativem Gesamtzähler übernommen.
   Der negative Gesamtzähler wird verworfen, ohne eine Zählerkorrektur zu erfinden.
   Dadurch bleibt der Zeitstempel der aktuellen Regenrate erhalten.

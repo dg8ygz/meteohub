@@ -234,7 +234,7 @@ class Installer:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('install','prepare','web','feed-test','native-test','extension-update','extension-rollback','storage-check','status','unmount-image'))
+    parser.add_argument('action',choices=('install','prepare','web','feed-test','native-test','plugin-update','extension-update','extension-rollback','storage-check','status','unmount-image'))
     parser.add_argument('--source-host')
     parser.add_argument('--source-port',type=int,default=5500)
     parser.add_argument('--duration',type=int,default=120)
@@ -251,6 +251,7 @@ def main():
     if args.action in ('install','prepare'):app.prepare()
     if args.action in ('install','web'):app.web()
     if args.action=='feed-test':app.feed_test(args.source_host,args.source_port,args.duration)
+    if args.action=='plugin-update':helper('prepare-tcp-plugin',app.runtime,'--update')
     if args.action=='native-test':
         if not args.source_host:parser.error('Provide --source-host for the existing TCP-copy service')
         helper('test-native-logger',app.candidate,app.runtime,'--host',args.source_host,'--port',str(args.source_port),'--duration',str(args.duration))

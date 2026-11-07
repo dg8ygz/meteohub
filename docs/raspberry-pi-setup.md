@@ -1485,9 +1485,9 @@ Temperatur-/Kombisensoren. Regen wurde in diesem kurzen Fenster nicht
 empfangen; daraus folgt kein Ausfallnachweis. Der native Logger lief dabei
 noch nicht.
 
-Von THB-Kombisensoren wird im Spiegelpfad nur Druck in den Anzeigeindex
-übernommen. Temperatur und Feuchte dieser Sensoren werden nicht weitergegeben;
-auch eine plausible THB-Temperatur wird nicht als Ersatzquelle genutzt.
+Von THB-Kombisensoren wird der vollständige ursprüngliche Datensatz an den
+nativen Logger weitergegeben. Im Anzeigeindex wird nur Druck übernommen;
+auch eine plausible THB-Temperatur wird dort nicht als Ersatzquelle genutzt.
 Details und Abgrenzung zum nativen Roharchiv stehen in
 [feed-recovery.md](feed-recovery.md#druck-aus-dem-kombisensor-getrennt-übernehmen).
 
@@ -1838,11 +1838,11 @@ Netzwerkzugang noch USB-Geräte. Sein Zustand und seine Herkunftsnachweise
 liegen unter `/data/tcp-feed/state`. Noch wird kein TCP-Zubringer oder Logger
 gestartet; eine fehlende `feed.json` ist in diesem Zustand normal.
 
-Die Druckregel gilt weiter: Nur der plausible THB-Druck wird separat als
-`pressure_only` in den Herkunftsnachweisen gehalten und kann vom Anzeigeindex
-übernommen werden. THB-Temperatur und -Feuchtigkeit gelangen nicht zum nativen
-Logger. Ein nativer THB-Roharchiveintrag wird dadurch nicht erzeugt; die
-getrennte Druckanzeige muss später zusammen mit dem Index eingerichtet werden.
+Die korrigierte Druckregel: vollständiges ursprüngliches THB an den nativen
+Logger, ausschließlich Druck für Dashboard/SVG. Ältere Installationen mit
+separaten `pressure_only`-Nachweisen benötigen das
+[Plugin-Update](installer.md#native-thb-druckaufzeichnung-aktualisieren).
+Native Archivierung verlangt zusätzlich die Zuordnung auf der Sensors-Seite.
 
 Vier lokale Vorbereitungstests bestanden: tatsächliche Plugin-Datei und
 unveränderte Konfiguration, Ablehnung falscher/fehlender/mehrerer Stationen,
@@ -1893,7 +1893,8 @@ Erwartet werden empfangene Datensätze beim Zubringer und anschließend
 `"plugin_probe_passed": true`, Sensorzähler und gegebenenfalls separat erfasste
 Druckwerte. `SYSTEMD_RUN_EXIT: 124` bedeutet in diesem speziellen Modus den
 vorgesehenen 15-Sekunden-Abbruch durch `timeout`. Der Helfer akzeptiert ihn
-nur mit syntaktisch gültiger, nicht leerer Plug-in-Ausgabe ohne THB-Datensätze.
+nur mit syntaktisch gültiger, nicht leerer Plug-in-Ausgabe. THB-Ausgaben müssen
+drei Zahlenfelder und einen Druck zwischen 3000 und 12000 Zehntel-hPa haben.
 Ein äußeres Zeitlimit, ein anderer Exitcode oder eine leere Ausgabe ist kein
 Erfolg. Fehlt in diesem kurzen Fenster ein Druckwert oder `t2`, darf daraus
 kein dauerhafter Sensorausfall abgeleitet werden; Wind bleibt beim Start bis
@@ -1906,12 +1907,15 @@ Ablehnungseinträge zählen zum Bericht. Der Test erzeugt keine nativen
 Wetterarchive. Er ist keine Hintergrundüberwachung: TCP-Zubringer und Plugin
 enden beide; Dauerbetrieb und nativer Logger folgen als eigene Schritte.
 
-Entwicklungsnachweis: Ein echter lokaler TCP-Testserver sendete synthetische
+Entwicklungsnachweis der früheren Version vor der THB-Korrektur:
+Ein echter lokaler TCP-Testserver sendete synthetische
 Temperatur-, Wind- und THB-Daten an den tatsächlichen Zubringer. Danach lief
 der installierte Wrapper als unprivilegierter Benutzer in der tatsächlichen
 systemd-Isolation: Temperatur und Wind wurden ausgegeben, nur Druck wurde
 separat gehalten und das 15-Sekunden-Limit beendete den Prozess. Zusätzlich
-werden leere/THB-Ausgaben und unerwartete Exitcodes als Fehler geprüft.
+wurden leere/THB-Ausgaben und unerwartete Exitcodes als Fehler geprüft.
+Die neue Fassung erlaubt vollständiges THB und verwirft fehlerhafte THB-Formate;
+ihre Nachweise sind in der aktuellen Installer-Anleitung dokumentiert.
 Der Nachweis mit realen Quelldaten auf dem Ziel-Pi erfolgte inzwischen am
 7. November 2026: 17 empfangene Datensätze, 16 Plugin-Ausgaben und ein separater
 Druckwert; keine Verwerfungen. Siehe [Zielprüfung](installer.md#pi-4-zielprüfung-am-7-november-2026).

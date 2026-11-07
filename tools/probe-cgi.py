@@ -144,8 +144,11 @@ def plugin_result(report, code, provenance, offset):
     malformed = []
     for line in output:
         parts = line.split()
-        if (len(parts) < 2 or not re.fullmatch(r'(?:wind|rain|th|t|uv|sol|data)[0-9]+', parts[0])
+        if (len(parts) < 2 or not re.fullmatch(r'(?:wind|rain|thb|th|t|uv|sol|data)[0-9]+', parts[0])
                 or any(not re.fullmatch(r'-?[0-9]+', item) for item in parts[1:])):
+            malformed.append(line)
+            continue
+        if parts[0].startswith('thb') and (len(parts)!=4 or not 3000<=int(parts[3])<=12000):
             malformed.append(line)
             continue
         counts[parts[0]] = counts.get(parts[0], 0) + 1
@@ -157,7 +160,8 @@ def plugin_result(report, code, provenance, offset):
         if len(data) > 2 * 1024 * 1024:
             raise ValueError('Unexpected provenance size')
         rows = [json.loads(line) for line in data.splitlines() if line]
-    pressures = [r for r in rows if r.get('pressure_only') is True]
+    pressures = [r for r in rows if r.get('pressure_only') is True or
+                 re.match(r'^thb[0-9]+ ',r.get('plugin',''))]
     success = code == 124 and bool(counts) and not malformed
     summary = {'plugin_probe_passed': success, 'stop': '15-second timeout' if code == 124 else code,
                'output_records': sum(counts.values()), 'sensors': counts,

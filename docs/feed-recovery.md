@@ -20,23 +20,39 @@ Logger neue Datensätze archiviert. Prüfen:
 
 ## Druck aus dem Kombisensor getrennt übernehmen
 
-Der aktuelle Spiegelpfad übernimmt von `thbN` ausschließlich den Stationsdruck.
-Zum Beispiel ergibt `thb0 1289 100 9839` einen Druckwert von 983,9 hPa; weder
-die Temperatur von 128,9 °C noch die Feuchte werden als Messwerte weitergegeben.
-Das gilt auch dann, wenn die THB-Temperatur wieder plausibel aussieht.
-Eigenständige Temperatursensoren wie `t1` und `t2` bleiben davon unberührt.
+Seit der Betreiberentscheidung vom 7. November 2026 wird der vollständige
+ursprüngliche `thbN`-Datensatz an den nativen Logger gegeben. Beispiel:
+`thb0 1289 100 9839` bleibt unverändert. Die auffällige Temperatur und Feuchte
+sind damit im nativen Datensatz enthalten, werden aber vom Dashboard/SVG
+ausgeschlossen. Deren Druckanzeige nutzt 983,9 hPa. Eigenständige Temperatur-
+sensoren `t1` und `t2` bleiben die Temperaturquellen, auch für die ausdrücklich
+gewählte Windchill-Berechnung. Keine Ersatztemperatur wird erfunden.
 
-Das Plugin schreibt dafür ausdrücklich markierte `pressure_only`-Datensätze
-in sein privates Provenienzjournal. Der Originaltext bleibt dort als Beleg
-erhalten, wird aber nicht als kombinierter THB-Datensatz auf die native
-Logger-Pipe geschrieben. Der Dashboard-Indexer übernimmt daraus nur das Feld
-`pressure`, nach einer eigenen Bereichsprüfung auf 300–1200 hPa.
-Es gibt keine erfundene Ersatztemperatur. Dies ist eine separate Speicherung
-im Anzeigeindex, kein Nachweis eines THB-Datensatzes im nativen Roharchiv.
+Das dokumentierte Pluginformat verlangt Temperatur, Feuchte und Stationsdruck
+zusammen; Druck hat dort die Einheit 1/10 hPa. Beim Spiegeln eines sechsstelligen
+THB-Rohdatensatzes werden nur die drei Eingabewerte übertragen, der Druck wird
+gegebenenfalls von ganzen hPa in Zehntel umgerechnet. Native abgeleitete Felder
+(Taupunkt, Vorhersage, Meeresspiegeldruck) werden nicht als Pluginfelder gesendet.
+Ungültige Druckwerte außerhalb 300–1200 hPa und falsche THB-Feldzahlen werden
+verworfen und protokolliert. Die native Verarbeitung einschließlich etwaiger
+eigener Wertebereichsprüfungen muss auf dem Zielgerät nachgewiesen werden.
 
-Bei einer Installation `live_feed_plugin.py` und `dashboard/index_weather.py`
-gemeinsam übernehmen. Bestehende laufende Installationen werden durch einen
-Git-Pull allein nicht umgestellt. Der Prozesstest `python3 test-feed-process.py`
+Das Provenienzjournal enthält nach erfolgreichem Pipe-Schreiben `plugin`-
+Datensätze. Der Indexer übernimmt daraus und aus nativen Roharchiven nur
+`pressure` für THB. Alte `pressure_only`-Journalzeilen bleiben lesbar, sind aber
+kein Nachweis früherer nativer Archivierung. Bereits durchlaufene Quellwerte
+werden bei der Aktualisierung nicht neu eingespielt.
+
+Die native THB-Anzeige selbst kann die mitgelieferten Temperatur-/Feuchtewerte
+weiterhin zeigen und Ableitungen berechnen. Für Nutzanzeigen und Exporte nur
+den Druck auswählen; Temperaturquellen explizit `t1`/`t2` belassen. Nicht
+behaupten, die proprietäre Anwendung unterdrücke diese Felder intern.
+
+Bestehende Pi-Installationen mit `python3 install-pi.py plugin-update` umstellen,
+während kein begrenzter Feed-/Loggertest läuft. Ein Git-Pull allein aktualisiert
+die installierte Plugin-Kopie nicht. Anleitung und native Abnahme:
+[Installer](installer.md#native-thb-druckaufzeichnung-aktualisieren).
+Der Prozesstest `python3 test-feed-process.py`
 prüft den tatsächlichen Plugin-Prozess und anschließend den tatsächlichen
 SQLite-Indexer mit gültigem Druck, fehlerhaftem Druck sowie plausibler und
 unplausibler THB-Temperatur.

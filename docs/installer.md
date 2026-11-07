@@ -107,9 +107,9 @@ Der Schritt erzeugt `logger.conf` mit dem nativen CGI-Parameter `-1`, prüft Sta
 erhalten. Danach liest der Collector standardmäßig **120 Sekunden** TCP-Daten,
 ohne Kommandos an die Station zu senden. Anschließend läuft das echte Plugin
 für 15 Sekunden in der isolierten Umgebung. Private Berichte dokumentieren die
-Ausgabe und übernehmen nur gültigen **Stationsdruck** aus THB; dessen Temperatur
-und Feuchte werden nicht ausgegeben. Der Druck wird im Herkunftsprotokoll für
-die Anzeige geführt, nicht als vollständiger nativer THB-Datensatz ausgegeben.
+Ausgabe. Vollständige ursprüngliche THB-Datensätze mit gültigem Stationsdruck
+werden an die Pipe ausgegeben; Dashboard/SVG wählen daraus nur Druck aus.
+Bestehende Installationen zuerst mit `plugin-update` aktualisieren.
 
 Collector und Plugin enden danach wieder. **Der native Logger startet nicht.**
 Ein erfolgreicher Test ist kein dauerhafter Empfang und keine Archivabnahme.
@@ -405,9 +405,9 @@ UV Kanal 0 → `uv0` und Daten Kanal 0 → `data0`. Nur tatsächlich erkannte Ka
 zuordnen und **Save** drücken. Namen sind optional. Fehlende oder abweichende
 Kanäle zuerst klären; keine Rohdaten oder Zuordnungen erfinden.
 
-`thb0` wird absichtlich nicht an den nativen Logger ausgegeben: Nur dessen
-Druckwert bleibt separat für Dashboard/SVG erhalten. Die unerwünschten
-THB-Temperatur-/Feuchtewerte bleiben ausgeschlossen.
+Seit der THB-Korrektur wird auch THB-Kanal 0 an den nativen Logger ausgegeben
+und muss als `thb0` zugeordnet werden. Dashboard/SVG verwenden davon nur Druck.
+Die vor der Korrektur dokumentierten Tests enthielten noch keinen nativen THB.
 
 Dieser Test benutzt eine feste, separate Logger-Konfiguration. Ein Speichern
 im Browser ändert diese laufende Kopie nicht. Eine Meldung „Data Logging
@@ -467,6 +467,95 @@ bestätigte Ursache der leeren Archive. Der erfolgreiche Lauf verwendete noch
 Temperaturkanal 2 → `t1` und Temperaturkanal 1 → `t2`; Wind war nicht zugeordnet.
 Die im Browser möglicherweise inzwischen korrigierten Zuordnungen müssen
 erneut mit `--generate-logger-config` übernommen und kontrolliert werden.
-Wind-Aufzeichnung, endgültige Temperaturzuordnung, Langzeittest, dauerhafter
-Betrieb, Boot-Autostart und RO-Modus bleiben offen. Dieser begrenzte Test
-ist keine laufende Überwachung oder vollständige Produktionsabnahme.
+Im folgenden Betreiberlauf mit korrigierten Temperaturzuordnungen und `wind0`
+wurden 42 TCP-Datensätze empfangen und 41 native Archivzeilen geschrieben:
+`wind0` 20, `t2` 3, `t1` 1, `sol0` 6, `uv0` 6 und `data0` 5. Keine verworfenen
+TCP-Datensätze oder ungültigen neuen Archivzeilen; 1209 Bytes hinzugefügt,
+keine gekürzten/ersetzten Archive. PASS nach kontrolliertem Ende (302,14 s).
+Dieser Lauf nutzte noch die frühere Druckbehandlung ohne natives THB.
+Langzeittest, dauerhafter Betrieb, Boot-Autostart und RO-Modus bleiben offen.
+Ein begrenzter Test ist keine laufende Überwachung oder Produktionsabnahme.
+
+## Native THB-Druckaufzeichnung aktualisieren
+
+Die bisherige ausschließliche Speicherung des Drucks im Anzeigeindex war für
+eine vollständige Meteohub-Migration unzureichend. Mit Betreiberfreigabe wird
+der ursprüngliche THB-Datensatz jetzt vollständig an den nativen Logger
+weitergegeben. Dashboard/SVG nutzen daraus weiterhin nur Stationsdruck.
+Die native THB-Sensoransicht kann auch die ursprünglichen Temperatur- und
+Feuchtewerte anzeigen. Diese nicht als Temperatur-/Feuchtequelle für Anzeigen,
+Wetterexporte oder Berechnungen auswählen. `t1`/`t2` bleiben die gewählten
+Temperaturkanäle; die vorhandene Windchill-Auswahl bleibt `t2`.
+Für die Druckreduktion bei Station 0 die vorhandene Einstellung
+„based on station's altitude“ belassen; keine THB-Temperatur dafür auswählen.
+
+Im dokumentierten Hersteller-Pluginformat ist Druck Teil von THB:
+Temperatur in Zehntelgrad, relative Feuchte und Stationsdruck in Zehntel-hPa.
+Die Korrektur ersetzt keine Messwerte. Beim Einlesen alter Roharchive wird
+die Druckeinheit korrekt normalisiert und die native Ausgabe auf genau drei
+THB-Eingabefelder begrenzt. Details: [Druckregel](feed-recovery.md#druck-aus-dem-kombisensor-getrennt-übernehmen).
+
+Nach Ende laufender Feed-/Loggertests als normaler Anwendungsbenutzer:
+
+```bash
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 install-pi.py plugin-update
+python3 install-pi.py web
+python3 install-pi.py native-test --source-host STATIONS_IP --source-port 5500 --duration 300
+```
+
+`plugin-update` akzeptiert nur die bekannte vorherige Plugin-Version oder die
+aktuelle Version mit passendem Manifest und unverändertem Wrapper. Unbekannte
+lokale Änderungen werden nicht überschrieben. Der gemeinsame Consumer-Lock
+verhindert eine Aktualisierung während der installer-gesteuerten Tests.
+Außerhalb des Installers manuell gestartete Plugin-Prozesse vorher beenden.
+Sicherung von Plugin und Manifest: `runtime/tcp-plugin-before-*` (privat).
+Die Dateien werden einzeln atomar ersetzt; bei einem abgefangenen Fehler wird
+zurückgerollt. Kein transaktionssicheres Versprechen bei Stromausfall zwischen
+beiden Dateiumbenennungen: Ein Manifestkonflikt muss anhand der Sicherung
+repariert werden. Archive, Cursor, Plugin-Wrapper und Stationseinstellungen
+bleiben erhalten. Es gibt keinen Neustart, Autostart oder historischen Replay.
+
+Während des fünfminütigen Tests auf **Sensors** den neu auftauchenden
+**THB-Kanal 0** als **`thb0`** zuordnen und **Save** drücken. Die vorhandenen
+Zuordnungen nicht ändern. Dies ist zunächst die Erkennung mit laufendem Logger;
+seine feste Testkonfiguration enthält die neue Zuordnung noch nicht.
+
+Nach Testende die gespeicherte Einstellung übernehmen:
+
+```bash
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime" \
+  --generate-logger-config
+grep -E '^@SENSORIDMAP[[:space:]]' \
+  "$HOME/meteohub-staging/5.1e-runtime/root/home/meteohub/logger.conf"
+```
+
+Zusätzlich zu den bisherigen Einträgen wird `@SENSORIDMAP 0 2 0 0` erwartet
+(Station 0, Typ THB, Quellkanal 0, Ziel-ID 0). Falls vorhanden, erneut mit
+`native-test --source-host STATIONS_IP --source-port 5500 --duration 300`
+prüfen. `thb0` muss dann in **frischen nativen Archivzeilen** erscheinen.
+Die Druckwerte mit der Quelle vergleichen und Dashboard/SVG auf weiterhin
+ausgeschlossene THB-Temperatur/Feuchte prüfen. Ein bloß erkannter Sensor oder
+eine erfolgreiche Pipe-Ausgabe ist noch keine Druckarchiv-Abnahme.
+
+Lokale Nachweise vom 7. November 2026:
+
+- Echte Plugin-Prozesse: vollständige ursprüngliche THB-Ausgabe, Druckeinheiten
+  in Plugin- und Roharchivformat, Ablehnung fehlerhafter Druckdaten,
+  unveränderte Windfreigabe nach `t2`, kein Replay, Ende bei geschlossener Pipe.
+- Tatsächlicher SQLite-Indexer: aus Live-THB und nativem THB-Rohformat nur Druck,
+  keine Temperatur-/Feuchteeinträge.
+- Neun Vorbereitung-/Update-Tests einschließlich realem TCP und unprivilegierter
+  systemd-Plugin-Ausführung, Sicherung, Wiederholbarkeit, Rückrollen nach
+  injiziertem Schreibfehler und Ablehnung unbekannter/parallel benutzter Stände.
+- Vier Orchestrierungstests einschließlich realem TCP, Plugin, gemeinsamem
+  privaten Netzwerk und **synthetischem** Archivschreiber; kein nativer ARM-Test.
+- 13 Dashboard-Tests und sieben Installer-Tests bestanden.
+
+Die native THB-Verarbeitung auf dem Ziel-Pi ist mit dieser Änderung noch nicht
+abgenommen. Insbesondere muss der originale Logger den ungewöhnlichen
+ursprünglichen THB-Temperaturwert akzeptieren, ohne den Druckdatensatz zu
+verwerfen. Keine Produktionsfreigabe allein aus den lokalen Tests ableiten.

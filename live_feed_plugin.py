@@ -12,6 +12,7 @@ def source_pressure(line,source_format):
     parts=line.split()
     if len(parts)<2 or not re.fullmatch(r'thb\d+',parts[1]):raise ValueError('not a pressure source')
     values=parts[2:];index=2 if source_format=='plugin' else 3
+    if len(values)!=(3 if source_format=='plugin' else 6):raise ValueError('invalid THB field count')
     try:value=int(values[index])
     except (IndexError,ValueError):raise ValueError('missing or invalid pressure') from None
     pressure=value/(10 if source_format=='plugin' or value>5000 else 1)
@@ -29,7 +30,10 @@ def convert(line):
     elif re.fullmatch(r'wind\d+',name) and len(v)==4: out=v[:3]
     elif re.fullmatch(r'rain\d+',name) and len(v)==3: out=v[:2]
     elif re.fullmatch(r'th\d+',name) and len(v)==3: out=v[:2]
-    elif re.fullmatch(r'thb\d+',name) and len(v)==6: out=[v[0],v[1],v[3],v[4]]
+    elif re.fullmatch(r'thb\d+',name) and len(v)==6:
+        # Raw pressure is hPa or tenths (>5000); the plugin always needs tenths.
+        # Dew point, forecast and sea-level pressure are native derived fields.
+        out=[v[0],v[1],v[3] if v[3]>5000 else v[3]*10]
     else: raise ValueError('unsupported record')
     # Reject implausible source temperatures; retain rejected evidence.
     if name.startswith('t') and not name.startswith('thb') and not -800<=out[0]<=800: raise ValueError('source temperature outside -80..80C')
@@ -77,18 +81,12 @@ def main():
                 data=json.loads(b); now=time.time()
                 if abs(now-data['source_read_at'])>45: time.sleep(2);continue
                 accepted,rejected=c.fresh(data['lines'],now,data.get('source_format','recorded'))
-                deliver=[];pressures=[]
+                deliver=[]
                 for raw,converted,age in accepted:
                     name=converted.split()[0]
-                    if name.startswith('thb'):
-                        # Native THB input combines temperature/humidity/pressure.
-                        # Keep only pressure in the derived index; never fabricate
-                        # replacement temperature or emit the combined THB record.
-                        pressures.append({'received_at':now,'source':raw,
-                            'source_format':data.get('source_format','recorded'),
-                            'pressure_only':True,'pressure_hpa':source_pressure(raw,data.get('source_format','recorded')),
-                            'age_seconds':age})
-                        continue
+                    # Preserve the complete THB source for the native archive.
+                    # Dashboard decoding selects pressure only; never substitute
+                    # a different sensor's temperature or invent missing fields.
                     if name.startswith('wind') and not temperature_ready:
                         if len(pending)>=64:
                             dropped=pending.pop(0);rejected.append((dropped[0],'startup wind buffer full'))
@@ -104,7 +102,6 @@ def main():
                 for raw,converted,age in deliver:
                     print(converted,flush=True)
                     log.write(json.dumps({'received_at':now,'source':raw,'plugin':converted,'age_seconds':age})+'\n')
-                for pressure in pressures:log.write(json.dumps(pressure)+'\n')
                 for raw,reason in rejected:
                     log.write(json.dumps({'received_at':now,'rejected':raw,'reason':reason})+'\n')
                 temp=cp.with_suffix('.tmp');temp.write_text(json.dumps({'last':c.last,'seen':dict(c.seen),'pending_wind':pending}));os.replace(temp,cp)

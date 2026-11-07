@@ -114,7 +114,7 @@ for line in p.stdout:
             output=actual_run(logger_cmd,capture_output=True,text=True,timeout=20)
             result=native.archive_result(self.weather,before,started)
             self.assertGreater(result['fresh_raw_records'],0,output.stderr)
-            self.assertNotIn('thb0',result['sensors'])
+            self.assertIn('thb0',result['sensors'])
             self.assertEqual((self.runtime/'root/data/network-joined').read_text(),'yes')
             actual_run(['systemctl','stop',logger+'.service'],capture_output=True,check=False)
             status=actual_run(['systemctl','show',logger+'.service','-p','Result'],capture_output=True,text=True)

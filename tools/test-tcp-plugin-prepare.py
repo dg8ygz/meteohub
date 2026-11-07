@@ -9,6 +9,7 @@ import socket
 import subprocess
 import sys
 import threading
+import fcntl
 from pathlib import Path
 import unittest
 from unittest import mock
@@ -111,16 +112,16 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(result,0,output.getvalue())
         report = next(self.runtime.parent.glob('cgi-probe-*'))
         summary = json.loads((report/'plugin-result.json').read_text())
-        self.assertEqual(summary['sensors'],{'t2':1,'wind0':1})
+        self.assertEqual(summary['sensors'],{'t2':1,'wind0':1,'thb0':1})
         self.assertEqual(summary['pressure_records'],1)
-        self.assertEqual((report/'response.txt').read_text().splitlines(),['t2 137','wind0 70 67 23'])
+        self.assertEqual((report/'response.txt').read_text().splitlines(),['t2 137','wind0 70 67 23','thb0 1289 100 9839'])
         self.assertFalse((self.runtime/'root/run/loggerd.pid').exists())
-        print('PASS: actual TCP collector -> installed plugin in systemd isolation; pressure separated; bounded stop')
+        print('PASS: actual TCP collector -> installed plugin in systemd isolation; original THB emitted; bounded stop')
 
-    def test_empty_thb_output_and_unexpected_exit_never_pass(self):
+    def test_empty_malformed_thb_and_unexpected_exit_never_pass(self):
         report = self.runtime/'result-test';report.mkdir()
         provenance = report/'absent-provenance.jsonl'
-        for output, code in (('',124),('thb0 200 50 9839\n',124),('t2 137\n',0),('t2 137\n',125)):
+        for output, code in (('',124),('thb0 200 50\n',124),('thb0 200 50 99999\n',124),('t2 137\n',0),('t2 137\n',125)):
             with self.subTest(output=output, code=code):
                 (report/'response.txt').write_text(output)
                 with redirect_stdout(io.StringIO()):
@@ -132,6 +133,56 @@ class PreparationTests(unittest.TestCase):
         self.config.unlink();self.config.symlink_to('/etc/passwd')
         with self.assertRaises(ValueError):tool.prepare(self.runtime)
         self.assertFalse((self.home/'plugin.sh').exists())
+
+    def previous_install(self):
+        tool.prepare(self.runtime)
+        code=b'previous reviewed plugin fixture\n'
+        self.digest=hashlib.sha256(code).hexdigest()
+        self.target=self.home/'live_feed_plugin.py';self.target.write_bytes(code)
+        self.manifest=self.runtime/'tcp-plugin-prepared.json'
+        record=json.loads(self.manifest.read_text())
+        record['files']['root/home/meteohub/live_feed_plugin.py']=self.digest
+        record['plugin_sha256']=self.digest
+        self.manifest.write_text(json.dumps(record))
+
+    def test_update_preserves_cursor_config_archive_and_is_repeatable(self):
+        self.previous_install()
+        state=self.runtime/'root/data/tcp-feed/state';state.mkdir()
+        cursor=state/'cursor.json';cursor.write_text('{"last":"20260101000000"}')
+        raw=self.runtime/'root/data/weather/old';raw.write_text('history')
+        keep={p:p.read_bytes() for p in (cursor,raw,self.config,self.home/'meteohub.conf')}
+        before=self.target.read_bytes()
+        with mock.patch.object(tool,'PREVIOUS_PLUGIN_SHA',self.digest):tool.update(self.runtime)
+        tool.verify_prepared(self.runtime)
+        backup=next(self.runtime.glob('tcp-plugin-before-*'))
+        self.assertEqual((backup/'live_feed_plugin.py').read_bytes(),before)
+        self.assertEqual({p:p.read_bytes() for p in keep},keep)
+        tool.update(self.runtime)
+        self.assertEqual(len(list(self.runtime.glob('tcp-plugin-before-*'))),1)
+
+    def test_update_rolls_back_after_manifest_write_failure(self):
+        self.previous_install()
+        before={p:p.read_bytes() for p in (self.target,self.manifest)}
+        replace=tool.replace_file;failed=False
+        def fail_once(path,data,mode):
+            nonlocal failed
+            if path==self.manifest and not failed:
+                failed=True;raise OSError('injected manifest failure')
+            replace(path,data,mode)
+        with mock.patch.object(tool,'PREVIOUS_PLUGIN_SHA',self.digest),mock.patch.object(tool,'replace_file',side_effect=fail_once):
+            with self.assertRaisesRegex(OSError,'injected'):tool.update(self.runtime)
+        self.assertEqual({p:p.read_bytes() for p in before},before)
+
+    def test_update_rejects_unknown_code_and_active_consumer(self):
+        self.previous_install()
+        before=self.target.read_bytes()
+        with self.assertRaises(ValueError):tool.update(self.runtime)
+        self.assertEqual(self.target.read_bytes(),before)
+        with (self.runtime/'.feed-consumer.lock').open('w') as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            with mock.patch.object(tool,'PREVIOUS_PLUGIN_SHA',self.digest):
+                with self.assertRaises(BlockingIOError):tool.update(self.runtime)
+        self.assertEqual(self.target.read_bytes(),before)
 
 
 if __name__ == '__main__':unittest.main()
