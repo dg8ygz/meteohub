@@ -189,15 +189,18 @@ class Installer:
 
     def feed_test(self,host,port,duration):
         if not host:raise ValueError('Provide --source-host for the existing TCP-copy service')
-        run(['sudo','-v'])
-        helper('probe-cgi',self.candidate,'--runtime',self.runtime,'--generate-logger-config')
-        tool=load('prepare-tcp-plugin')
-        if (self.runtime/'tcp-plugin-prepared.json').exists():tool.verify_prepared(self.runtime)
-        else:tool.prepare(self.runtime)
-        helper('tcp-feed','--host',host,'--port',str(port),'--duration',str(duration),
-               '--output',self.runtime/'root/data/tcp-feed/feed.json')
-        helper('probe-cgi',self.candidate,'--runtime',self.runtime,'--probe-plugin')
-        print('TEST FINISHED: collector/plugin stopped; no native logger started',flush=True)
+        fd=os.open(self.runtime/'.feed-consumer.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+        with os.fdopen(fd,'w') as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            run(['sudo','-v'])
+            helper('probe-cgi',self.candidate,'--runtime',self.runtime,'--generate-logger-config')
+            tool=load('prepare-tcp-plugin')
+            if (self.runtime/'tcp-plugin-prepared.json').exists():tool.verify_prepared(self.runtime)
+            else:tool.prepare(self.runtime)
+            helper('tcp-feed','--host',host,'--port',str(port),'--duration',str(duration),
+                   '--output',self.runtime/'root/data/tcp-feed/feed.json')
+            helper('probe-cgi',self.candidate,'--runtime',self.runtime,'--probe-plugin')
+            print('TEST FINISHED: collector/plugin stopped; no native logger started',flush=True)
 
     def status(self):
         for label,path in [('image',self.original/'mhrpi-v5.0s.img'),('5.1e',self.candidate/'manifest.json'),
@@ -231,7 +234,7 @@ class Installer:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('install','prepare','web','feed-test','extension-update','extension-rollback','storage-check','status','unmount-image'))
+    parser.add_argument('action',choices=('install','prepare','web','feed-test','native-test','extension-update','extension-rollback','storage-check','status','unmount-image'))
     parser.add_argument('--source-host')
     parser.add_argument('--source-port',type=int,default=5500)
     parser.add_argument('--duration',type=int,default=120)
@@ -248,6 +251,9 @@ def main():
     if args.action in ('install','prepare'):app.prepare()
     if args.action in ('install','web'):app.web()
     if args.action=='feed-test':app.feed_test(args.source_host,args.source_port,args.duration)
+    if args.action=='native-test':
+        if not args.source_host:parser.error('Provide --source-host for the existing TCP-copy service')
+        helper('test-native-logger',app.candidate,app.runtime,'--host',args.source_host,'--port',str(args.source_port),'--duration',str(args.duration))
     if args.action=='extension-update':helper('extension-update',app.candidate,app.runtime)
     if args.action=='extension-rollback':helper('extension-update',app.candidate,app.runtime,'--rollback')
     if args.action=='status':app.status()

@@ -62,7 +62,8 @@ Die bisher einzeln ausgeführten Pi-Schritte sind jetzt in
 [`install-pi.py`](install-pi.py) gebündelt. Die
 [Installer-Anleitung](docs/installer.md) beschreibt Installation, Wiederaufnahme,
 manuelle Stationseinrichtung und den getrennten Befehl `extension-update` für
-Dashboard und SVG. Bestehende Einstellungen bleiben erhalten. Der Stand richtet
+Dashboard und SVG. `native-test` prüft anschließend befristet die Kette aus
+TCP-Zubringer, Plugin und nativem Rohdatenlogger. Bestehende Einstellungen bleiben erhalten. Der Stand richtet
 die Testumgebung ein; nativer Dauerbetrieb und Boot-Autostart sind noch nicht
 Teil des Installers.
 

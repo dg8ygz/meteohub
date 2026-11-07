@@ -294,3 +294,73 @@ python3 install-pi.py status
 
 Damit wird kein Dienst als root gestartet; es bleibt beim bisherigen normalen
 Anwendungsbenutzer. Keine Login-Dateien wurden zur Umgehung verändert.
+
+## Native Logger-/Archivprüfung mit laufendem TCP-Zubringer
+
+Die erfolgreiche Dashboard-Installation startet keinen nativen Logger. Deshalb
+kann die alte Oberfläche weiterhin `Connection refused` auf `127.0.0.1:5555`
+und `Data logging has been halted` melden. Ein ausschließlich laufender
+Dashboard-Indexer ersetzt diesen Backendprozess nicht. Sensorzuordnungen auf
+`Sensors` sind zusätzlich zu prüfen, sobald der Logger Sensoren liefert.
+
+Der neue Befehl führt beide Prozesse gemeinsam für eine begrenzte Zeit aus:
+
+```bash
+python3 install-pi.py web
+python3 install-pi.py native-test --source-host STATIONS_IP --source-port 5500 --duration 180
+```
+
+`STATIONS_IP` durch die eigene TCP-Kopie-Quelle ersetzen. Nur numerische
+IP-Adressen sind in diesem Schritt erlaubt. Aus einer Root-Shell den oben
+beschriebenen Aufruf als normaler Benutzer verwenden.
+
+Der native Test:
+
+1. Prüft den vorhandenen Kandidaten, den installierten Plugin-Wrapper, Station 0
+   und die passende aktive isolierte Webunit. Ein gemeinsamer Lock verhindert
+   parallele Installer-`feed-test`-/`native-test`-Aufrufe auf demselben Plugin-Cursor.
+2. Sichert die private Anwendungskonfiguration in `native-logger-test-*` und
+   erstellt eine separate Logger-Konfiguration mit deaktivierten Uploadintervallen.
+   Standort-/Kalibrierungswerte werden nicht pauschal entfernt.
+3. Startet den lesenden TCP-Zubringer als unprivilegierten, eingeschränkten
+   Dienst. Die Quell-IP wird explizit übergeben; keine Befehle an die Wetterstation
+   und kein direkter USB-Zugriff.
+4. Startet das echte vorbereitete `loggerd -n -c ...` ohne alte Hersteller-
+   Init-Skripte. Der Logger teilt den privaten Netzwerkbereich der geprüften
+   Webunit (`JoinsNamespaceOf`), damit deren Zugriff auf Loopback-Port 5555
+   grundsätzlich möglich ist. `/run` ist für diesen Test privat beschreibbar.
+5. Lässt den Logger maximal 180 Sekunden arbeiten und beendet anschließend beide
+   Dienste. Bestehende rohe Archivdateien werden nicht geleert. Neu angehängte
+   Zeilen in `/data/weather/YYYYMM/raw` werden auf UTC-Zeitstempel, Sensor-ID und
+   Zahlenformat geprüft. Alte Zeilen zählen nicht als Erfolg; ersetzte/gekürzte
+   Archive und ungültige neue Zeilen verhindern eine erfolgreiche Abnahme.
+6. Sichert stdout, stderr, beide Journale, Unit-Ergebnis und `result.json` auf
+   dauerhaftem Speicher im privaten Report-Verzeichnis. Die normalen Ausgaben
+   enthalten nur Zusammenfassungen, keine vollständige Logger-Konfiguration.
+
+Als Erfolg gelten neue frische Rohdatensätze, tatsächlich neu empfangene TCP-
+Datensätze und das erwartete Ende durch das Laufzeitlimit. Ein früher Prozess-
+Exit, eine leere Datei oder lediglich `active` reichen nicht. Bei einem Fehler
+bleiben die privaten Diagnoseberichte erhalten. Der Test verändert keine
+Aktivierung und behauptet keine gültige Lizenz auf Grundlage einer leeren ID.
+
+**Nach dem Test enden Collector und Logger wieder.** Der Befehl installiert
+keinen Boot-Autostart. Die Oberfläche kann anschließend erneut einen fehlenden
+Logger melden. Erst anhand des nativen Ergebnisses wird der dauerhafte Betrieb
+samt Neustart und späterem RO-/RAM-Konzept eingerichtet.
+
+Lokale Prüfung des neuen Startwegs:
+
+```bash
+# Parser/Archivprüfung; kein nativer ARM-Prozess:
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-native-orchestration.py
+
+# Als root auf einem separaten Testsystem mit systemd:
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-native-orchestration.py --isolation
+```
+
+Vier Tests bestanden am 7. November 2026, einschließlich echter TCP-Verbindung,
+echtem Plugin, einem ausdrücklich **synthetischen** Archivschreiber, privater
+Loopback-Verbindung zwischen Units und zeitlich begrenztem Cgroup-Stop.
+Der originale ARM-Logger auf dem Ziel-Pi wurde durch diesen lokalen Test
+nicht geprüft; dessen erster Lauf steht noch aus.
