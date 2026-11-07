@@ -705,3 +705,30 @@ address: Function not implemented` und eine inkonsistente Netzwerkkonfiguration.
 Die Meldung verhinderte den belegten TCP-Empfang und die Aufzeichnung nicht.
 Ihre Ursache ist noch nicht nachgewiesen; weder die reale Host-IP noch die
 MAC-Adresse werden deshalb geändert. Kein Dauerbetrieb oder Autostart aktiv.
+
+### Direkte native THB-Archivierung bestätigt
+
+Der anschließende Betreiberlauf vom 7. November 2026 verwendete eine neu
+erzeugte Logger-Konfiguration mit der vorab geprüften Zuordnung
+`@SENSORIDMAP 0 2 0 0`. Bericht auf dem Pi:
+`native-direct-test-btw9pylu`.
+
+In 302,2 Sekunden einschließlich Rückweg wurden 39 frische Roharchivzeilen
+(1130 Bytes) beobachtet: `t2` 3, `sol0` 6, `data0` 5, `uv0` 6, `wind0` 17,
+`thb0` 1 und `t1` 1. Keine ungültigen Zeilen und keine gekürzten oder ersetzten
+Archive. `archive_observed=true` und `pressure_archive_observed=true` belegen
+jetzt auch einen neuen nativen THB-Archivdatensatz über den direkten TCP-Weg.
+Damit ist die fehlende THB-Zuordnung aus dem vorherigen Lauf behoben.
+
+Der Bericht prüft bei THB das Vorhandensein einer frischen Archivzeile; die
+konkreten Druckfelder und ihre Übereinstimmung mit Quelle und Anzeige sind
+noch gesondert zu prüfen. Ein einzelner THB-Datensatz ersetzt keinen
+Langzeittest oder die Abnahme von Aggregation und Exporten.
+
+Kein Empfangsplugin und kein Collector liefen. Der native Prozess beendete
+sich beim vorgesehenen Zeitlimit mit Exit 0. `Result=timeout`,
+`ActiveState=failed` und `systemd_run_exit=1` gehören hier zum begrenzten
+systemd-Testende, nicht zu einem nachgewiesenen Absturz. Die reguläre private
+Webumgebung wurde wiederhergestellt. Logger und Empfang sind anschließend
+gestoppt; Dauerbetrieb und Autostart bleiben ausstehend. Die oben beschriebene
+MAC-/Netzwerkmeldung ist weiterhin offen.
