@@ -364,3 +364,19 @@ echtem Plugin, einem ausdrücklich **synthetischen** Archivschreiber, privater
 Loopback-Verbindung zwischen Units und zeitlich begrenztem Cgroup-Stop.
 Der originale ARM-Logger auf dem Ziel-Pi wurde durch diesen lokalen Test
 nicht geprüft; dessen erster Lauf steht noch aus.
+
+### Erstes natives Pi-Ergebnis: Archivierung noch fehlgeschlagen
+
+Der Betreiberlauf vom 7. November 2026 (180 Sekunden) brachte 25 TCP-Datensätze
+ohne Verwerfung, jedoch **keine neuen Roharchivzeilen**. Der Dienst erreichte
+sein Laufzeitlimit (`Result=timeout`, Hauptprozess-Exit 0 beim Beenden), und die
+Prüfung meldete folgerichtig `archive_observed=false`. Keine gekürzten oder
+ersetzten Archive wurden beobachtet. Collector und Logger wurden beendet.
+
+Damit ist der Netzwerkempfang erneut belegt, der native Empfangs-/Archivpfad
+aber nicht abgenommen. Die zuvor gemeldete fehlende Sensorzuordnung ist ein
+möglicher Zusammenhang, noch keine nachgewiesene Ursache. Auch Plugin-Start,
+Dateipfade und Schreibrechte müssen anhand von `stdout.txt`, `stderr.txt`,
+`native-journal.txt` im privaten Testbericht sowie dem privaten
+`root/data/log/meteohub.log` eingegrenzt werden. Vor dieser Auswertung keinen
+Dauerbetrieb oder RO-Modus aktivieren und den Test nicht blind wiederholen.
