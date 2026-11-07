@@ -82,6 +82,16 @@ beschrieben. Kein Nachweis eines lückenlosen 24-Stunden-Betriebs bislang.
 
 ## Als Nächstes – ohne erneute Installation
 
+Nachtrag zur Druckanzeige: Bei etwa vier Minuten alten Werten meldete der
+Betreiber am 7. November fehlenden Luftdruck in Dashboard/SVG. Die Anzeige
+verwendet ohne Sensorintervallkonfiguration eine Drei-Minuten-Grenze; dieses
+Verhalten wurde mit echten API-/SVG-Aufrufen und synthetischen Archivdaten
+reproduziert. `tools/dashboard-interval.py` erlaubt die gemeinsame Einstellung
+für beide Ansichten. Für unsere Station ist `--sensor thb0 --interval 300`
+vorgeschlagen; auf dem Pi noch nicht angewendet/bestätigt. Details im
+[Installer](installer.md#messintervalle-für-dashboard-und-svg). Ein reiner
+Anzeigefix ersetzt nicht die ausstehende Prüfung der Archivverzögerung.
+
 ### 1. Weiterlauf und Langzeitdaten prüfen
 
 Als normaler Anwendungsbenutzer:

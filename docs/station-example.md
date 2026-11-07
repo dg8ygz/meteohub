@@ -52,7 +52,7 @@ Optionen.** Eine allgemeine Anleitung macht diese Stellen noch nicht universell:
 | SVG und Windvektor | Verwenden `wind0`; weitere feste SVG-Quellen sind `thb0`, `rain0`, `sol0`, `uv0`. Fehlende Werte erscheinen als Strich. |
 | Dashboard-Beschriftung | Bezeichnet `t2` als „Außen“ und `t1` als „Zusatzsensor“. Diese Bezeichnungen sind für andere Stationen zu prüfen. |
 | Zeitdarstellung | Aktuell Deutsch und `Europe/Berlin`; eine andere OS-Zeitzone ändert diese Codevorgaben nicht. |
-| Aktualität | Ohne Intervallkonfiguration gilt 60 Sekunden als Annahme. API/SVG lesen `sensor_intervals_seconds` aus ihrer Konfiguration; ein Einrichtungsdialog ist nicht vorhanden. |
+| Aktualität | Ohne Intervallkonfiguration gilt 60 Sekunden als Annahme (180 Sekunden Altersgrenze). API/SVG lesen `sensor_intervals_seconds` aus ihrer Konfiguration; Einstellung über `tools/dashboard-interval.py`, kein Einrichtungsdialog. |
 | Druck-Testkennzeichen | `pressure_archive_observed` prüft speziell `thb0`. Andere THB-IDs sind über die tatsächlichen Archivzeilen und die Sensorzähler zu bewerten. |
 
 Die Sensorzuordnung im nativen Meteohub muss fachlich richtig bleiben.
@@ -63,6 +63,14 @@ lokale Änderungen an einer installierten Ausgabe sind kein unterstützter
 Konfigurationsweg.
 
 ## Was allgemein nachgewiesen werden muss
+
+Stationsbefund vom 7. November: Der Betreiber meldete fehlenden Luftdruck in
+Dashboard und SVG bei etwa vier Minuten alten Werten. Die unkonfigurierte
+Altersgrenze von drei Minuten reproduziert dieses Verhalten. Frühere
+Archivzeitstempel für THB lagen etwa fünf Minuten auseinander. Für diese Station
+wird daher `thb0 --interval 300` vorgeschlagen (elf Minuten Altersgrenze).
+Die Konfiguration auf dem Pi und deren Wirkung sind noch vom Betreiber zu
+bestätigen. Dies ist keine pauschale Intervallvorgabe für andere Stationen.
 
 Für jede eigene Station: Empfang der erwarteten Kanäle, neue native
 Archivdatensätze, richtige Einheiten, passende Anzeigequellen und Aktualität.

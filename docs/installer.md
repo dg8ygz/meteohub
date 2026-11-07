@@ -199,6 +199,36 @@ Ohne eigene Sensorintervall-Konfiguration verwendet die Anzeige die vorhandene
 Standardannahme von 60 Sekunden; die tatsächlichen Intervalle sind vor
 Produktivbetrieb gesondert abzugleichen.
 
+### Messintervalle für Dashboard und SVG
+
+Die Altersgrenze beträgt `max(90, 2 × Sensorintervall + 60)` Sekunden.
+Ohne Konfiguration sind das **180 Sekunden**. Ein Sensor, der nur alle fünf
+Minuten sendet, wird damit schon vor der nächsten normalen Messung ausgeblendet.
+Das Intervall anhand der eigenen Station und des Roharchivs festlegen, nicht
+aus einzelnen Empfangslücken ableiten. Archivpufferung getrennt untersuchen.
+
+Als Anwendungsbenutzer, hier **nur ein Beispiel für einen Fünf-Minuten-Sensor**:
+
+```bash
+cd "$HOME/src/meteohub"
+python3 tools/dashboard-interval.py \
+  "$HOME/meteohub-staging/5.1e-runtime" --sensor thb0 --interval 300
+```
+
+Das Werkzeug schreibt die private Datei
+`5.1e-runtime/root/etc/meteohub-dashboard.json` und sichert eine vorhandene
+Datei unter dem ausgegebenen `BACKUP`-Pfad. Andere Einstellungen bleiben
+erhalten. API und SVG lesen dieselbe Datei bei jedem Aufruf; danach die Seite
+beziehungsweise das eingebettete Bild neu laden. Kein Extension-Update oder
+Dienstneustart erforderlich. Bei 300 Sekunden Intervall gilt der Messwert ab
+660 Sekunden (elf Minuten) als veraltet. Andere Sensoren behalten ihre Grenzen.
+Eine gestörte Datenaufbereitung wird weiterhin gesondert angezeigt.
+
+Rückweg: die ausgegebene Sicherung als Konfigurationsdatei wiederherstellen.
+Falls das Werkzeug die Datei erstmals angelegt hat, entfernt das Löschen dieser
+Datei alle darin gesetzten Intervalle und aktiviert wieder die Standardwerte.
+Roharchive, Messzeitstempel und nativer Logger werden nicht verändert.
+
 Rückweg zum vorherigen **Extension-Update** (nach mindestens zwei verschiedenen
 installierten Ausgaben):
 
