@@ -18,6 +18,7 @@ noch ein fertiges Installationsimage.
 Produktionsfreigabe.**
 
 [Installer und Extension-Update](docs/installer.md) ·
+[Dauerbetrieb und Autostart](docs/continuous-operation.md) ·
 [Stationsbeispiel und feste Softwarevorgaben](docs/station-example.md) ·
 [RO-/RAM-Konzept (noch offen)](docs/read-only-plan.md) ·
 [Funktionen](#was-das-projekt-bereits-bietet) ·
@@ -67,9 +68,10 @@ manuelle Stationseinrichtung und den getrennten Befehl `extension-update` für
 Dashboard und SVG. `direct-test` prüft anschließend befristet den direkten
 Empfang vom alten Meteohub durch den originalen Rohdatenlogger. Der ältere
 JSON-/Plugin-Test `native-test` ist für diesen Umzugsweg nicht erforderlich.
-Bestehende Einstellungen bleiben erhalten. Der Stand richtet
-die Testumgebung ein; nativer Dauerbetrieb und Boot-Autostart sind noch nicht
-Teil des Installers.
+Bestehende Einstellungen bleiben erhalten. Nach passender nativer Testabnahme
+richtet der separate Schritt [`live-install`](docs/continuous-operation.md)
+dauerhaften direkten Empfang und Boot-Autostart ein. Sein Langzeitbetrieb und
+der echte Neustart auf dem Ziel-Pi sind noch abzunehmen.
 
 
 **Zum ersten Mal mit Meteohub?** Die
@@ -99,6 +101,7 @@ und das Einbettungsbeispiel unter [Anzeige und Datenbehandlung](#anzeige-und-dat
 | `tools/stage-update.py`, `tools/test-update.py` | Bereiten das verpflichtende 5.1e-Kernupdate aus dem Herstellerpaket in einer neuen privaten Kopie vor; keine alten Systemdateien oder Update-Skripte werden ausgeführt/installiert. |
 | `tools/probe-cgi.py` | Führt nach einer echten Isolationsprüfung einen CGI-Probelauf oder die native Konfigurationsgenerierung (`-1`) oder einen begrenzten Plug-in-Datenwegtest aus; keine Webserver- oder Loggerinstallation. |
 | `tools/stage-runtime.py`, `tools/test-runtime.py` | Bereiten einen privaten Konfigurations-/Datenbaum für den CGI-Test vor und prüfen Dateiauswahl sowie optional die tatsächliche systemd-Isolation. |
+| `tools/live-service.py`, `tools/test-live-service.py` | Dauerhafter direkter TCP-Logger, private Web-/Indexdienste, Autostart, Status und Rückbau nach passender nativer Testabnahme. |
 | `tools/web-test.py`, `tools/test-web.py` | Passwortgeschützte Browser-Testoberfläche über Loopback/SSH und echte HTTP-Tests mit synthetischem CGI; keine Bootfreigabe oder Loggerinstallation. |
 | `tools/prepare-tcp-plugin.py`, `tools/test-tcp-plugin-prepare.py` | Prüfen die native Plug-in-Konfiguration und legen den Snapshot-Adapter im privaten Testbaum an; starten weder TCP-Zubringer noch Logger. |
 | `tools/tcp-feed.py`, `tools/test-tcp-feed.py` | Empfangen den bestehenden Plugin-Kopierstrom einer Station ausschließlich lesend und erstellen begrenzte JSON-Snapshots für das Spiegel-Plugin. |

@@ -96,6 +96,7 @@ def unit_command(unit,props):
 
 
 def run_test(candidate,runtime,host,port,duration):
+    load('live-service').refuse_live(runtime)
     host=str(ipaddress.ip_address(host)) # Explicit IP avoids DNS or shell interpretation.
     load('web-test').check_paths(candidate,runtime)
     load('prepare-tcp-plugin').verify_prepared(runtime)

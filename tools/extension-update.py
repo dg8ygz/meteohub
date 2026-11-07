@@ -206,7 +206,11 @@ def start_index(candidate, runtime):
     status = json.loads((runtime / 'root/data/dashboard/status.json').read_text())
     if status.get('error') or time.time() - status.get('last_success', 0) > 60:
         raise ValueError('Derived index could not be refreshed')
-    subprocess.run(index_command(candidate, runtime), check=True)
+    if (runtime / 'live-install.json').exists():
+        load('live-service').read_state(candidate, runtime)
+        subprocess.run(['sudo', '-n', 'systemctl', 'start', UNIT], check=True)
+    else:
+        subprocess.run(index_command(candidate, runtime), check=True)
     result = subprocess.run(['systemctl', 'is-active', UNIT], text=True, capture_output=True)
     if result.returncode:raise ValueError('Indexer did not remain active')
 
@@ -217,6 +221,10 @@ def update(candidate, runtime, rollback=False, services=True, source=None):
         load('web-test').check_paths(candidate, runtime)
         subprocess.run(['sudo', '-v'], check=True)
         service_state(runtime)  # Check ownership before changing files.
+        if (runtime / 'live-install.json').exists():
+            live=load('live-service');live.read_state(candidate,runtime)
+            if live.fields(live.TARGET).get('ActiveState')!='active':
+                raise ValueError('Live target stopped; resume it before updating the extension')
     base, old = inspect(runtime)
     if rollback:
         if old is None:raise ValueError('No installed extension to roll back')
@@ -247,7 +255,10 @@ def update(candidate, runtime, rollback=False, services=True, source=None):
     print('EXTENSION:', name)
     print('Dashboard: /dashboard/; SVG: /cgi-bin/weather-image.cgi (existing web authentication)')
     print('Derived index only; no native logger or TCP collector started. No webserver restart.')
-    print('Indexer is transient: rerun extension-update after a reboot. No autostart installed.')
+    if (runtime / 'live-install.json').exists():
+        print('Persistent indexer resumed; existing live boot configuration retained.')
+    else:
+        print('Indexer is transient: rerun extension-update after a reboot. No autostart installed.')
     return name
 
 

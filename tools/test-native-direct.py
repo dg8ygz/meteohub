@@ -76,6 +76,7 @@ def stop_web():
 
 
 def run_test(candidate,runtime,host,port,duration):
+    load('live-service').refuse_live(runtime)
     host=str(ipaddress.IPv4Address(host))
     web.check_paths(candidate,runtime)
     config=config_copy(runtime/'root/home/meteohub/logger.conf',host,port)
@@ -108,7 +109,7 @@ def run_test(candidate,runtime,host,port,duration):
                 '/usr/bin/env','-i','PATH=/usr/bin:/bin','HOME=/home/meteohub','LANG=C',
                 'LD_BIND_NOW=1','LD_LIBRARY_PATH=/home/meteohub/lib:/usr/lib/arm-linux-gnueabihf',
                 '/home/meteohub/bin/loggerd','-n','-c','/home/meteohub/logger-check.conf']
-            print('RUNNING:',duration,'seconds. Sensors: assign THB channel 0 to thb0 and Save if not yet assigned.',flush=True)
+            print('RUNNING:',duration,'seconds. Sensors: assign the actual received channels and Save if not yet assigned.',flush=True)
             print('This run uses a fixed config copy; regenerate after saving for the next archive test.',flush=True)
             started=time.time()
             with (report/'stdout.txt').open('w') as out,(report/'stderr.txt').open('w') as err:

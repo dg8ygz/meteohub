@@ -3,9 +3,10 @@
 Stand: 7. November 2026. Der Installer fasst die bisher einzeln ausgeführten,
 geprüften Vorbereitungsschritte zusammen. Er richtet die **5.1e-Testoberfläche**
 und optional die **Dashboard-/SVG-Erweiterung** ein. Er ist noch kein fertiger
-Produktionsinstaller für die gesamte Wetterstation: nativer Logger,
-Archiv-/Aggregat-/Exportabnahme, dauerhafter Datenzubringer und Autostart bleiben
-separate Schritte. Er akzeptiert keine Lizenzbedingungen und wählt keine Station
+Produktionsinstaller für die gesamte Wetterstation: Aggregation, Exporte und
+vollständige Betriebsabnahme bleiben offen. Nach erfolgreichem direktem Test
+richtet der separate Schritt [Dauerbetrieb und Autostart](continuous-operation.md)
+Logger, Web und Indexer dauerhaft ein; seine Zielabnahme steht noch aus. Er akzeptiert keine Lizenzbedingungen und wählt keine Station
 stellvertretend für den Anwender.
 
 **Aktueller Umzugsweg:** [Direkter nativer Meteohub-TCP-Empfang](#direkter-nativer-meteohub-tcp-empfang).
@@ -217,7 +218,9 @@ sudo systemctl stop meteohub-dashboard-index.service
 sudo systemctl stop meteohub-web-test.socket meteohub-web-test.service
 ```
 
-Die bisherigen Dienste sind **temporäre Testdienste ohne Boot-Autostart**.
+Dieser Abschnitt gilt **vor `live-install`**: Die bisherigen Dienste sind
+**temporäre Testdienste ohne Boot-Autostart**. Nach dessen Installation stattdessen
+[Live-Status, Wartung und Rückweg](continuous-operation.md) verwenden.
 Nach einem Neustart, wenn Kandidat und Laufzeitumgebung bereits vorhanden sind:
 
 ```bash
@@ -259,8 +262,8 @@ genannte Partialdatei nach Prüfung entfernen und den Schritt erneut starten.
   API, SVG, statischen Dateien, Methodenprüfung und gesperrten privaten Pfaden.
   Indexer-Start/Stop/Neustart tatsächlich ausgeführt; synthetische Daten.
 - **Noch offen:** kompletter Installerlauf von leerer Pi-SD, vollständige Browser-/HTTP-Abnahme der neuen
-  Extension auf ARM, dauerhafter Datenzubringer, nativer Logger/Archive/Aggregate/Exporte,
-  Autostart und Langzeitabnahme. Diese Veröffentlichung behauptet keine fertige
+  Extension auf ARM, Aggregation/Exporte sowie die Dauerbetriebs-, Neustart- und
+  Langzeitabnahme der neuen persistenten Dienste. Diese Veröffentlichung behauptet keine fertige
   produktive Wetterstation.
 
 Reproduzierbare lokale Tests:
@@ -721,8 +724,8 @@ Dashboard-Indexer kann weiterhin die nativen Roharchive lesen.
 
 Der Lauf endet nach der angeforderten Zeit. `Result=timeout` ist das erwartete
 Testende. Kein Hintergrundempfang, Autostart oder RO-Modus wird eingerichtet.
-Erst nach nativer Abnahme folgen Dauerbetrieb, Aggregation/Exporte, Langzeittest
-und Neustartprüfung. Beim späteren lokalen USB-Anschluss wird wieder die
+Nach nativer Abnahme folgt [Dauerbetrieb mit Autostart](continuous-operation.md).
+Aggregation/Exporte, Langzeittest und Neustartprüfung bleiben eigene Nachweise. Beim späteren lokalen USB-Anschluss wird wieder die
 originale Plug-in-Verbindung mit der passenden seriellen `cat`-Quelle benutzt;
 keine proprietären Loggerprogramme werden dafür verändert.
 

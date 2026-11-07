@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Resumable Meteohub 5.1e preparation on Raspberry Pi OS Lite Trixie.
 
-Run as the login user. No automatic licence acceptance, station selection or
-production logger deployment. See docs/installer.md for the remaining gates.
+Run as the login user. No automatic licence acceptance or station selection.
+Persistent direct reception requires live-install after a matching native test.
+See docs/installer.md and docs/continuous-operation.md for acceptance steps.
 """
 import argparse
 import hashlib
@@ -147,6 +148,7 @@ class Installer:
         print('PASS: original image mounted read-only',flush=True)
 
     def prepare(self):
+        load('live-service').refuse_live(self.runtime)
         platform_check();run(['sudo','-v']);packages()
         self.original.mkdir(mode=0o700,exist_ok=True)
         self.work.mkdir(mode=0o700,exist_ok=True)
@@ -174,6 +176,10 @@ class Installer:
         print('PREPARED: 5.1e core and private runtime; native logger not installed',flush=True)
 
     def web(self):
+        if (self.runtime/'live-install.json').exists():
+            load('live-service').read_state(self.candidate,self.runtime)
+            print('Persistent website installed; use live-status or live-resume. Existing state unchanged.')
+            return
         tool=load('web-test');tool.check_paths(self.candidate,self.runtime)
         web=self.runtime/'root/opt/meteohub-web'
         if not web.exists():tool.prepare(self.candidate,self.runtime)
@@ -188,6 +194,7 @@ class Installer:
         print('Manual: read/accept licence terms, verify version/build. For migration select station 0 User-defined / TCP/IP Meteohub; see docs/installer.md.',flush=True)
 
     def feed_test(self,host,port,duration):
+        load('live-service').refuse_live(self.runtime)
         if not host:raise ValueError('Provide --source-host for the existing TCP-copy service')
         fd=os.open(self.runtime/'.feed-consumer.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
         with os.fdopen(fd,'w') as lock:
@@ -234,7 +241,7 @@ class Installer:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('install','prepare','web','feed-test','native-test','direct-test','plugin-update','extension-update','extension-rollback','storage-check','status','unmount-image'))
+    parser.add_argument('action',choices=('install','prepare','web','feed-test','native-test','direct-test','plugin-update','extension-update','extension-rollback','storage-check','status','unmount-image','live-install','live-status','live-stop','live-resume','live-remove'))
     parser.add_argument('--source-host')
     parser.add_argument('--source-port',type=int,default=5500)
     parser.add_argument('--duration',type=int,default=120)
@@ -248,9 +255,17 @@ def main():
     # Keep this descriptor open for the complete orchestrated operation.
     fcntl.flock(lock_fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
     app=Installer(Path.home())
+    if args.action.startswith('live-'):
+        command=[args.action[5:],app.candidate,app.runtime]
+        if args.action=='live-install':
+            if not args.source_host:parser.error('Provide --source-host for direct TCP reception')
+            command+=['--host',args.source_host,'--port',str(args.source_port)]
+        helper('live-service',*command)
+        return
     if args.action in ('install','prepare'):app.prepare()
     if args.action in ('install','web'):app.web()
     if args.action=='feed-test':app.feed_test(args.source_host,args.source_port,args.duration)
+    if args.action=='plugin-update':load('live-service').refuse_live(app.runtime)
     if args.action=='plugin-update':helper('prepare-tcp-plugin',app.runtime,'--update')
     if args.action=='native-test':
         if not args.source_host:parser.error('Provide --source-host for the existing TCP-copy service')

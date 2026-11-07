@@ -2,7 +2,9 @@
 
 **Neu: [Installer und separates Dashboard-/SVG-Update](installer.md)** bündeln die
 nachfolgend dokumentierten Vorbereitungsschritte. Vorhandene 5.1e-Verzeichnisse
-werden geprüft und wiederverwendet. Produktionsabnahme und Autostart bleiben offen.
+werden geprüft und wiederverwendet. Nach erfolgreichem direktem Empfangstest
+ist [Dauerbetrieb mit Autostart](continuous-operation.md) separat installierbar;
+Produktions-, Langzeit- und Neustartabnahme bleiben offen.
 
 Für die Datenübernahme von einem laufenden Meteohub gilt inzwischen der
 [direkte native TCP-Weg](installer.md#direkter-nativer-meteohub-tcp-empfang).
