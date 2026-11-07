@@ -680,3 +680,28 @@ darf die vorhandenen Archivzeilen nicht erneut als Erfolg zählen.
 Zusätzlich echte Lighttpd-/CGI-/HTTP-Tests im begrenzten Hostnetz: Authentifizierung,
 Loopback-Backendzugriff, Dashboard/API/SVG und geschützte Dateien.
 Diese Entwicklungsprüfungen führen den originalen ARM-Logger nicht aus.
+
+### Erster direkter ARM-Lauf bestätigt
+
+Betreiberlauf am 7. November 2026: Der originale 5.1e-Logger auf dem Pi las den
+Stationsport direkt und schrieb innerhalb des begrenzten Fünfminutentests
+43 frische Archivzeilen (1234 Bytes): `t2` 4, `sol0` 7, `uv0` 7, `wind0` 19,
+`data0` 5 und `t1` 1. Keine ungültigen Zeilen oder gekürzten/ersetzten Archive.
+Kein Empfangsplugin und kein Collector liefen. Der native Prozess endete
+beim vorgesehenen Zeitlimit mit Exit 0; danach wurde die private Webumgebung
+wiederhergestellt. Gesamtdauer einschließlich Rückweg: 302,0 Sekunden.
+
+Die Sensors-Seite zeigte währenddessen auch THB-Kanal 0 mit frischem
+Stationsdruck 981,6 hPa und nativ berechnetem Meereshöhendruck 1021,1 hPa.
+Die ursprüngliche THB-Temperatur 128,9 °C und Feuchte 100 % waren dort sichtbar;
+sie werden von unserer Anzeige weiterhin nicht als Nutzwerte verwendet.
+Das belegt nativen Druckempfang, **noch keine Druckarchivierung**:
+`pressure_archive_observed=false` und keine neue `thb0`-Archivzeile in diesem
+Lauf. Die im Browser gespeicherte Zuordnung muss in eine neue Logger-Konfiguration
+übernommen und in einem weiteren Lauf abgenommen werden.
+
+Separat offen: Die native Oberfläche meldete `Error ifconfig read eth0 mac
+address: Function not implemented` und eine inkonsistente Netzwerkkonfiguration.
+Die Meldung verhinderte den belegten TCP-Empfang und die Aufzeichnung nicht.
+Ihre Ursache ist noch nicht nachgewiesen; weder die reale Host-IP noch die
+MAC-Adresse werden deshalb geändert. Kein Dauerbetrieb oder Autostart aktiv.
