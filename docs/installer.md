@@ -225,8 +225,8 @@ genannte Partialdatei nach Prüfung entfernen und den Schritt erneut starten.
 - Echter lighttpd-HTTP-Test unter systemd-Isolation mit Anmeldung, Dashboard,
   API, SVG, statischen Dateien, Methodenprüfung und gesperrten privaten Pfaden.
   Indexer-Start/Stop/Neustart tatsächlich ausgeführt; synthetische Daten.
-- **Noch offen:** kompletter Installerlauf von leerer Pi-SD, ARM-Abnahme der neuen
-  Extension, dauerhafter Datenzubringer, nativer Logger/Archive/Aggregate/Exporte,
+- **Noch offen:** kompletter Installerlauf von leerer Pi-SD, vollständige Browser-/HTTP-Abnahme der neuen
+  Extension auf ARM, dauerhafter Datenzubringer, nativer Logger/Archive/Aggregate/Exporte,
   Autostart und Langzeitabnahme. Diese Veröffentlichung behauptet keine fertige
   produktive Wetterstation.
 
@@ -253,3 +253,44 @@ Die gewünschte Trennung in schreibgeschütztes Betriebssystem, RAM-Puffer und
 tägliche Sicherung ist [separat beschrieben](read-only-plan.md). `storage-check`
 erfasst dafür nur den Zustand; der aktuelle Installer aktiviert noch keinen
 RO-Modus und keinen Sicherungstimer.
+
+## Pi-4-Zielprüfung am 7. November 2026
+
+Betreiber-Ausgabe nach dem ZRAM-Neustart, ausgeführt als `meteohub`:
+
+- Browser-Test wieder gestartet; Isolationsprüfung bestanden, ohne Anmeldung
+  HTTP 401. Native Station-0-Konfiguration erneut erzeugt, 361 Bytes.
+- TCP-Zubringer: 120,4 Sekunden, eine Verbindung, 17 Datensätze / 202 Bytes,
+  keine verworfenen Datensätze, keine Teilzeilen-Abbrüche und keine Verdrängungen.
+- Tatsächlich installierter Plugin-Wrapper: 16 Ausgaben plus ein separat
+  geführter Druckwert, keine unerwartete Ausgabe/Verwerfung. Exit 124 war das
+  vorgesehene Ende nach 15 Sekunden; `plugin_probe_passed=true`.
+- THB-Stationsdruck 983,8 hPa wurde übernommen; THB-Temperatur/Feuchte nicht als
+  Plugin-Datensatz ausgegeben. `t2 -5` entspricht -0,5 °C aus dem eigenen Sensor.
+- Extension `8eebe649702e11208f2be80e1fc9d59fb1a191e6be0f7b7eeed7a5fe8478df5a`
+  auf ARM installiert. Der echte Indexlauf schrieb 17 Datensätze ohne Ablehnung;
+  der anschließende Indexer-Dienst startete. Gesamtablauf Exit 0.
+
+Das bestätigt Installation und Indexverarbeitung auf ARM. Authentifizierte
+Dashboard-/SVG-Antwort und Darstellung im Browser auf diesem Ziel sind noch
+zu prüfen; die bisherigen echten HTTP-Tests liefen separat mit Testdaten.
+Collector und Plugin des befristeten Tests sind beendet. Der Indexer läuft
+weiter, erzeugt aber keine neuen Messungen. Native Archivierung, dauerhafter
+Zubringer und RO-/RAM-/Sicherungsbetrieb sind dadurch noch nicht abgenommen.
+
+### Aufruf aus einer Root-Shell
+
+Auf diesem Pi brachte der Aufruf mit `sudo -iu meteohub bash -c ...` keine
+Ausgabe. Die Ursache in der Login-Startkette ist nicht nachgewiesen. Der folgende
+Aufruf mit explizitem HOME und ohne Bash-Startdateien funktionierte dagegen:
+
+```bash
+sudo -H -u meteohub -- /bin/bash --noprofile --norc -c '
+set -e
+cd "$HOME/src/meteohub"
+python3 install-pi.py status
+'
+```
+
+Damit wird kein Dienst als root gestartet; es bleibt beim bisherigen normalen
+Anwendungsbenutzer. Keine Login-Dateien wurden zur Umgehung verändert.

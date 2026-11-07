@@ -1912,7 +1912,9 @@ der installierte Wrapper als unprivilegierter Benutzer in der tatsächlichen
 systemd-Isolation: Temperatur und Wind wurden ausgegeben, nur Druck wurde
 separat gehalten und das 15-Sekunden-Limit beendete den Prozess. Zusätzlich
 werden leere/THB-Ausgaben und unerwartete Exitcodes als Fehler geprüft.
-Der Nachweis mit den realen Quelldaten auf dem Ziel-Pi bleibt offen.
+Der Nachweis mit realen Quelldaten auf dem Ziel-Pi erfolgte inzwischen am
+7. November 2026: 17 empfangene Datensätze, 16 Plugin-Ausgaben und ein separater
+Druckwert; keine Verwerfungen. Siehe [Zielprüfung](installer.md#pi-4-zielprüfung-am-7-november-2026).
 
 Die Vorbereitung ist noch kein vollständig installiertes 5.1e-System.
 Vor dem Umschalten sind eine gesicherte private Laufzeitkopie, CGI-Aufruf,
