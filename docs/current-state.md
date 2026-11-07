@@ -135,6 +135,18 @@ Archivfortschritte und Logs aufnehmen; erst daraus eine Änderung ableiten.
 `records_added=0` im Indexstatus betrifft nur den letzten Indexdurchlauf und
 ist allein kein Beleg für ausgefallenen Empfang.
 
+Später meldete der Betreiber gleichzeitiges Ausblenden von Wind, Temperatur,
+Solar und UV nach drei Minuten. Ein davor gelieferter Status zeigte weiterhin
+Archivwachstum (534 Zeilen seit Installation), aber nicht diesen Fehlerzustand.
+Mit `python3 tools/observe-archive.py "$HOME/meteohub-staging/5.1e-runtime"`
+vier Minuten lang Archivgröße, letzte Rohzeitstempel und Indexzeitstempel
+gleichzeitig lesen. Kein weiterer Stationsport-Leser, keine Änderungen am
+Logger. `index_behind_raw_s=0` bedeutet nur gleichen letzten Zeitstempel;
+wenn beide Alterswerte gemeinsam wachsen, entsteht die Verzögerung bereits
+vor dem Index. Eine stille Quelle und Loggerpufferung sind damit noch nicht
+voneinander unterschieden. Nur aktueller UTC-Monat und letzte 256 KiB werden
+untersucht; kein vollständiger historischer Lückentest.
+
 ### 3. Native MAC-/Netzwerkwarnung diagnostizieren
 
 Noch offen:
