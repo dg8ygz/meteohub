@@ -244,3 +244,21 @@ liegen bei 91 Sekunden für Wind, 136 Sekunden für die schnelleren übrigen
 Kanäle und 375–376 Sekunden für `t1`/`thb0`. Sensorintervalle und mögliche
 Archivpufferung sind separat abzugleichen. Kein Nachweis lückenlosen Langzeit-
 betriebs allein aus den aktiven Units oder diesen Summenzählern.
+
+### Bootzeit und spätere Rückmeldung ergänzt
+
+Der Betreiber hat anschließend `uptime -s` und das Boot-Journal vorgelegt:
+Neustart am **7. November 2026 um 14:59:47 CET (13:59:47 UTC)**. Der Logger
+wurde laut Journal ebenfalls um 14:59:47 CET gestartet. Die Abfrage um
+15:06:36 CET zeigte im Logger-Journal nur Start und erfolgreichen Startabschluss.
+Damit liegen die zuvor ausgewiesenen Archivwerte von Wind (15:03:33 CET) und
+`data0`/Solar/UV/`t2` (15:02:48 CET) eindeutig nach dem Neustart.
+
+Auf die noch ausstehende Kontrolle von `t1` und Luftdruck meldete der Betreiber
+anschließend „daten sind da“. Das ist als Bestätigung des Betreibers erfasst;
+eine weitere Roharchivzeile oder ein neuer Statusbericht mit deren konkreten
+Zeitstempeln liegt für diese Rückmeldung nicht vor.
+
+Der Dauerempfang bleibt eingeschaltet. Keine weitere Änderung oder erneuter
+Neustart zum Abschluss dieses Arbeitsschritts. Der nächste Ansatzpunkt steht
+im [gesicherten Arbeitsstand](current-state.md).

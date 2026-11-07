@@ -19,6 +19,7 @@ Produktionsfreigabe.**
 
 [Installer und Extension-Update](docs/installer.md) ·
 [Dauerbetrieb und Autostart](docs/continuous-operation.md) ·
+[Aktueller Arbeitsstand und nächste Schritte](docs/current-state.md) ·
 [Stationsbeispiel und feste Softwarevorgaben](docs/station-example.md) ·
 [RO-/RAM-Konzept (noch offen)](docs/read-only-plan.md) ·
 [Funktionen](#was-das-projekt-bereits-bietet) ·
