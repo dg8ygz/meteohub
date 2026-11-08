@@ -891,3 +891,26 @@ fertiger Stand, voriger Stand erhalten, Dienste aktiv und Mount RO.
 Testfixture entfernt; keine echte Station und keine SD benutzt. Syntaxcheck
 bestanden. Ausfuehrung auf dem Pi und frische Messwerte nach der Pause OFFEN.
 RAM-Betrieb, taeglicher Timer, automatischer Restore und Root-RO bleiben OFFEN.
+
+
+### Betreiberabnahme der Ausgangssicherung (09.11.2026)
+
+Skript-SHA256 edc79dae3600ddaec6ab448fd08bbd814c562ce8153142574689c21908cbd554
+auf dem Pi geprueft. Ausfuehrung erfolgreich: runtime.tar SHA-256 OK,
+SQLite restore OK, vollstaendige Sicherung unter
+/srv/meteohub-persist/snapshots/initial-F2ffNYMd. Temporaere Restorepruefung
+unter /root/meteohub-restore-check-8WnBnryl wurde im Erfolgsweg entfernt.
+Skript meldet Dienste wieder aktiv. Damit ist eine tatsaechliche
+Ausgangssicherung mit Wiederherstellungspruefung auf dem Pi belegt.
+Messwerte nach dieser Pause und der sichtbare abschliessende RO-Mountstatus
+sind noch separat zu pruefen. Kein Timer, keine RAM-Mounts, kein automatischer
+Restore und kein Root-Overlay wurden dadurch installiert.
+
+Vor deren Implementierung werden Boot-Cmdline, aktive initramfs-Konfiguration,
+Paketversionen von raspi-config/overlayroot/initramfs-tools und aktuelle
+Speicherbelegung auf dem Pi erfasst. Raspberry Pi OS Trixie kann overlayroot
+verwenden; die separat benoetigte Datenpartition darf nicht unbeabsichtigt
+unter einen weiteren fluechtigen Overlay geraten. Konkrete Konfiguration
+anhand des installierten Paketstands pruefen, nicht von alten Pi-Anleitungen
+ableiten. Die automatischen Wiederherstellungs-/Sicherungsdienste muessen
+vor dem Umschalten der Rootpartition getestet werden.
