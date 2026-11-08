@@ -748,3 +748,25 @@ systemctl show meteohub-live-logger.service \
 printf '\nZeit-Startsperre eingerichtet; laufender Logger wurde nicht neu gestartet.\n'
 )
 ```
+
+
+### Echte Bootabnahme der Zeit-Startsperre (08.11.2026, 23:47 CET)
+
+Betreiberbeleg: Vorheriges Journal und Loggerunit dauerhaft unter
+/home/meteohub/bootcheck-before-viaWZC0d gesichert. Nach neuem Boot initiale
+NTP-Synchronisation bei 36,629 s (23:46:20 CET), Warteunit erfolgreich bei
+36,632 s beendet, Loggerstart erst bei 36,642 s, gestartet bei 36,741 s.
+Damit ist die Startreihenfolge auf dem Ziel-Pi nachgewiesen. NRestarts=0 fuer
+Logger/Web/Index, Uhr synchronisiert. Beobachtungszeit nach Loggerstart bei
+dieser Statusabfrage erst etwa 55 Sekunden; kein Langzeitnachweis.
+
+Druck/t1/Regen sind im vorherigen Boot wieder angekommen: thb0/t1 zuletzt
+22:43:47 UTC, rain0 22:38:46 UTC. Aktueller neuester Windwert 22:45:16 UTC
+liegt ebenfalls noch vor dem neuen Loggerstart um 22:46:20 UTC. Neue
+Archivaufzeichnung nach genau diesem Reboot bleibt bis zur naechsten
+Beobachtung OFFEN; 4015 Datensaetze seit Installation sind kein Bootbeleg.
+
+Naechste Vorbereitung: neue Datenpartition per UUID nur lesend unter
+/srv/meteohub-persist einhaengen und Mount pruefen. Noch kein fstab-Eintrag,
+keine RAM-Mounts und kein Sicherungstimer. Parallel vier Minuten lesende
+Archivbeobachtung fuer Datensaetze nach 22:46:20 UTC. Root/Boot bleiben RW.
