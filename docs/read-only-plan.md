@@ -174,3 +174,44 @@ Herstellerimages ist dafür nicht nötig. Danach den befristeten `feed-test`
 mit der eigenen TCP-Quelladresse und `extension-update` ausführen. Der Test
 prüft den Empfangsweg; dauerhafte native Archivierung und Tageszuwachs bleiben
 noch gesondert zu messen.
+
+
+## Wiederaufnahme am 8. November 2026
+
+Der Betreiber hat die noch offene RO-Umstellung erneut aufgegriffen. Der
+Dauerbetrieb mit nativem TCP-Logger, Regenarchivierung und Dashboard ist
+inzwischen eingerichtet; die fruehere Bestandsaufnahme vor dem Loggerbetrieb
+reicht nicht fuer die RAM-Dimensionierung. Dies ist ein Planungsstand, kein
+neuer Live-Nachweis auf dem Pi.
+
+Weiterhin offen: aktuelle Speicher-/Archivgroessen und Tageszuwachs,
+vollstaendige Schreibpfade, begrenzter RAM-Puffer, dauerhafter Sicherungsbereich,
+Sicherungs-/Wiederherstellungsverfahren, Timer, Wartungsmodus und RO-Abnahme.
+Der Nachweis fuer ZRAM ohne SD-Backing vom 7. November bleibt ein historischer
+Befund und wird vor der Umstellung erneut geprueft.
+
+Naechster Schritt auf unserer Beispielstation, vom Betreiber ausgefuehrt:
+
+```bash
+sudo -H -u meteohub -- /bin/bash --noprofile --norc -c '
+set -e
+cd "$HOME/src/meteohub"
+python3 install-pi.py storage-check
+python3 install-pi.py live-status
+printf "\nAktuelle Datengroessen:\n"
+du -h --max-depth=1 "$HOME/meteohub-staging/5.1e-runtime/root/data"
+printf "\nZRAM-Hintergrundspeicher:\n"
+cat /sys/block/zram0/backing_dev
+'
+```
+
+Keine neue Software muss fuer diese vorhandenen Lesebefehle geladen werden.
+Die Ausgabe liefert eine Momentaufnahme, noch keinen gemessenen Tageszuwachs.
+Bis zur Auswertung bleibt die laufende Erfassung unveraendert.
+Ein konkreter Vor-Ort-/SD-Rettungszugang ist vor spaeteren Boot- oder
+Partitionsaenderungen zu bestaetigen; reine SSH-Erreichbarkeit reicht dafuer
+nicht. Die Frage nach diesem Rueckweg wurde dem Betreiber gestellt.
+
+Die bestehende Vorgabe bleibt: Betreiber fuehrt Zielbefehle selbst aus;
+Entwicklung und Dokumentation lokal, derzeit kein GitHub-Push. Die Sicherungszeit
+04:15 Europe/Berlin ist weiterhin ein Vorschlag, kein eingerichteter Timer.
