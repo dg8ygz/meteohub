@@ -215,3 +215,41 @@ nicht. Die Frage nach diesem Rueckweg wurde dem Betreiber gestellt.
 Die bestehende Vorgabe bleibt: Betreiber fuehrt Zielbefehle selbst aus;
 Entwicklung und Dokumentation lokal, derzeit kein GitHub-Push. Die Sicherungszeit
 04:15 Europe/Berlin ist weiterhin ein Vorschlag, kein eingerichteter Timer.
+
+
+## Betreiberbefund vom 8. November, ca. 22:03 MEZ
+
+Die angeforderten Lesebefehle wurden vom Betreiber ausgefuehrt:
+
+- RAM 905 MiB, davon 704 MiB verfuegbar; ZRAM 905 MiB, 0 B belegt,
+  `backing_dev=none`.
+- Root ext4 und Boot vfat weiterhin RW; SD mit 512-MiB-Bootpartition und
+  29,2-GiB-Rootpartition. Keine separate Datenpartition vorhanden.
+- Laufzeitdaten 6.652 MiB (6.975.488 Bytes belegter Platz), davon Dashboard
+  6.098 MiB, Wetterarchiv 488 KiB, alter TCP-Feed-Bereich 52 KiB.
+  Private Anwendungskonfiguration 224 KiB.
+- Logger, Web und Indexer aktiv, jeweils NRestarts=0; Autostart aktiviert.
+  Seit Live-Installation 3.834 neue gueltige Rohzeilen (113.360 Bytes), alle acht
+  Sensoren vertreten, darunter sieben Regenwerte; keine ungueltigen Zeilen,
+  Trunkierungen oder Ersetzungen gemeldet. Kein Neustart seit Installation.
+- Indexlauf erfolgreich; `records_added=0` ist nur der letzte Indexlauf,
+  kein Nachweis eines Erfassungsausfalls. Diese Ausgabe ist weder ein
+  vollstaendiger Lueckentest noch eine langfristige Speichermessung.
+
+Die aktuellen Daten sind klein genug fuer weitere RAM-Puffer-Planung. Das
+Dashboard haelt laut aktuellem Indexer 35 Tage Messwerte; seine jetzigen 6.1 MiB
+sind daher kein belegter Maximalbedarf. SQLite-WAL, Archivwachstum, Logs und
+Sicherungsspitzen muessen im RAM-Budget beruecksichtigt werden. Kein festes
+kleines tmpfs-Limit allein aus dieser Momentaufnahme ableiten.
+
+Die bestehende Sandbox macht insbesondere `/data` und `/home/meteohub`
+schreibbar. Beide Bereiche sind bei der RAM-/Persistenzaufteilung zu behandeln;
+`/run` ist bereits geteilter fluechtiger Prozesszustand. Die erlaubten
+Schreibverzeichnisse ersetzen keinen Nachweis aller tatsaechlichen Schreibzugriffe.
+
+Beim vorgesehenen Root-Overlay muss die persistente Sicherung ausserhalb seiner
+unteren Root-Dateisystemschicht liegen. Eine eigene Datenpartition auf derselben
+SD erfordert mit der aktuellen Aufteilung eine Offline-Vorbereitung; alternativ
+kommt ein separates Speichermedium infrage. Diese Entscheidung und der konkrete
+Rettungsweg stehen noch aus. Es wurden keine Mounts, Partitionen, Bootdateien,
+Dienste oder Sicherungszeitplaene geaendert.
