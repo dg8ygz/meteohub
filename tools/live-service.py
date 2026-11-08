@@ -30,6 +30,7 @@ INDEX = 'meteohub-dashboard-index.service'
 NAMES = (TARGET, LOGGER, RUNTIME, WEB, SOCKET, INDEX)
 MARKER = 'live-install.json'
 TIME_WAIT = 'systemd-time-wait-sync.service'
+RAM_CONFIG = Path('/etc/meteohub-ram.json')
 
 
 def load(name):
@@ -266,6 +267,8 @@ def install(candidate, runtime, host, port):
 
 
 def restore(candidate, runtime, state):
+    if RAM_CONFIG.exists() or RAM_CONFIG.is_symlink():
+        raise ValueError('RAM storage installed: remove it with meteohub-ram.py remove before live-remove')
     print('RESTORING: private test website; native archive retained.', flush=True)
     read_state(candidate, runtime, partial=True)
     remove_units(state)

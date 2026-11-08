@@ -22,6 +22,7 @@ Produktionsfreigabe.**
 [Aktueller Arbeitsstand und nächste Schritte](docs/current-state.md) ·
 [Stationsbeispiel und feste Softwarevorgaben](docs/station-example.md) ·
 [RO-/RAM-Konzept (noch offen)](docs/read-only-plan.md) ·
+[RAM-Sicherung (lokal getestet, Pi-Abnahme offen)](docs/ram-storage.md) ·
 [Funktionen](#was-das-projekt-bereits-bietet) ·
 [Projektstatus](#aktueller-projektstatus) ·
 [Raspberry-Pi-Anleitung für Einsteiger](docs/raspberry-pi-setup.md) ·

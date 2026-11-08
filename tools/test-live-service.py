@@ -36,6 +36,13 @@ MODULES=LIGHTTPD.parent.parent/'lib/lighttpd'
 
 
 class LiveTests(unittest.TestCase):
+    def test_live_remove_refuses_installed_ram_storage(self):
+        with tempfile.TemporaryDirectory() as td:
+            config=Path(td)/'ram.json';config.write_text('{}')
+            with patch.object(live,'RAM_CONFIG',config):
+                with self.assertRaisesRegex(ValueError,'RAM storage installed'):
+                    live.restore(Path(td),Path(td),{})
+
     def test_logger_waits_for_clock_without_blocking_web(self):
         with tempfile.TemporaryDirectory() as td:
             runtime=Path(td);(runtime/'live').mkdir()

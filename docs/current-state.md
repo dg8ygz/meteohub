@@ -1,4 +1,4 @@
-# Arbeitsstand und Fortsetzung – 8. November 2026
+# Arbeitsstand und Fortsetzung – 9. November 2026
 
 **Betriebsnachweis unserer Beispielstation, keine allgemeine Installationsvorgabe.**
 Diese Notiz hält den zuletzt vom Betreiber gemeldeten Stand fest. Sie ist keine
@@ -6,7 +6,57 @@ automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
 
-## Neuester Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
+## Feierabendstand 9. November: RO-Vorbereitung, noch kein RAM-/Root-RO-Betrieb
+
+**Betreiber beendet die Arbeit; heute keine weitere Umschaltung auf dem Pi.**
+Der neue Meteohub-Pi ist 44.149.114.50, Quelle weiterhin 44.149.114.9:5500.
+Der Betreiber fuehrt alle Zielbefehle selbst aus. Lokale Commits erlaubt,
+weiterhin **kein GitHub-Push**.
+
+Auf dem Pi belegt:
+
+- Offline-SD-Image auf Proxmox .60: `/root/meteohub-sd-vor-ro-juN2kxBj/karte.img`,
+  31914983424 Bytes, SHA256
+  `89148f69b230f0a8237d3eb3d2066a30738a19a8d27d4c301680ea21d452b47f`.
+  Abbild gegen vollstaendig erneut gelesene Karte verglichen. Kein Image-Restoreboot getestet.
+- Root ext4 auf 12 GiB verkleinert, geprueft und mehrfach erfolgreich gebootet.
+  Boot- und Root-Kennungen unveraendert; Root und Boot weiterhin RW.
+- Neue Datenpartition 17,2 GiB, UUID `6d332cf5-8a19-4fc5-bcaa-5156ab2dad54`,
+  unter `/srv/meteohub-persist` RO gemountet. fstab geprueft und eingetragen;
+  Sicherung `/root/meteohub-mount-before-7i3Nc6mZ/fstab`.
+- Zeit-Startsperre installiert: Logger nach NTP statt davor. Echter Bootbeleg:
+  Zeitsynchronisation bei 36,629 s, Loggerstart bei 36,642 s, keine Neustarts.
+- Ausgangssicherung mit echtem Restore und SQLite-Pruefung:
+  `/srv/meteohub-persist/snapshots/initial-F2ffNYMd`.
+- Neueste Betreiberstatusausgabe etwa 00:05 CET: alle Anwendungsdienste aktiv,
+  NRestarts=0, 4161 Datensaetze seit Live-Installation, keine ungueltigen Zeilen
+  oder Ersetzungen. Frische Wind-/Druck-/Temperatur-/sonstige Messwerte nach
+  Sicherungspause, rain0 um 23:38:46 CET noch im stundenweisen Intervall.
+  Keine neue Live-Pruefung zum Zeitpunkt dieses Dokumentationscommits.
+- RAM: 905 MiB gesamt, 733 MiB verfuegbar; ZRAM ohne SD-Backing, Swap unbenutzt.
+  Runtime-Daten etwa 6,8 MiB. `auto_initramfs=1`, initramfs-tools
+  `0.148.4+rpt2`, raspi-config `20261026+2`; overlayroot nicht installiert.
+
+Lokal vorbereitet, **NICHT auf dem Pi installiert**:
+
+- `tools/ram-storage.py`: begrenztes RAM-Overlay, gepruefte Generationen,
+  taegliche Sicherung 04:15 Europe/Berlin, Shutdown-Sicherung, Rebase,
+  Kapazitaetspruefung und Rueckbau. Details: [RAM-Sicherung](ram-storage.md).
+- Echte lokale Mount-/systemd-Tests einschliesslich vollem RAM, Fehlerpfaden,
+  schlechter Sicherung, Shutdown/Restore und Rueckbau bestanden. Kein nativer
+  ARM-Empfangs-/Pi-Rebootnachweis durch diese Tests.
+- Aktualisierter Live-Helfer verhindert `live-remove` bei installierter
+  RAM-Speicherung. Keine neuen Skripte per git pull auf dem Pi voraussetzen.
+
+**Morgen fortsetzen:** RAM-Werkzeug noch einmal gezielt pruefen und gepruefte
+Datei zum Pi uebertragen, dann RAM-Installation und echte neue Aufzeichnung
+abnehmen. Manuellen Checkpoint, RO-Datenmount, frische Daten danach und
+Wiederherstellung nach Reboot nachweisen. Erst anschliessend Host-Root-/Boot-RO
+vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
+Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
+bleiben. Heute ist kein Sicherungstimer auf dem Pi eingerichtet.
+
+## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
 Der Betreiber hat die gespeicherte Regenzuordnung über echten Empfangstest
 in den neuen Dauerbetrieb übernommen. Der 302,15-s-Test schrieb 44 gültige
