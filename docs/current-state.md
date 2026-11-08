@@ -20,8 +20,12 @@ oder Archiv-Ersetzungen. Alle Dienste aktiv, keine Neustarts. Der Index ist
 bei allen acht Sensoren einschließlich `rain0` mit dem Roharchiv gleichauf
 (jeweils 0 s Rückstand), ohne Indexfehler; letzter Indexlauf 2,7 s alt.
 
-Noch ausstehend: tatsächlich gerenderte Regenanzeige in Dashboard/SVG und
-nächster stündlicher Regenwert im Dauerbetrieb. Der bisherige Regenwert
+Der Betreiber bestätigt anschließend auf Nachfrage zu Dashboard und SVG:
+**„ja, regenrate 0,0“**. Damit ist der Fehler bei der Regenübernahme einschließlich
+Index und Anzeige behoben. Eine Rate von 0,0 ist ein gültiger Messwert.
+
+Separat ausstehend bleibt der nächste stündliche Regenwert im Dauerbetrieb.
+Der bisherige Regenwert
 stammt um 14:38:47 MEZ aus dem Test; sein Alter von rund 13 Minuten ist bei
 dieser stündlichen Quelle erwartbar. Nächster Wert ungefähr 15:38 MEZ,
 zuzüglich Archivpufferung. Keine automatische Beobachtung eingerichtet.

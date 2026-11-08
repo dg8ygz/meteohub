@@ -112,8 +112,11 @@ Die Übernahme und der erste native Regenwert sind belegt. Die Betreiber-
 Nachkontrolle um 14:51:30 MEZ bestätigt zusätzlich 50 neue gültige Zeilen
 nach dem Dauerstart (1463 Bytes), aktive Dienste ohne Neustarts und einen
 fehlerfreien Index ohne Rückstand bei allen acht Sensoren einschließlich
-`rain0`. Noch offen sind die tatsächliche Regenanzeige in Dashboard/SVG und
-der nächste stündliche Regenwert im Dauerbetrieb. Der unmittelbar nach
+`rain0`. Anschließend bestätigt der Betreiber die Anzeige in Dashboard/SVG
+mit „ja, regenrate 0,0“. Die Regenübernahme einschließlich Darstellung ist
+somit abgeschlossen. Nächster stündlicher Regenwert im Dauerbetrieb und
+Langzeitabnahme bleiben getrennt offen; der negative Gesamtzähler der Quelle
+wurde nicht korrigiert. Der unmittelbar nach
 Installation auf null gesetzte Archivzähler allein ist kein Fehlernachweis;
 er zählt erst ab der neuen Installation. Der absichtliche Test-Timeout nach
 fünf Minuten ist ebenfalls kein Absturz des anschließend gestarteten Dienstes.
