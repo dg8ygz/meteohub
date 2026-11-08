@@ -612,3 +612,26 @@ lsblk -o NAME,SIZE,RO,FSTYPE,MOUNTPOINTS,UUID,PARTUUID "$karte"
 printf '\nOK: Datenpartition formatiert und geprueft; Schreibschutz wird wieder gesetzt.\n'
 )
 ```
+
+
+### Betreiberbeleg: Datenpartition formatiert und geprueft (08.11.2026)
+
+Der Betreiber meldet mkfs.ext4 und anschliessend alle fuenf e2fsck-Paesse
+erfolgreich. Neues Dateisystem: LABEL meteohub-data, UUID
+6d332cf5-8a19-4fc5-bcaa-5156ab2dad54, PARTUUID e1523b9f-03,
+4512896 Bloecke zu 4096 Bytes. Root- und Boot-UUID unveraendert.
+Die lsblk-Ausgabe wurde vor dem EXIT-Trap erstellt: RO=0 fuer Gesamtdisk
+und Partition 3 ist daher kein Nachweis eines fehlgeschlagenen Traps.
+Den abschliessenden Schreibschutz vor Entnahme separat anzeigen lassen.
+
+Naechster Schritt: sync und ungemounteten Zustand am Proxmox pruefen,
+SD in den ausgeschalteten Pi zuruecksetzen und regulaer booten. Auf dem Pi
+neue Anmeldung, Bootzeit, Partitionen, Root-/Bootmounts, fehlgeschlagene
+Units und live-status pruefen. Nach ausreichender Laufzeit neue Archivdaten
+mit Zeitstempel nach diesem Boot nachweisen. Ein aktiver Dienst allein
+ist keine Abnahme der Aufzeichnung.
+
+Es wurde noch kein fstab-Eintrag fuer die Datenpartition gesetzt. RAM-Daten,
+RO-System und Sicherungstimer sind weiterhin NICHT eingerichtet. Das
+vollstaendige Originalabbild auf .60 bleibt als Wiederherstellungsquelle
+erhalten. Lokale Dokumentation; kein Push.
