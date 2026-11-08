@@ -283,3 +283,22 @@ und konkret dokumentierter Rueckschreibweg. Das Abbild enthaelt private
 Konfiguration/Zugangsdaten und gehoert nicht in Git. Ein komprimiertes Abbild
 kann kleiner sein; benoetigten Platz nicht allein anhand des belegten
 Dateisystemplatzes zusagen. Partitionierung bleibt bis dahin unveraendert.
+
+
+## Proxmox-Arbeitsplatz: erster Betreiberbefund
+
+Auf dem vorgesehenen Host meldet der Betreiber vier leere USB-Kartenleser-Slots
+(/dev/sda bis /dev/sdd, jeweils 0 B). Der SDXC-Slot erscheint derzeit als
+/dev/sdc; dies ist noch keine Identifikation der spaeter eingesteckten Karte.
+Das Hostsystem liegt auf NVMe/LVM, Root auf /dev/mapper/pve-root (ext4).
+Root hat 76 GiB verfuegbar, ausreichend fuer ein unkomprimiertes Abbild der
+zuvor gemeldeten ca. 29,7-GiB-SD mit Reserve. /tmp liegt auf tmpfs und ist
+kein Sicherungsziel. Vorgesehen ist ein privates Verzeichnis unter /root.
+Keine NVMe-, LVM- oder VM-Datentraeger fuer die Kartenarbeiten verwenden.
+
+Naechster angeleiteter Schritt: auf dem Meteohub-Pi Diagnosejournal dauerhaft
+sichern und sauber herunterfahren. Erst nach vollstaendigem Shutdown Karte
+entnehmen, am Proxmox-Host einstecken und Laufwerke/Partitionen samt IDs erneut
+anzeigen. Bisher kein Kartenabbild, keine Dateisystempruefung und keine
+Partitionsaenderung erfolgt. Die Unterbrechung des neuen Meteohub beginnt mit
+dem Shutdown; der alte Stations-Pi bleibt davon unberuehrt.
