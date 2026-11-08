@@ -29,6 +29,7 @@ SOCKET = 'meteohub-web-test.socket'
 INDEX = 'meteohub-dashboard-index.service'
 NAMES = (TARGET, LOGGER, RUNTIME, WEB, SOCKET, INDEX)
 MARKER = 'live-install.json'
+TIME_WAIT = 'systemd-time-wait-sync.service'
 
 
 def load(name):
@@ -125,7 +126,8 @@ def render(candidate, runtime, uid, gid):
         LOGGER: service('Meteohub original logger (direct TCP)', logger,
             '/usr/bin/flock --nonblock --no-fork /run/feed-consumer.lock /usr/bin/env -i PATH=/usr/bin:/bin HOME=/home/meteohub LANG=C '
             'LD_BIND_NOW=1 LD_LIBRARY_PATH=/home/meteohub/lib:/usr/lib/arm-linux-gnueabihf '
-            '/home/meteohub/bin/loggerd -n -c /home/meteohub/logger-live.conf'),
+            '/home/meteohub/bin/loggerd -n -c /home/meteohub/logger-live.conf',
+            'Requires=' + TIME_WAIT + '\nAfter=' + TIME_WAIT + ' time-sync.target\n'),
         WEB: service('Meteohub private web interface', web,
                      '/usr/sbin/lighttpd -D -f /opt/meteohub-web/lighttpd.conf',
                      'Requires=' + SOCKET + '\nAfter=' + SOCKET + '\n'),
@@ -203,6 +205,8 @@ def remove_units(state):
 def install(candidate, runtime, host, port):
     direct = load('test-native-direct'); web = load('web-test'); extension = load('extension-update')
     refuse_live(runtime);web.check_paths(candidate, runtime)
+    if fields(TIME_WAIT).get('LoadState') != 'loaded':
+        raise ValueError('Required clock synchronization wait unit is missing or masked: ' + TIME_WAIT)
     config = direct.config_copy(runtime / 'root/home/meteohub/logger.conf', host, port)
     if not any(s.split()[:2] == ['@SENSORIDMAP', '0'] for s in config.splitlines()):
         raise ValueError('Assign sensors and verify native recording first')

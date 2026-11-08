@@ -677,3 +677,74 @@ network-online.target an, enthaelt aber keine ausdrueckliche Wartebedingung
 auf synchronisierte Zeit. Vor einer Aenderung NTP-Status und Bootjournal
 mit monotonen Zeitstempeln auf dem Pi erheben. Keine Logger-/Zeitdienst-
 oder Bootaenderung in diesem Diagnoseschritt vorgenommen.
+
+
+### Zeitreihenfolge belegt und Startschutz vorbereitet
+
+Betreiberjournal 08.11.2026 23:40 CET, monotone Zeit seit Boot: Loggerstart
+18,8 s; initiale NTP-Synchronisation 37,3 s auf 23:28:34 CET; Logger-Exit 1
+bei 365,3 s; Neustart bei 395,7 s. Aktuell NTP aktiv und Uhr synchronisiert,
+keine RTC. Damit ist der Loggerstart vor der ersten Zeitkorrektur belegt;
+der Zusammenhang mit den Timeouts ist stark gestuetzt, eine weitere Ursache
+ist damit nicht ausgeschlossen. t1/thb0/rain0 weiterhin ohne frischen Beleg.
+
+Installer rendert nun ausschliesslich fuer den Logger Requires/After auf
+systemd-time-wait-sync.service und After=time-sync.target. Fehlende/maskierte
+Warteunit wird vor Installationsmutation abgelehnt. Das sorgt fuer Warten
+auf Zeitabgleich statt Aufzeichnen mit veralteter Uhr. Bei ausbleibender
+Synchronisation bleibt der Logger wartend; Web/Index erhalten keine neue
+Abhaengigkeit. Einsatz hier mit systemd-timesyncd auf physischem Pi.
+Andere NTP-Dienste/Container brauchen eigene Pruefung (systemd-Warteunit
+hat auf Containern eine ueberspringende Bedingung).
+Referenz: https://www.freedesktop.org/software/systemd/man/latest/systemd-time-wait-sync.service.html
+
+Lokale Validierung: test-live-service.py drei Tests bestanden, ein umfassender
+Isolationstest nicht ausgefuehrt. Zusaetzlich echter systemd-Test mit der
+vom Installer gerenderten Abhaengigkeit und isolierter Test-Warteunit:
+Logger startet erst nach Verzoegerung; bei fehlgeschlagener Warteunit startet
+er nicht. Testunits anschliessend entfernt. Kein Zielsystem-Neustart und
+kein echter NTP-Boot durch diesen lokalen Test abgedeckt.
+Privater Beleg: /var/local/meteohub-private/clock-order-local-test.json.
+
+Bestehende Installation: folgender Drop-in erhaelt die gehashten Hauptunits
+und veraendert nicht den laufenden Logger. Nicht den Livebetrieb entfernen
+oder neu installieren. Vor Ausfuehrung wird der vorhandene timesyncd-Abgleich
+geprueft. Datei darf noch nicht existieren. Rueckbau gezielt durch Entfernen
+nur von 20-clock-sync.conf und systemctl daemon-reload; er ist kein
+regulaerer Folgeschritt. Drop-in bleibt bei live-remove bewusst separat
+bestehen und ist bei einem vollstaendigen Rueckbau mit zu behandeln.
+Bootabnahme der Startsperre und RAM/RO/Sicherung bleiben OFFEN.
+
+```bash
+(
+set -euo pipefail
+umask 077
+
+test "$(systemctl show systemd-time-wait-sync.service -p LoadState --value)" = loaded
+systemctl is-active --quiet systemd-timesyncd.service
+test -e /run/systemd/timesync/synchronized
+
+ziel=/etc/systemd/system/meteohub-live-logger.service.d/20-clock-sync.conf
+test ! -e "$ziel"
+test ! -L "$ziel"
+temp=$(mktemp)
+trap 'rm -f "$temp"' EXIT
+
+cat > "$temp" <<'UNIT'
+[Unit]
+Requires=systemd-time-wait-sync.service
+After=systemd-time-wait-sync.service time-sync.target
+UNIT
+
+install -d -m 0755 /etc/systemd/system/meteohub-live-logger.service.d
+install -o root -g root -m 0644 "$temp" "$ziel"
+systemctl daemon-reload
+systemctl start systemd-time-wait-sync.service
+
+systemctl show systemd-time-wait-sync.service \
+  -p ActiveState -p SubState -p Result
+systemctl show meteohub-live-logger.service \
+  -p ActiveState -p NRestarts -p Requires -p After -p DropInPaths
+printf '\nZeit-Startsperre eingerichtet; laufender Logger wurde nicht neu gestartet.\n'
+)
+```

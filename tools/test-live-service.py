@@ -36,6 +36,21 @@ MODULES=LIGHTTPD.parent.parent/'lib/lighttpd'
 
 
 class LiveTests(unittest.TestCase):
+    def test_logger_waits_for_clock_without_blocking_web(self):
+        with tempfile.TemporaryDirectory() as td:
+            runtime=Path(td);(runtime/'live').mkdir()
+            (runtime/'live/source.json').write_text('{"host":"192.0.2.1"}')
+            probe=live.load('probe-cgi')
+            real_load=live.load
+            with patch.object(probe,'properties',return_value=[]), patch.object(
+                    live,'load',side_effect=lambda n: probe if n=='probe-cgi' else real_load(n)):
+                units=live.render(runtime/'candidate',runtime,1000,1000)
+            logger=units[live.LOGGER].split('[Service]')[0]
+            self.assertIn('Requires='+live.TIME_WAIT+'\n',logger)
+            self.assertIn('After='+live.TIME_WAIT+' time-sync.target\n',logger)
+            for name in (live.WEB,live.SOCKET,live.INDEX,live.RUNTIME):
+                self.assertNotIn(live.TIME_WAIT,units[name])
+
     def test_acceptance_must_match_source_and_configuration(self):
         with tempfile.TemporaryDirectory() as td:
             top=Path(td);candidate=top/'candidate';candidate.mkdir()
