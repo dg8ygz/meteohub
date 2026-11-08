@@ -322,7 +322,7 @@ Backup-Nachweis vorgelegt. Kein fsck mit Reparatur und keine Groessenaenderung.
 
 Die nachfolgende stationsspezifische Anleitung verwendet den bestaetigten
 Leserpfad und beide UUIDs. Das Sicherungsverzeichnis wird neu angelegt;
-`oflag=excl` verhindert das Ueberschreiben eines vorhandenen Abbildes.
+`conv=excl` verhindert das Ueberschreiben eines vorhandenen Abbildes.
 Die Kernel-Schreibsperre auf der Karte/ihren Partitionen wird fuer die Sicherung
 gesetzt und nicht automatisch aufgehoben. Nach Umstecken muss sie erneut
 geprueft werden.
@@ -353,7 +353,7 @@ done
 sfdisk --dump "$karte" > "$sicherung/partitionen.sfdisk"
 printf '%s\n' "$bytes" > "$sicherung/kartengroesse.bytes"
 printf 'Sicherung: %s\n' "$sicherung"
-dd if="$karte" of="$sicherung/karte.img" bs=4M iflag=fullblock oflag=excl conv=fsync status=progress
+dd if="$karte" of="$sicherung/karte.img" bs=4M iflag=fullblock conv=excl,fsync status=progress
 test "$(stat -c %s "$sicherung/karte.img")" = "$bytes"
 
 cd "$sicherung"
@@ -368,3 +368,17 @@ cat SHA256SUMS
 ```
 
 Shellsyntax lokal geprueft; Ausfuehrung und Hashvergleich auf der .60 stehen aus.
+
+
+### Korrektur des dd-Aufrufs
+
+Erster Betreiberlauf legte `/root/meteohub-sd-vor-ro-UeIWJB9y` an, stoppte
+jedoch bei der Optionspruefung von dd: `excl` war faelschlich als Output-Flag
+angegeben. Richtig ist `conv=excl,fsync`. Kein Kartenabbild oder erfolgreicher
+Backup-Abschluss wurde damit nachgewiesen. Die Karten-Schreibsperren waren
+bereits gesetzt; die Partitionierung wurde nicht geaendert.
+
+Korrigierten Aufruf lokal mit Testdateien geprueft: bytegleiche Kopie und
+verweigertes Ueberschreiben einer vorhandenen Zieldatei. Der Betreiber hat den
+Ablauf als `flash.sh` gespeichert; trotz des Namens liest dieses Skript die
+Karte und schreibt ausschliesslich das Sicherungsabbild auf den Host.
