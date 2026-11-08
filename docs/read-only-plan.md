@@ -253,3 +253,33 @@ SD erfordert mit der aktuellen Aufteilung eine Offline-Vorbereitung; alternativ
 kommt ein separates Speichermedium infrage. Diese Entscheidung und der konkrete
 Rettungsweg stehen noch aus. Es wurden keine Mounts, Partitionen, Bootdateien,
 Dienste oder Sicherungszeitplaene geaendert.
+
+
+## Wiederherstellungsweg: Betreiber-Rueckmeldung am 8. November
+
+Der Meteohub-Pi steht beim Betreiber und ist direkt erreichbar. Ein anderer
+Linux-Rechner ist noch nicht festgelegt; als moeglicher Arbeitsplatz wurde der
+Proxmox-Host .60 mit angeschlossenem SD-Kartenleser genannt. Zugriff auf den Pi
+ist damit bestaetigt, Lesegeraet, Hostzugang, Datentraegeridentifikation und
+Platz fuer ein vollstaendiges Kartenabbild sind noch nicht geprueft.
+
+Vor dem Abschalten des Pi auf dem vorgesehenen Linux-/Proxmox-Host lesen:
+
+```bash
+lsblk -e 7 -o NAME,PATH,SIZE,TYPE,FSTYPE,MOUNTPOINTS,MODEL,TRAN,RM
+findmnt -no SOURCE,FSTYPE,TARGET /
+df -hT
+```
+
+Diese erste Ausgabe erfasst die vorhandenen Hostlaufwerke und moegliche
+Sicherungsziele. Noch kein Formatieren, Partitionieren oder Kopierbefehl mit
+vermutetem /dev/sdX. Die Karte spaeter nach sauberem Herunterfahren des Pi
+anschliessen und die Laufwerksliste erneut vergleichen. Nicht aus der
+Reihenfolge oder allein aus dem RM-Flag auf die SD schliessen.
+
+Erst nach eindeutiger Zuordnung und geprueftem Sicherungsziel: vollstaendiges
+Offline-Abbild der Karte samt Partitionstabelle, belegte Integritaetspruefung
+und konkret dokumentierter Rueckschreibweg. Das Abbild enthaelt private
+Konfiguration/Zugangsdaten und gehoert nicht in Git. Ein komprimiertes Abbild
+kann kleiner sein; benoetigten Platz nicht allein anhand des belegten
+Dateisystemplatzes zusagen. Partitionierung bleibt bis dahin unveraendert.
