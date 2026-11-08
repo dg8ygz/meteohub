@@ -89,12 +89,28 @@ Konfiguration gespeichert, jedoch nicht in der festen Live-Kopie. Die Quelle
 liefert `rain0` nur etwa stündlich um xx:38; ein fünfminütiger allgemeiner
 Empfangstest kann deshalb ohne Regenzeile erfolgreich sein. Nach Übernahme
 und Dauerstart muss der nächste echte Regenwert abgewartet werden, zuzüglich
-Archivpufferung. Für diese Quelle `rain0`-Intervall3600s konfigurieren, andere
+Archivpufferung. Für diese Quelle `rain0`-Intervall von 3600 s konfigurieren, andere
 Sensorintervalle und vorhandene Archivverzögerung unverändert lassen.
 
 Letzter Quellencheck08.11.13:38CET: Rate0, Zusatzwert0, kumulativer Zähler
 -31908. Der negative Zähler ist kein gültiger Niederschlagsgesamtwert und
 bleibt ein eigener Datenqualitätsbefund; Rate0 nicht als fehlend behandeln.
-Fernzugriff zum neuen Pi scheiterte bei dieser Nachprüfung an der Anmeldung.
-Der Betreiber führt die vorbereitete Konfigurationsübernahme selbst aus;
-Umstellung und neue Regenzeile sind damit **noch nicht abgenommen**.
+Bei der Vorbereitung scheiterte der bisherige Fernzugriff an der Anmeldung.
+Der Betreiber hat den vorbereiteten Block anschließend selbst erfolgreich
+ausgeführt (Rückmeldung gegen 14:42 MEZ):
+
+- Gespeicherte Konfiguration mit Regenmapping erzeugt, beide Konfigurationen
+  gesichert; Anzeigeintervall von 60 auf 3600 s, Altersgrenze 7260 s.
+- Echter direkter Empfangstest: 44 gültige neue Archivzeilen in 302,15 s,
+  alle acht Sensor-IDs, darunter eine neue `rain0`-Zeile um **14:38:47 MEZ**.
+  Keine ungültigen Zeilen oder unerwarteten Archiv-Ersetzungen.
+- Anschließend Dauerbetrieb installiert: Logger, Web und Indexer aktiv,
+  Autostart aktiviert, noch keine Neustarts. Die neue Live-Sicherung heißt
+  `live-before-uzh4bsnt`, die Konfigurationssicherung `rain-before-fd8F1Ik0`.
+
+Die Übernahme und der erste native Regenwert sind belegt. Noch offen sind
+neue Aufzeichnungen nach dem Dauerstart, die Regenanzeige in Dashboard/SVG
+und der nächste stündliche Regenwert im Dauerbetrieb. Der unmittelbar nach
+Installation auf null gesetzte Archivzähler allein ist kein Fehlernachweis;
+er zählt erst ab der neuen Installation. Der absichtliche Test-Timeout nach
+fünf Minuten ist ebenfalls kein Absturz des anschließend gestarteten Dienstes.

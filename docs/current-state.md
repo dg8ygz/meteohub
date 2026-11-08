@@ -1,10 +1,29 @@
-# Arbeitsstand und Fortsetzung – 7. November 2026
+# Arbeitsstand und Fortsetzung – 8. November 2026
 
 **Betriebsnachweis unserer Beispielstation, keine allgemeine Installationsvorgabe.**
 Diese Notiz hält den zuletzt vom Betreiber gemeldeten Stand fest. Sie ist keine
 automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
+
+## Neuester Nachweis: Regenübernahme am 8. November, ca.14:42 MEZ
+
+Der Betreiber hat die gespeicherte Regenzuordnung über echten Empfangstest
+in den neuen Dauerbetrieb übernommen. Der 302,15-s-Test schrieb 44 gültige
+neue Roharchivzeilen aller acht Sensoren, darunter **rain0 um14:38:47 MEZ**.
+Das Anzeigeintervall ist jetzt3600s (Altersgrenze7260s). Anschließend liefen
+Logger, Web und Indexer mit aktiviertem Autostart und ohne Neustarts.
+
+Noch ausstehend: Archivwachstum nach diesem Dauerstart, Regenanzeige in
+Dashboard/SVG und nächster stündlicher Regenwert im Dauerbetrieb. Die direkt
+nach Installation gemeldeten0 neuen Zeilen sind eine neue Zählbasis; sie
+widerlegen den erfolgreichen vorangehenden Test nicht. Der begrenzte Test
+endete planmäßig mit Timeout; daraus keinen Dauerlogger-Fehler ableiten.
+
+Diese Nachweise stammen aus der Betreiber-Ausgabe. Kein neuer Ferncheck,
+Reboot oder lückenloser Langzeitnachweis. Details und aktuelle Sicherungen
+stehen im [Stationsbeispiel](station-example.md#regen-ergänzung-am-08112026-nur-diese-station).
+Die nachfolgenden älteren Abnahmezahlen stammen vom7.November.
 
 ## Jetzt beibehalten
 
