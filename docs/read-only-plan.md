@@ -635,3 +635,22 @@ Es wurde noch kein fstab-Eintrag fuer die Datenpartition gesetzt. RAM-Daten,
 RO-System und Sicherungstimer sind weiterhin NICHT eingerichtet. Das
 vollstaendige Originalabbild auf .60 bleibt als Wiederherstellungsquelle
 erhalten. Lokale Dokumentation; kein Push.
+
+
+### Bootbeleg nach Partitionierung: 08.11.2026, 23:29 CET
+
+Betreiber ist auf dem Pi neu als root angemeldet. Bootzeit 23:27:56 CET;
+Pruefung 23:29:43 CET. Root 12 GiB und Boot 512 MiB sind mit ihren bisherigen
+UUIDs korrekt RW gemountet; Datenpartition 17,2 GiB mit UUID
+6d332cf5-8a19-4fc5-bcaa-5156ab2dad54 ist noch ungemountet.
+ZRAM vorhanden. Keine fehlgeschlagenen Units; Logger, Web und Index aktiv,
+NRestarts jeweils 0; Bootwechsel erkannt.
+
+Aufzeichnung nach diesem Boot noch OFFEN: Neuester Wind-/Solar-/UV-Eintrag
+21:11:01 UTC (22:11:01 CET), somit vor dem Herunterfahren. Die 3922 Datensaetze
+seit Installation sind kumulativ und kein Nachweis fuer Daten nach dem Boot.
+Indexer arbeitet, hat beim letzten Lauf aber keine neuen Datensaetze gefunden.
+Knapp zwei Minuten Laufzeit reichen angesichts zuvor beobachteter
+Archivverzoegerung noch nicht zur Diagnose eines Empfangsausfalls.
+Naechster Schritt: aktuelles Bootjournal, Anwendungslog und vier Minuten
+lesende Archivbeobachtung; keine Neustarts oder weiteren Storage-Aenderungen.
