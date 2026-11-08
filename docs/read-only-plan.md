@@ -837,3 +837,57 @@ findmnt --fstab --target "$ziel"
 findmnt --mountpoint "$ziel"
 )
 ```
+
+
+### fstab akzeptiert; Ausgangssicherung vorbereitet
+
+Betreiber bestaetigt: findmnt --verify ohne Fehler/Warnungen; fstab-Sicherung
+/root/meteohub-mount-before-7i3Nc6mZ/fstab. Eintrag fuer Daten-UUID
+6d332cf5-8a19-4fc5-bcaa-5156ab2dad54 mit ro,nosuid,nodev,noexec,nofail,
+x-systemd.device-timeout=10s vorhanden. Aktueller Mount weiterhin RO.
+Automatisches Mounten nach weiterem Boot noch nicht separat nachgewiesen.
+
+Neues Werkzeug tools/bootstrap-persist.sh erstellt ausschliesslich eine
+Ausgangssicherung vor RAM-Mounts. Aufruf (Beispielstation, als root):
+
+```bash
+bash tools/bootstrap-persist.sh \
+  /home/meteohub/meteohub-staging/5.1e-runtime \
+  /srv/meteohub-persist \
+  6d332cf5-8a19-4fc5-bcaa-5156ab2dad54
+```
+
+Der Betreiber fuehrt Zielbefehle weiter selbst aus. Werkzeug lokal committed,
+kein Push und daher kein git-pull-Versprechen fuer diese Version.
+
+Das Werkzeug prueft gemountete UUID, RO-Zustand, Platz und aktive Dienste,
+verweigert bereits unter dem Runtimepfad liegende RAM/Bind-Mounts und sperrt
+parallele Speicherarbeiten. Datenpartition wird kurz RW; Websocket, Web,
+Logger und Indexer werden fuer einen konsistenten Stand gestoppt. Die
+Aufnahmepause und voruebergehende Nichterreichbarkeit des WebIF sind beabsichtigt;
+keine Zusage lueckenloser Erfassung fuer diesen Schritt. Logger muss sauber
+beendet sein, dann wird auch der vorhandene Feed-Verbraucherlock gehalten.
+Tar umfasst die vollstaendige private Runtime (Daten und Konfiguration;
+Binaerkandidat/Hostsystem werden nicht mitgesichert). Die separate vollstaendige
+SD-Imagesicherung bleibt erforderlich und unveraendert.
+
+Pruefung: Vergleich mit angehaltener Quelle, SHA-256, echtes Entpacken in ein
+neues privates Verzeichnis auf der noch beschreibbaren Rootpartition,
+Tar-Vergleich und SQLite integrity_check am wiederhergestellten Index.
+Nur ein erfolgreich gepruefter Stand wird von .pending-* nach initial-*
+umbenannt. Sync erfolgt vor und nach Umbenennung. Keine alte Sicherung wird
+geloescht, es gibt noch keinen latest-Zeiger oder automatischen Restore.
+Bei normalem Fehler/INT/TERM werden RO-Remount und Dienststart versucht und
+Fehler gemeldet; Stromverlust/SIGKILL koennen keine Shell-Aufraeumgarantie
+haben. Vorhandene Quelle bleibt unangetastet. Teilstaende bleiben zur Diagnose.
+Regulaerer Rueckbau ist nicht erforderlich, da keine Runtime-/Unit-/Boot-
+Aenderung vorgenommen wird; nach Fehler Mount und Dienste kontrollieren.
+
+Validierung lokal: tools/test-persist-bootstrap.py --isolation benutzt eine
+private Mountnamespace, eigene Loop-ext4-Testpartition und eindeutig benannte
+systemd-Testunits. Reale Sicherung/Wiederherstellung inklusive committed WAL,
+Eigentuemer und Symlink geprueft. Injizierter Archivschreibfehler: kein neuer
+fertiger Stand, voriger Stand erhalten, Dienste aktiv und Mount RO.
+Testfixture entfernt; keine echte Station und keine SD benutzt. Syntaxcheck
+bestanden. Ausfuehrung auf dem Pi und frische Messwerte nach der Pause OFFEN.
+RAM-Betrieb, taeglicher Timer, automatischer Restore und Root-RO bleiben OFFEN.
