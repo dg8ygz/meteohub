@@ -382,3 +382,34 @@ Korrigierten Aufruf lokal mit Testdateien geprueft: bytegleiche Kopie und
 verweigertes Ueberschreiben einer vorhandenen Zieldatei. Der Betreiber hat den
 Ablauf als `flash.sh` gespeichert; trotz des Namens liest dieses Skript die
 Karte und schreibt ausschliesslich das Sicherungsabbild auf den Host.
+
+
+## Vollabbild erfolgreich geprueft: Betreiber-Nachweis
+
+Die korrigierte Sicherung wurde vom Betreiber auf dem Proxmox-Host beendet:
+
+- Verzeichnis: `/root/meteohub-sd-vor-ro-juN2kxBj`
+- Abbild: `karte.img`, exakt **31.914.983.424 Bytes**
+- SHA-256: `89148f69b230f0a8237d3eb3d2066a30738a19a8d27d4c301680ea21d452b47f`
+- dd meldete erfolgreichen Abschluss; anschliessend bestaetigte das Skript
+  gleiche Dateigroesse und gleiche SHA-256 von Abbild und erneut gelesener Karte.
+- Partitionstabelle und Kartengroesse wurden vor der Kopie mitgesichert.
+
+Dies ist ein vom Betreiber vorgelegter Integritaetsnachweis der Offline-Kopie,
+noch kein Test des Rueckschreibens oder Bootens einer wiederhergestellten Karte.
+Das Abbild bleibt unveraendert erhalten. Es liegt auf einem anderen physischen
+Datentraeger als der SD, enthaelt aber private Daten und wird nicht publiziert.
+
+Naechster Schritt: exakte Partitionstabelle, Dateisystemeigenschaften und
+rein lesende ext4-Pruefung mit `e2fsck -fn`. Nur bei erfolgreicher Pruefung
+`resize2fs -P` als Schaetzung der Mindestgroesse auslesen. Noch kein Resize,
+kein Reparaturlauf und kein Aufheben der Schreibsperre. Die spaetere Zielgroesse
+muss deutliche Reserve fuer Betrieb und Updates enthalten; nicht auf die
+angegebene Mindestgroesse zusammenschrumpfen.
+
+Bei spaeterem Rueckbau waere das **ganze** unveraenderte Abbild auf die erneut
+eindeutig identifizierte SD zurueckzuschreiben, womit auch die alte
+Partitionstabelle wiederhergestellt wird. Dafuer muessen alle Kartenpartitionen
+ungemountet, die Zielkapazitaet ausreichend und die Schreibsperre gezielt
+aufgehoben sein. Ein solcher Schreibbefehl wird erst fuer den konkreten
+Rueckbaufall ausgegeben, nicht zusammen mit den aktuellen Lesebefehlen.
