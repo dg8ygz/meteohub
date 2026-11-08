@@ -108,9 +108,12 @@ ausgeführt (Rückmeldung gegen 14:42 MEZ):
   Autostart aktiviert, noch keine Neustarts. Die neue Live-Sicherung heißt
   `live-before-uzh4bsnt`, die Konfigurationssicherung `rain-before-fd8F1Ik0`.
 
-Die Übernahme und der erste native Regenwert sind belegt. Noch offen sind
-neue Aufzeichnungen nach dem Dauerstart, die Regenanzeige in Dashboard/SVG
-und der nächste stündliche Regenwert im Dauerbetrieb. Der unmittelbar nach
+Die Übernahme und der erste native Regenwert sind belegt. Die Betreiber-
+Nachkontrolle um 14:51:30 MEZ bestätigt zusätzlich 50 neue gültige Zeilen
+nach dem Dauerstart (1463 Bytes), aktive Dienste ohne Neustarts und einen
+fehlerfreien Index ohne Rückstand bei allen acht Sensoren einschließlich
+`rain0`. Noch offen sind die tatsächliche Regenanzeige in Dashboard/SVG und
+der nächste stündliche Regenwert im Dauerbetrieb. Der unmittelbar nach
 Installation auf null gesetzte Archivzähler allein ist kein Fehlernachweis;
 er zählt erst ab der neuen Installation. Der absichtliche Test-Timeout nach
 fünf Minuten ist ebenfalls kein Absturz des anschließend gestarteten Dienstes.

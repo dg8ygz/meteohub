@@ -6,24 +6,31 @@ automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
 
-## Neuester Nachweis: Regenübernahme am 8. November, ca.14:42 MEZ
+## Neuester Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
 Der Betreiber hat die gespeicherte Regenzuordnung über echten Empfangstest
 in den neuen Dauerbetrieb übernommen. Der 302,15-s-Test schrieb 44 gültige
-neue Roharchivzeilen aller acht Sensoren, darunter **rain0 um14:38:47 MEZ**.
-Das Anzeigeintervall ist jetzt3600s (Altersgrenze7260s). Anschließend liefen
+neue Roharchivzeilen aller acht Sensoren, darunter **rain0 um 14:38:47 MEZ**.
+Das Anzeigeintervall ist jetzt 3600 s (Altersgrenze 7260 s). Anschließend liefen
 Logger, Web und Indexer mit aktiviertem Autostart und ohne Neustarts.
 
-Noch ausstehend: Archivwachstum nach diesem Dauerstart, Regenanzeige in
-Dashboard/SVG und nächster stündlicher Regenwert im Dauerbetrieb. Die direkt
-nach Installation gemeldeten0 neuen Zeilen sind eine neue Zählbasis; sie
-widerlegen den erfolgreichen vorangehenden Test nicht. Der begrenzte Test
-endete planmäßig mit Timeout; daraus keinen Dauerlogger-Fehler ableiten.
+Nachkontrolle des Betreibers um **14:51:30 MEZ**: 50 neue gültige native
+Zeilen seit dieser Installation, 1463 zusätzliche Bytes, keine Formatfehler
+oder Archiv-Ersetzungen. Alle Dienste aktiv, keine Neustarts. Der Index ist
+bei allen acht Sensoren einschließlich `rain0` mit dem Roharchiv gleichauf
+(jeweils 0 s Rückstand), ohne Indexfehler; letzter Indexlauf 2,7 s alt.
+
+Noch ausstehend: tatsächlich gerenderte Regenanzeige in Dashboard/SVG und
+nächster stündlicher Regenwert im Dauerbetrieb. Der bisherige Regenwert
+stammt um 14:38:47 MEZ aus dem Test; sein Alter von rund 13 Minuten ist bei
+dieser stündlichen Quelle erwartbar. Nächster Wert ungefähr 15:38 MEZ,
+zuzüglich Archivpufferung. Keine automatische Beobachtung eingerichtet.
+Der begrenzte Test endete planmäßig mit Timeout; kein Dauerlogger-Absturz.
 
 Diese Nachweise stammen aus der Betreiber-Ausgabe. Kein neuer Ferncheck,
 Reboot oder lückenloser Langzeitnachweis. Details und aktuelle Sicherungen
 stehen im [Stationsbeispiel](station-example.md#regen-ergänzung-am-08112026-nur-diese-station).
-Die nachfolgenden älteren Abnahmezahlen stammen vom7.November.
+Die nachfolgenden älteren Abnahmezahlen stammen vom 7. November.
 
 ## Jetzt beibehalten
 
