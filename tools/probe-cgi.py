@@ -258,11 +258,15 @@ assert sorted(os.listdir("/home")) == ["meteohub"]
 assert not os.path.exists("/run/systemd/private")
 assert not os.path.exists("/run/dbus/system_bus_socket")
 assert not any(n.startswith(("ttyUSB", "video")) for n in os.listdir("/dev"))
-try: fd = os.open("bin/loggerd", os.O_WRONLY | os.O_APPEND)
-except OSError as e: assert e.errno == errno.EROFS, e
-else:
-    os.close(fd)
-    raise AssertionError("candidate writable")
+# An executing ELF can return ETXTBSY before the read-only mount is checked.
+# Inspect this namespace's mount flags instead; a busy executable on a writable
+# mount must never count as proof of filesystem isolation.
+for path in ("bin", "bin/loggerd", "lib"):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        assert os.fstatvfs(fd).f_flag & os.ST_RDONLY, "candidate mount writable: " + path
+    finally:
+        os.close(fd)
 s = socket.socket(); s.settimeout(1)
 try: s.connect(("192.0.2.1", 80))
 except OSError as e: assert e.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH), e

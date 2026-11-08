@@ -178,6 +178,38 @@ Der Installer blockiert begrenzte Empfangstests, solange die Live-Installation
 registriert ist. Zusätzlich hält der laufende Logger dieselbe Dateisperre wie
 die Testhelfer. Manuell gestartete fremde Leser kann diese Sperre nicht verhindern.
 
+### Isolationstest bei bereits laufendem Logger
+
+Ältere Stände von `tools/probe-cgi.py` versuchen, `bin/loggerd` zum Schreiben
+zu öffnen, und erwarten dabei ausschließlich `EROFS`. Wenn genau dieses
+ELF-Programm bereits läuft, kann der Kernel zuvor `ETXTBSY` (`Text file busy`)
+melden. Das ist kein Beleg für einen beschreibbaren Mount und ebenso wenig
+ein ausreichender Nachweis des Schreibschutzes.
+
+Der korrigierte Test prüft die Mount-Flags mit `fstatvfs` innerhalb seiner
+eigenen Isolation für `bin`, `bin/loggerd` und `lib`. Er öffnet diese Pfade
+nur lesend und verlangt jeweils `ST_RDONLY`. Der bestehende Logger kann
+während der Konfigurationserzeugung weiterlaufen. Es werden weder dessen
+Binärdatei noch die Schutzregeln geändert.
+
+Bei dieser Fehlermeldung zunächst als Installationsbenutzer aktualisieren:
+
+```bash
+cd "$HOME/src/meteohub"
+git pull --ff-only
+python3 tools/probe-cgi.py \
+  "$HOME/meteohub-staging/5.1e-openssl3" \
+  --runtime "$HOME/meteohub-staging/5.1e-runtime" \
+  --generate-logger-config
+```
+
+Erst nach erfolgreicher Erzeugung mit dem oben beschriebenen
+Konfigurationswechsel fortfahren. Bei einem mit `set -e` ausgeführten Block
+stoppt ein fehlgeschlagener Isolationstest vor dem nachfolgenden
+`live-remove`; das CGI wurde dann ebenfalls noch nicht gestartet.
+Eine erfolgreiche Erzeugung allein übernimmt noch keine Sensorzuordnung in
+die feste Live-Konfiguration.
+
 Nur Prozesszustand unter `/run` ist hier flüchtig. **Roharchive, Anwendungskonfiguration,
 native Logs und SQLite liegen weiterhin auf der SD-Karte.** Es gibt noch keinen
 RO-Modus, RAM-Wetterpuffer oder täglichen Sicherungstimer. Pro Dienst gelten
@@ -191,6 +223,22 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/test-live-service.py
 PYTHONDONTWRITEBYTECODE=1 python3 tools/test-installer.py
 PYTHONDONTWRITEBYTECODE=1 python3 tools/test-extension.py
 ```
+
+Der gezielte Regressionstest für den obigen Fehler läuft als root auf einem
+separaten Entwicklungsrechner:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-runtime.py --isolation
+PYTHONDONTWRITEBYTECODE=1 python3 tools/test-logger-config.py --isolation
+```
+
+Er verwendet ein laufendes, kopiertes `sleep`-ELF als synthetischen Logger
+und echte systemd-Mount-Isolation. Sowohl mit als auch ohne private Runtime
+müssen schreibgeschützte Mounts bestehen und absichtlich beschreibbare
+`bin`-/`lib`-Mounts scheitern. Der Prozess läuft währenddessen weiter und sein
+Dateiinhalt bleibt unverändert. Der zweite Test prüft zusätzlich die isolierte
+Konfigurationserzeugung mit einem synthetischen CGI. Diese lokalen Prüfungen
+ersetzen nicht den erneuten Probe-Aufruf auf dem tatsächlichen ARM-Pi.
 
 Optional als root auf einem separaten Entwicklungsrechner:
 `python3 tools/test-live-service.py --isolation`. Dieser Test verwendet eindeutige
