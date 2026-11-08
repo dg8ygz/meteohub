@@ -478,3 +478,76 @@ printf '\nOK: ext4 auf 12 GiB verkleinert und geprueft; Partitionstabelle noch u
 
 Noch kein Nachweis der Ausfuehrung auf der echten Karte; Partitionsschritt und
 neue Datenpartition bleiben ausstehend.
+
+
+## Root-Dateisystem auf der Karte erfolgreich verkleinert
+
+Betreiber bestaetigt: Sicherungsabbild erneut SHA-256-geprueft, resize2fs auf
+3145728 Bloecke zu 4096 Bytes erfolgreich. Anschliessendes e2fsck ohne Fehler,
+clean, 98832 Dateien, 1311274 belegte und 1834454 freie Bloecke. Die alte groessere
+Rootpartition besteht noch. Damit darf als naechster Schritt ihre Grenze auf
+das bereits verkleinerte Dateisystem angepasst werden.
+
+Den MBR-Umbau lokal an einem sparse-Kartenabbild mit exakt 31914983424 Bytes
+und der alten Tabelle geprueft: Trockenlauf ohne Mutation; danach alte MBR-ID,
+Bootpartition und Root-Start erhalten, Rootgroesse und dritte Partition exakt
+wie geplant. Privater Beleg `partition-12g-local-test.json` unter
+`/var/local/meteohub-private`. Kein Hardware-/Bootnachweis durch diesen Test.
+
+Naechster angeleiteter Betreiberbefehl: neue MBR-Tabelle mit unveraenderter
+Kennung schreiben, Partitionen neu einlesen, Root-Dateisystem erneut lesend
+pruefen. Keine Formatierung in diesem Schritt. Schreibschutz am Ende wieder
+setzen; bei Fehler abbrechen und Zustand untersuchen.
+
+```bash
+(
+set -euo pipefail
+umask 077
+export LC_ALL=C
+
+karte=/dev/disk/by-id/usb-Generic_SDXC_MMC_0000000000000006-0:2
+wurzel="${karte}-part2"
+sicherung=/root/meteohub-sd-vor-ro-juN2kxBj
+
+test "$(blkid -s UUID -o value "${karte}-part1")" = B2F0-82D2
+test "$(blkid -s UUID -o value "$wurzel")" = 15f4c6be-1102-4331-9904-f78e78afd1fd
+test "$(blockdev --getsize64 "$karte")" = 31914983424
+test -z "$(lsblk -nro MOUNTPOINTS "$karte" | tr -d '[:space:]')"
+test "$(stat -c %s "$sicherung/karte.img")" = 31914983424
+sfdisk --dump "$karte" | cmp - "$sicherung/partitionen.sfdisk"
+test "$(tune2fs -l "$wurzel" | awk '/^Block count:/ {print $3}')" = 3145728
+test "$(tune2fs -l "$wurzel" | awk '/^Block size:/ {print $3}')" = 4096
+e2fsck -fn "$wurzel"
+
+cat > "$sicherung/partitionen-neu.sfdisk" <<'TABLE'
+label: dos
+label-id: 0xe1523b9f
+unit: sectors
+sector-size: 512
+
+start=16384, size=1048576, type=c
+start=1064960, size=25165824, type=83
+start=26230784, size=36103168, type=83
+TABLE
+
+trap 'sync; for g in "${karte}-part1" "${karte}-part2" "${karte}-part3" "$karte"; do if test -b "$g"; then blockdev --setro "$g"; fi; done' EXIT
+blockdev --setrw "$karte"
+
+sfdisk --no-act --wipe never --wipe-partitions never "$karte" < "$sicherung/partitionen-neu.sfdisk"
+sfdisk --wipe never --wipe-partitions never "$karte" < "$sicherung/partitionen-neu.sfdisk"
+blockdev --rereadpt "$karte"
+udevadm settle
+
+test "$(blockdev --getsize64 "${karte}-part1")" = 536870912
+test "$(blockdev --getsize64 "$wurzel")" = 12884901888
+test "$(blockdev --getsize64 "${karte}-part3")" = 18484822016
+test "$(blkid -s UUID -o value "$wurzel")" = 15f4c6be-1102-4331-9904-f78e78afd1fd
+
+e2fsck -fn "$wurzel" 2>&1 | tee "$sicherung/ext4-nach-partitionierung.txt"
+sfdisk --dump "$karte" | tee "$sicherung/partitionen-nachher.sfdisk"
+lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS,UUID,PARTUUID "$karte"
+printf '\nOK: Rootpartition 12 GiB; dritte Partition angelegt, noch NICHT formatiert.\n'
+)
+```
+
+Erfolg auf der SD und Bootabnahme noch ausstehend.
