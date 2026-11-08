@@ -551,3 +551,64 @@ printf '\nOK: Rootpartition 12 GiB; dritte Partition angelegt, noch NICHT format
 ```
 
 Erfolg auf der SD und Bootabnahme noch ausstehend.
+
+
+### Betreiberbeleg: Partitionstabelle erfolgreich angepasst (08.11.2026)
+
+Stationsexemplar auf Proxmox .60: Der Betreiber hat die oben angeleitete
+Partitionierung ausgefuehrt. MBR-ID e1523b9f, Boot-UUID B2F0-82D2 und
+Root-UUID 15f4c6be-1102-4331-9904-f78e78afd1fd sind erhalten. Partition 2
+ist nun exakt 12 GiB; die anschliessende lesende ext4-Pruefung war sauber.
+Partition 3 beginnt bei Sektor 26230784, umfasst 36103168 Sektoren
+(18484822016 Bytes) und hat PARTUUID e1523b9f-03. Sie hat laut lsblk
+noch kein Dateisystem. Alle Partitionen waren ungemountet.
+
+Naechster Betreiberbefehl: ausschliesslich diese neue Partition als ext4
+formatieren, vollstaendig initialisieren und pruefen. Keine Mount-, fstab-,
+Boot- oder RO-Overlay-Aenderung. Der Block verweigert die Formatierung bei
+bereits vorhandener Signatur oder abweichender Kartentabelle. Bei einem
+Abbruch nicht blind erneut formatieren, sondern den Zustand untersuchen.
+
+Syntax und mkfs-Optionen lokal an einem sparse-Abbild mit exakt der geplanten
+Partitionsgroesse geprueft: mkfs.ext4, e2fsck -fn und blkid -p erfolgreich.
+Privater Beleg: /var/local/meteohub-private/format-data-local-test.json.
+Dies prueft keine echte SD und ersetzt keine Bootabnahme. Formatierung auf
+der SD, Einbindung, RAM-Datenhaltung und taegliche Sicherung bleiben OFFEN.
+
+```bash
+(
+set -euo pipefail
+umask 077
+export LC_ALL=C
+
+karte=/dev/disk/by-id/usb-Generic_SDXC_MMC_0000000000000006-0:2
+daten="${karte}-part3"
+sicherung=/root/meteohub-sd-vor-ro-juN2kxBj
+
+test -b "$daten"
+test "$(blockdev --getsize64 "$karte")" = 31914983424
+test "$(blkid -s UUID -o value "${karte}-part1")" = B2F0-82D2
+test "$(blkid -s UUID -o value "${karte}-part2")" = 15f4c6be-1102-4331-9904-f78e78afd1fd
+test "$(blkid -s PARTUUID -o value "$daten")" = e1523b9f-03
+test "$(blockdev --getsize64 "$daten")" = 18484822016
+test -z "$(lsblk -nro MOUNTPOINTS "$karte" | tr -d '[:space:]')"
+sfdisk --dump "$karte" | cmp - "$sicherung/partitionen-nachher.sfdisk"
+test -z "$(wipefs --noheadings --output TYPE "$daten")"
+
+trap 'sync; for g in "${karte}-part1" "${karte}-part2" "${karte}-part3" "$karte"; do if test -b "$g"; then blockdev --setro "$g"; fi; done' EXIT
+blockdev --setrw "$karte"
+blockdev --setro "${karte}-part1"
+blockdev --setro "${karte}-part2"
+blockdev --setrw "$daten"
+
+mkfs.ext4 -L meteohub-data -m 0 \
+  -E lazy_itable_init=0,lazy_journal_init=0 "$daten" 2>&1 |
+  tee "$sicherung/daten-formatierung.txt"
+
+e2fsck -fn "$daten" 2>&1 |
+  tee "$sicherung/daten-pruefung.txt"
+blkid "$daten" | tee "$sicherung/daten-kennung.txt"
+lsblk -o NAME,SIZE,RO,FSTYPE,MOUNTPOINTS,UUID,PARTUUID "$karte"
+printf '\nOK: Datenpartition formatiert und geprueft; Schreibschutz wird wieder gesetzt.\n'
+)
+```
