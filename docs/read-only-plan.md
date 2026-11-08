@@ -302,3 +302,69 @@ entnehmen, am Proxmox-Host einstecken und Laufwerke/Partitionen samt IDs erneut
 anzeigen. Bisher kein Kartenabbild, keine Dateisystempruefung und keine
 Partitionsaenderung erfolgt. Die Unterbrechung des neuen Meteohub beginnt mit
 dem Shutdown; der alte Stations-Pi bleibt davon unberuehrt.
+
+
+## Eingesteckte Karte identifiziert, 8. November ca. 22:11 MEZ
+
+Betreiberausgabe auf dem Proxmox-Host: SDXC-Leser jetzt 29,7 GiB, /dev/sdc,
+Bootpartition 512 MiB vfat UUID B2F0-82D2, Rootpartition 29,2 GiB ext4 UUID
+15f4c6be-1102-4331-9904-f78e78afd1fd. Beide Partitionen ohne Mountpunkt.
+Leserpfad: `/dev/disk/by-id/usb-Generic_SDXC_MMC_0000000000000006-0:2`.
+Dieser by-id-Pfad identifiziert den Leser; die Dateisystem-UUIDs werden daher
+vor jeder Kartenoperation zusaetzlich geprueft. Host-NVMe/LVM bleibt unberuehrt.
+
+Als naechster Schritt angeleitet: gesamte Karte schreibgeschuetzt lesen,
+privates Vollabbild unter /root mit freiem Platz fuer Kartengroesse plus Reserve
+erzeugen, Partitionstabelle sichern, Abbildgroesse vergleichen und SHA-256 von
+Karte und Abbild unabhaengig berechnen und vergleichen. Bei Lesefehler abbrechen;
+kein conv=noerror und kein Ueberspringen defekter Bereiche. Noch kein erfolgreicher
+Backup-Nachweis vorgelegt. Kein fsck mit Reparatur und keine Groessenaenderung.
+
+Die nachfolgende stationsspezifische Anleitung verwendet den bestaetigten
+Leserpfad und beide UUIDs. Das Sicherungsverzeichnis wird neu angelegt;
+`oflag=excl` verhindert das Ueberschreiben eines vorhandenen Abbildes.
+Die Kernel-Schreibsperre auf der Karte/ihren Partitionen wird fuer die Sicherung
+gesetzt und nicht automatisch aufgehoben. Nach Umstecken muss sie erneut
+geprueft werden.
+
+```bash
+(
+set -euo pipefail
+umask 077
+
+karte=/dev/disk/by-id/usb-Generic_SDXC_MMC_0000000000000006-0:2
+test -b "$karte"
+test "$(blkid -s UUID -o value "${karte}-part1")" = B2F0-82D2
+test "$(blkid -s UUID -o value "${karte}-part2")" = 15f4c6be-1102-4331-9904-f78e78afd1fd
+test -z "$(lsblk -nro MOUNTPOINTS "$karte" | tr -d '[:space:]')"
+
+bytes=$(blockdev --getsize64 "$karte")
+test "$bytes" -gt 30000000000
+test "$bytes" -lt 34000000000
+sicherung=$(mktemp -d /root/meteohub-sd-vor-ro-XXXXXXXX)
+frei=$(df -B1 --output=avail "$sicherung" | tail -n 1)
+test "$frei" -gt "$((bytes + 2147483648))"
+
+for geraet in "$karte" "${karte}-part1" "${karte}-part2"; do
+  blockdev --setro "$geraet"
+  test "$(blockdev --getro "$geraet")" = 1
+done
+
+sfdisk --dump "$karte" > "$sicherung/partitionen.sfdisk"
+printf '%s\n' "$bytes" > "$sicherung/kartengroesse.bytes"
+printf 'Sicherung: %s\n' "$sicherung"
+dd if="$karte" of="$sicherung/karte.img" bs=4M iflag=fullblock oflag=excl conv=fsync status=progress
+test "$(stat -c %s "$sicherung/karte.img")" = "$bytes"
+
+cd "$sicherung"
+printf '\nPruefe Abbild und lese die Karte zum Vergleich erneut ...\n'
+sha256sum karte.img > SHA256SUMS
+sha256sum "$karte" > karte-original.sha256
+test "$(awk '{print $1}' SHA256SUMS)" = "$(awk '{print $1}' karte-original.sha256)"
+sync
+printf '\nOK: Kartengroesse und SHA-256 stimmen ueberein.\nSicherung: %s\n' "$sicherung"
+cat SHA256SUMS
+)
+```
+
+Shellsyntax lokal geprueft; Ausfuehrung und Hashvergleich auf der .60 stehen aus.
