@@ -413,3 +413,68 @@ Partitionstabelle wiederhergestellt wird. Dafuer muessen alle Kartenpartitionen
 ungemountet, die Zielkapazitaet ausreichend und die Schreibsperre gezielt
 aufgehoben sein. Ein solcher Schreibbefehl wird erst fuer den konkreten
 Rueckbaufall ausgegeben, nicht zusammen mit den aktuellen Lesebefehlen.
+
+
+## Offline-ext4-Pruefung und Groessenplan
+
+Der Betreiber bestaetigt fehlerfreie `e2fsck -fn`-Pruefung, Dateisystem clean.
+7658624 Bloecke zu 4096 Bytes, 6279446 frei; belegt 1379178 Bloecke =
+5,261 GiB. Geschaetztes Minimum 1396793 Bloecke = 5,328 GiB.
+MBR-ID 0xe1523b9f, Sektorgroesse 512 Bytes. Boot Start 16384, Groesse 1048576;
+Root Start 1064960, Groesse 61268992 Sektoren.
+
+Plan: Root-Dateisystem und spaeter Rootpartition je 12 GiB (3145728 ext4-Bloecke,
+25165824 Sektoren). Root-Start unveraendert; neue Datenpartition ab Sektor
+26230784, Rest 36103168 Sektoren = 17,215 GiB. MBR-ID, Bootpartition,
+Root-Partitionsnummer und Dateisystem-UUID bleiben erhalten. Die Partitionen
+werden erst nach erfolgreich verkleinertem und erneut geprueftem ext4 angepasst.
+
+Lokaler mechanischer Vorabtest mit temporaerem sparse-ext4-Abbild 16 -> 12 GiB,
+unter anderem orphan_file/metadata_csum_seed und ohne 64bit: e2fsck davor/danach
+Exit 0 und exakt 3145728 Bloecke bestaetigt. Leeres Testdateisystem, kein Ersatz
+fuer Daten-/Bootabnahme auf der SD. Privater Testbeleg:
+`/var/local/meteohub-private/resize-12g-local-test.json`.
+
+Naechster Betreiberbefehl betrifft nur das Dateisystem. Er prueft Karten-UUIDs,
+Groesse, unveraenderte Partitionstabelle und Sicherungsabbild erneut. Nach Ende
+oder Fehler werden Karte und Rootpartition wieder schreibgeschuetzt. Bei jedem
+Fehler Ausgaben pruefen, keine Partitionstabelle verkleinern und kein `-f` zum
+Erzwingen eines resize2fs-Fehlers verwenden. Das Vollabbild bleibt unveraendert.
+
+```bash
+(
+set -euo pipefail
+umask 077
+export LC_ALL=C
+
+karte=/dev/disk/by-id/usb-Generic_SDXC_MMC_0000000000000006-0:2
+wurzel="${karte}-part2"
+sicherung=/root/meteohub-sd-vor-ro-juN2kxBj
+
+test "$(blkid -s UUID -o value "${karte}-part1")" = B2F0-82D2
+test "$(blkid -s UUID -o value "$wurzel")" = 15f4c6be-1102-4331-9904-f78e78afd1fd
+test "$(blockdev --getsize64 "$karte")" = 31914983424
+test -z "$(lsblk -nro MOUNTPOINTS "$karte" | tr -d '[:space:]')"
+sfdisk --dump "$karte" | cmp - "$sicherung/partitionen.sfdisk"
+test "$(stat -c %s "$sicherung/karte.img")" = 31914983424
+test "$(awk '{print $1}' "$sicherung/SHA256SUMS")" = 89148f69b230f0a8237d3eb3d2066a30738a19a8d27d4c301680ea21d452b47f
+(cd "$sicherung" && sha256sum -c SHA256SUMS)
+
+trap 'sync; blockdev --setro "$wurzel"; blockdev --setro "$karte"' EXIT
+blockdev --setrw "$karte"
+blockdev --setrw "$wurzel"
+
+e2fsck -fp "$wurzel" 2>&1 | tee "$sicherung/ext4-vor-verkleinerung.txt"
+resize2fs -p "$wurzel" 12G 2>&1 | tee "$sicherung/ext4-verkleinerung.txt"
+e2fsck -fn "$wurzel" 2>&1 | tee "$sicherung/ext4-nach-verkleinerung.txt"
+
+tune2fs -l "$wurzel" | grep -E 'Filesystem state:|Block count:|Free blocks:|Block size:'
+test "$(tune2fs -l "$wurzel" | awk '/^Block count:/ {print $3}')" = 3145728
+test "$(tune2fs -l "$wurzel" | awk '/^Block size:/ {print $3}')" = 4096
+sync
+printf '\nOK: ext4 auf 12 GiB verkleinert und geprueft; Partitionstabelle noch unveraendert.\n'
+)
+```
+
+Noch kein Nachweis der Ausfuehrung auf der echten Karte; Partitionsschritt und
+neue Datenpartition bleiben ausstehend.
