@@ -770,3 +770,70 @@ Naechste Vorbereitung: neue Datenpartition per UUID nur lesend unter
 /srv/meteohub-persist einhaengen und Mount pruefen. Noch kein fstab-Eintrag,
 keine RAM-Mounts und kein Sicherungstimer. Parallel vier Minuten lesende
 Archivbeobachtung fuer Datensaetze nach 22:46:20 UTC. Root/Boot bleiben RW.
+
+
+### Neue Archivdaten nach Boot mit Zeitsperre nachgewiesen
+
+Betreiberbeobachtung 08.11.2026, 22:48:44 bis 22:52:44 UTC: Archiv wuchs
+von 489885 auf 490580 Bytes (695 Bytes). Um 22:50:16 UTC aktuelle Eintraege
+fuer wind0 (22:50:01), data0 (22:49:46), t2/sol0/uv0 (22:49:16),
+t1/thb0 (22:48:47). Diese liegen nach Loggerstart 22:46:20 UTC. Index ohne
+Fehler und durchgaengig 0 Sekunden Rueckstand zum Roharchiv. rain0 bleibt
+22:38:46 UTC, am Ende 838 Sekunden alt und innerhalb des fuer diese Station
+konfigurierten Stundenintervalls; kein neuer Regenwert nach diesem Boot
+nachgewiesen. Keine allgemeine Langzeit-/Lueckenabnahme hieraus ableiten.
+
+Datenpartition inzwischen vom Betreiber RO unter /srv/meteohub-persist
+montiert: /dev/mmcblk0p3, ext4, ro,nosuid,nodev,noexec,relatime, rund 17 GiB
+frei. Naechster Schritt ist ein abgesicherter fstab-Eintrag fuer automatisches
+RO-Mounten. nofail erlaubt Systemstart auch bei fehlender Datenpartition;
+die spaeteren Restore-/Sicherungsdienste muessen den korrekten Mount zwingend
+pruefen und ihn als explizite Abhaengigkeit anfordern, bevor sie Daten lesen
+oder schreiben. Ein leeres Mountverzeichnis darf nie als gueltige Sicherung
+gelten. Der laufende Mount/Logger wird durch diesen Schritt nicht neu gestartet.
+Quelle: https://www.freedesktop.org/software/systemd/man/latest/systemd.mount.html
+
+Der Block sichert fstab, verweigert bestehende Eintraege, validiert die neue
+Tabelle vor atomarem Ersetzen und prueft zwischenzeitliche Aenderungen.
+Lokal bash -n bestanden; findmnt-Validierung der tatsaechlichen Ziel-fstab
+findet beim Betreiber statt. Rueckbau: gesicherte fstab zurueckkopieren und
+systemctl daemon-reload. Ausfuehrung/Bootabnahme des Eintrags noch OFFEN.
+
+```bash
+(
+set -euo pipefail
+umask 077
+
+uuid=6d332cf5-8a19-4fc5-bcaa-5156ab2dad54
+ziel=/srv/meteohub-persist
+test "$(findmnt -nro UUID --mountpoint "$ziel")" = "$uuid"
+test ! -L /etc/fstab
+test -f /etc/fstab
+
+if awk -v id="$uuid" -v ziel="$ziel" '
+  /^[[:space:]]*#/ {next}
+  index($1,id) || $2 == ziel {found=1}
+  END {exit !found}
+' /etc/fstab; then
+  echo 'STOP: Datenpartition bereits in fstab erfasst; bitte Ausgabe zeigen.'
+  exit 1
+fi
+
+sicherung=$(mktemp -d /root/meteohub-mount-before-XXXXXXXX)
+cp -a /etc/fstab "$sicherung/fstab"
+temp=$(mktemp /etc/.fstab-meteohub-XXXXXXXX)
+trap 'rm -f "$temp"' EXIT
+cp -a /etc/fstab "$temp"
+printf '\nUUID=%s %s ext4 ro,nosuid,nodev,noexec,nofail,x-systemd.device-timeout=10s 0 2\n' \
+  "$uuid" "$ziel" >> "$temp"
+
+findmnt --verify --verbose --tab-file "$temp"
+cmp /etc/fstab "$sicherung/fstab"
+mv -T "$temp" /etc/fstab
+systemctl daemon-reload
+
+printf '\nSicherung: %s\n' "$sicherung"
+findmnt --fstab --target "$ziel"
+findmnt --mountpoint "$ziel"
+)
+```
