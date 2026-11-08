@@ -174,6 +174,16 @@ Der Logger verwendet eine gesonderte, schreibgeschützt eingebundene Kopie unter
 Konfiguration nicht. Änderungen an Quelle oder Sensorzuordnung derzeit über
 `live-remove`, Speichern im CGI, erneute Konfigurationserzeugung und einen
 erfolgreichen `direct-test` abnehmen; danach erneut `live-install` ausführen.
+Vor dem Rückbau die bisherige `runtime/live/logger.conf` und die neu erzeugte
+Konfiguration privat sichern. Ein erfolgreicher kurzer Empfangstest bestätigt
+nicht automatisch alle neu zugeordneten Sensoren: Bei langsamen Sensoren muss
+nach Wiederaufnahme des Dauerbetriebs mindestens ein echtes neues Messereignis
+im nativen Archiv und anschließend in Dashboard/SVG nachgewiesen werden.
+Das tatsächliche Sensorintervall für die Frischeanzeige konfigurieren; keine
+Messwerte erzeugen oder Zeitstempel auffrischen. Bei fehlgeschlagenem Test
+bleibt der Logger aus: den Fehler prüfen und bei Bedarf mit der gesicherten,
+zuvor abgenommenen Konfiguration den alten Dauerbetrieb wieder einrichten.
+
 Der Installer blockiert begrenzte Empfangstests, solange die Live-Installation
 registriert ist. Zusätzlich hält der laufende Logger dieselbe Dateisperre wie
 die Testhelfer. Manuell gestartete fremde Leser kann diese Sperre nicht verhindern.

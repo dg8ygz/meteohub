@@ -80,3 +80,21 @@ Ein einzelnes `PASS` des begrenzten Tests ist keine vollständige Betriebsabnahm
 
 Weiter zur [allgemeinen Installer-Anleitung](installer.md) oder zur
 [Pi-Ersteinrichtung](raspberry-pi-setup.md).
+
+
+## Regen-Ergänzung am 08.11.2026 (nur diese Station)
+
+Morgens war `@SENSORIDMAP 0 1 0 0` bereits in der vom CGI erzeugten
+Konfiguration gespeichert, jedoch nicht in der festen Live-Kopie. Die Quelle
+liefert `rain0` nur etwa stündlich um xx:38; ein fünfminütiger allgemeiner
+Empfangstest kann deshalb ohne Regenzeile erfolgreich sein. Nach Übernahme
+und Dauerstart muss der nächste echte Regenwert abgewartet werden, zuzüglich
+Archivpufferung. Für diese Quelle `rain0`-Intervall3600s konfigurieren, andere
+Sensorintervalle und vorhandene Archivverzögerung unverändert lassen.
+
+Letzter Quellencheck08.11.13:38CET: Rate0, Zusatzwert0, kumulativer Zähler
+-31908. Der negative Zähler ist kein gültiger Niederschlagsgesamtwert und
+bleibt ein eigener Datenqualitätsbefund; Rate0 nicht als fehlend behandeln.
+Fernzugriff zum neuen Pi scheiterte bei dieser Nachprüfung an der Anmeldung.
+Der Betreiber führt die vorbereitete Konfigurationsübernahme selbst aus;
+Umstellung und neue Regenzeile sind damit **noch nicht abgenommen**.
