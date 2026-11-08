@@ -654,3 +654,26 @@ Knapp zwei Minuten Laufzeit reichen angesichts zuvor beobachteter
 Archivverzoegerung noch nicht zur Diagnose eines Empfangsausfalls.
 Naechster Schritt: aktuelles Bootjournal, Anwendungslog und vier Minuten
 lesende Archivbeobachtung; keine Neustarts oder weiteren Storage-Aenderungen.
+
+
+### Empfang wieder vorhanden; Boot-Zeitkorrektur als offene Ursache
+
+Weiterer Betreiberbeleg vom 08.11.2026: Logger meldete wiederholt fehlendes
+Signal/Synchronisation und beendete sich um 23:34:02 CET mit Exit 1.
+Systemd startete ihn um 23:34:32 neu (Zaehler 1). Um 23:38:00 CET wuchs
+das Archiv von 487278 auf 487868 Bytes; der Index uebernahm 21 Datensaetze
+und lag fuer alle Sensoren 0 Sekunden hinter dem Roharchiv. Frische Werte
+fuer wind0, t2, sol0, uv0 und data0 sind nachgewiesen. t1, thb0 und rain0
+hatten am Ende der Beobachtung noch alte Zeitstempel; vollstaendige
+Sensorabnahme daher weiterhin OFFEN.
+
+Das aktuelle Bootjournal nennt fuer den ersten Loggerstart 22:11:25 CET,
+waehrend uptime zuvor 23:27:56 als Bootzeit errechnet hatte. Eine Korrektur
+der Systemzeit nach dem Start ist eine plausible Erklaerung, noch kein
+bewiesener Ausloeser des Loggerfehlers. Die vorige Annahme einer blossen
+Archivverzoegerung reicht angesichts Exit 1 und Timeouts nicht aus.
+Lokaler Quellcode tools/live-service.py ordnet Logger nach
+network-online.target an, enthaelt aber keine ausdrueckliche Wartebedingung
+auf synchronisierte Zeit. Vor einer Aenderung NTP-Status und Bootjournal
+mit monotonen Zeitstempeln auf dem Pi erheben. Keine Logger-/Zeitdienst-
+oder Bootaenderung in diesem Diagnoseschritt vorgenommen.
