@@ -604,7 +604,10 @@ MainPID, Datei-Entfernung bei Loggerstop, PID-Erneuerung nach SIGKILL und
 erneutem Archivfortschritt. Testabfragen warten nun auf den tatsaechlichen
 Prozesswechsel/Dienstabschluss statt nur auf eine weitere TCP-Verbindung oder
 das vorzeitig erreichte Target-inactive. Kein echter ARM-Logger in diesen Tests.
-Pi-Installation und Abnahme dieses PID-Fixes noch OFFEN. MAC-Warnung getrennt.
+Pi-Test inzwischen bestaetigt: loggerd.pid und systemd-MainPID beide 4774;
+nach Neuladen der nativen Seite verschwand die loggerd.pid-Meldung.
+Drop-in derzeit nur unter /run, dauerhafte Installation noch OFFEN.
+MAC-Warnung getrennt.
 
 Loggerauszug zeigt nach einigen geplanten Neustarts leere TCP-Antworten und
 Wiederverbindung 30 Sekunden spaeter (20:00:10/20:00:40 sowie
@@ -620,10 +623,23 @@ Error ifconfig read eth0 mac address: Function not implemented
 Network Interface not correctly configured.
 ```
 
-Der direkte Empfang funktioniert trotz dieser Meldung. Die konkrete Ursache
-ist nicht belegt. Keine reale IP-/MAC-Änderung aus dem Hinweis auf die alte
-Fallback-Adresse ableiten. Gezielte Diagnose der alten ARM-Anwendung in der
-Sandbox vorbereiten; der Betreiber führt nötige Zielbefehle aus.
+Der direkte Empfang funktioniert trotz dieser Meldung. Am 9. November ist
+die Formatabweichung belegt: Im Mount-/Netzwerk-Namespace des Webdienstes
+liefert /sbin/ifconfig eth0 die echte IP 44.149.114.50/26 und MAC
+98:fe:54:62:71:a0, jedoch als `inet` und `ether`. Das verifizierte native
+5.1e-CGI enthaelt Abfragen nach `inet addr:` und `HWaddr `. Das Werkzeug und
+eth0 fehlen also nicht. Keine IP-/MAC-Aenderung aus dem Fallback-Hinweis ableiten.
+
+`tools/ifconfig-compat.py` bereitet einen ausschliesslich lesenden Adapter vor:
+reale iproute2-JSON-Daten des aktuellen Netzwerk-Namespace im alten Format.
+Keine erfundenen Identitaeten, keine Netzwerkkonfiguration. Vorgesehen ist
+ein privater ReadOnly-Bind nur im Webdienst, kein Austausch des Hostwerkzeugs.
+Drei lokale Tests bestanden, darunter echte isolierte Netlink-Abfrage als
+unprivilegierter Benutzer und privater Bind-Mount; abgelehnte Aenderungsbefehle
+lassen die Netzwerkdaten unveraendert. Echte CGI-Abnahme auf dem Pi OFFEN.
+Die getcwd-Warnung des Diagnosebefehls ist getrennt zu behandeln: kuenftig
+nsenter --wdns=/ statt --wd=/ fuer das Arbeitsverzeichnis im Ziel-Root nutzen.
+Anleitung und Rueckbau: [ifconfig-Anzeigeadapter](ifconfig-compat.md).
 
 ### 4. Danach weitere Betriebsfunktionen
 
