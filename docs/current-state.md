@@ -104,7 +104,17 @@ korrigierte Transaktion ist kreisfrei. Echte lokale Mount-/Unit-Tests mit
 Upgrade, Health-Fehler bei gestopptem Webdienst, gemeinsamem Target-/RAM-Stop,
 gesichertem neuem Testdatensatz und Wiederanlauf bestanden (3 Tests, 32,038 s).
 `repair-ordering` aktualisiert Helper/RAM-Unit und Verwaltungs-Hashes mit
-vorheriger Sicherung, ohne Dienstneustart. Auf dem Pi noch auszufuehren.
+vorheriger Sicherung, ohne Dienstneustart.
+
+**Betreiber hat repair-ordering ausgefuehrt:** Helper-SHA256
+`70b4620acd07584f0d8c30ae601f44f715d5f73f4daadcce0aee2218c029345b`
+bestaetigt, Sicherung `/root/meteohub-ram-ordering-before-adih7iu7`.
+Geladene RAM-Unit zeigt DefaultDependencies=no und After=sysinit.target sowie
+den Persistenzmount, kein After=basic.target. Alle vier Anwendungen active,
+inactive_apps leer, needs_attention=false. RAM 5128192 Bytes, bisherige
+Generation unveraendert. Naechste Abnahme: synchroner Stop von Target UND
+RAM-Service, neue gespeicherte Generation, Archiv-Praefixvergleich, Wiederanlauf.
+Dies ersetzt noch keinen erfolgreichen kompletten Reboot.
 
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
