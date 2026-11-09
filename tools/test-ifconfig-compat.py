@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -18,6 +19,33 @@ if ISOLATION: sys.argv.remove('--isolation')
 
 
 class DisplayTests(unittest.TestCase):
+    @unittest.skipUnless(ISOLATION and os.geteuid() == 0, 'requires root --isolation')
+    def test_service_netlink_policy(self):
+        with tempfile.TemporaryDirectory(prefix='meteohub-netlink-test-') as td:
+            Path(td).chmod(0o755)
+            source = Path(td) / 'adapter'; source.write_bytes(SCRIPT.read_bytes()); source.chmod(0o755)
+            harness = '''import subprocess,sys
+adapter,expected=sys.argv[1:]
+r=subprocess.run([adapter,'-a'],capture_output=True,text=True)
+if expected=='denied':
+ assert r.returncode != 0, r.stdout
+ print('PASS: service address-family filter blocks adapter despite namespace access')
+else:
+ assert r.returncode == 0 and 'Local Loopback' in r.stdout, (r.stdout,r.stderr)
+ r=subprocess.run(['/usr/sbin/ip','link','add','forbidden0','type','dummy'],capture_output=True,text=True)
+ assert r.returncode != 0 and 'Operation not permitted' in r.stderr, (r.stdout,r.stderr)
+ print('PASS: netlink read allowed; network administration denied in private test namespace')
+'''
+            for expected, families in [('denied', 'AF_INET AF_UNIX'), ('allowed', 'AF_INET AF_UNIX AF_NETLINK')]:
+                cmd = ['systemd-run','--wait','--pipe','--collect',
+                       '--unit=meteohub-netlink-test-' + str(time.time_ns()),
+                       '-p','User=65534','-p','Group=65534','-p','PrivateNetwork=yes',
+                       '-p','NoNewPrivileges=yes','-p','CapabilityBoundingSet=',
+                       '-p','RestrictAddressFamilies=' + families,
+                       sys.executable,'-c',harness,str(source),expected]
+                result = subprocess.run(cmd,text=True,capture_output=True,timeout=20)
+                self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
     def test_addresses_labels_and_down_interfaces(self):
         rows = [dict(ifname='sample0', flags=['UP', 'LOWER_UP', 'BROADCAST'], mtu=1500,
                      link_type='ether', address='02:00:00:00:00:01', addr_info=[

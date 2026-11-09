@@ -644,7 +644,13 @@ direkter Start EACCES, ausdruecklicher Python-Aufruf liefert korrekt echte MAC
 und IP im alten Format. Ablage unter /usr/local/libexec im Host-Overlay als
 Korrektur vorbereitet. Der lokale Test nutzte zuvor selbst den Interpreter
 und erfasste diese Fehlerklasse nicht; jetzt noexec und direkten Start geprueft.
-Zielabnahme des korrigierten Mounts und der nativen CGI-Seite noch OFFEN.
+Ziel bestaetigt jetzt direkte Ausfuehrung mit echten Adressen; die MAC-Meldung
+ist auf der nativen Seite verschwunden, die allgemeine Netzwerkwarnung bleibt.
+Weitere lokale Analyse: Webdienst erlaubt AF_INET/AF_UNIX, waehrend iproute2
+AF_NETLINK benoetigt. nsenter bildet diese Prozessfilter nicht nach. Echter
+systemd-Test reproduziert Fehler und erfolgreiche Abfrage nach Freigabe von
+AF_NETLINK; Netzwerkadministration bleibt ohne Capabilities gesperrt (EPERM
+in privatem Testnetz). Web-spezifische Ergaenzung vorbereitet, Pi-Abnahme OFFEN.
 Anleitung und Rueckbau: [ifconfig-Anzeigeadapter](ifconfig-compat.md).
 
 ### 4. Danach weitere Betriebsfunktionen

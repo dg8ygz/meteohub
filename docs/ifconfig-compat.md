@@ -19,6 +19,8 @@ Als root nach `/usr/local/libexec/meteohub-ifconfig-compat.py` installieren (075
 ```ini
 [Service]
 BindReadOnlyPaths=/usr/local/libexec/meteohub-ifconfig-compat.py:/usr/sbin/ifconfig
+RestrictAddressFamilies=
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
 ```
 
 Bestehende BindReadOnlyPaths nicht leeren. `daemon-reload` und ausschliesslich
@@ -41,6 +43,19 @@ Der ausdrueckliche Python-Aufruf funktionierte, direkte Ausfuehrung nicht.
 Deshalb Quelle auf einem ausfuehrbaren Mount ablegen; /run nicht auf exec setzen.
 Der Integrationstest prueft jetzt auch direkte Ausfuehrung und reproduziert
 den Fehler mit einer echten noexec-tmpfs-Quelle vor dem Wechsel der Quelle.
+
+Nach Wechsel des Ablageorts bestaetigte der Betreiber direkte Ausfuehrung im
+Web-Namespace und Wegfall der MAC-Fehlermeldung. Die allgemeine Netzwerkwarnung
+blieb. Die CGI-Binaeranalyse zeigt diesen Warnpfad bei fehlender Ausgabe aus
+`ifconfig eth0 | grep "inet addr:"` (5.1e, VA 0x6e8c8 bis 0x6ead4).
+Die bestehende Dienstpolicy erlaubt nur AF_INET/AF_UNIX; iproute2 benoetigt
+AF_NETLINK. nsenter uebernimmt keinen Seccomp-Filter des Zielprozesses.
+Ein echter lokaler systemd-Test reproduziert das Versagen des Adapters mit
+dieser Policy. Mit AF_NETLINK liefert er Daten; ein Netzwerk-Aenderungsversuch
+im privaten Testnetz scheitert weiterhin mit EPERM bei leerem Capability-Satz.
+Deshalb fuer den Adapter nur im Webdienst die obige Allowlist verwenden.
+IPAddressDeny/Allow und CapabilityBoundingSet nicht lockern. Zielabnahme
+der AF_NETLINK-Ergaenzung noch offen. Kein weiterer Loggerstart erforderlich.
 
 Das Drop-in liegt unter /run, die Quelle im fluechtigen Host-Overlay unter
 /usr/local/libexec. Beide verschwinden beim Neustart aus diesem Testbetrieb.
