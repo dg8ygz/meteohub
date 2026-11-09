@@ -6,6 +6,17 @@ automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
 
+## Neueste Fortsetzung: aktivierte Identitaetskopie gesichert
+
+Betreiberbeleg: `/srv/meteohub-persist/identity-migration/ready-gesmgcud`
+vollstaendig verifiziert, Datenpartition wieder RO, Logger-PID unveraendert.
+Die private aktivierte Konfiguration unterscheidet sich vom gemeinsamen Stand
+nur in 32 Bytes (27836 bis 27867). Keine Aktivierungswerte in Repository/Output.
+Der permanente Installer ist lokal vorbereitet und mit drei Tests einschliesslich
+echtem systemd-Startfehler/Rollback geprueft. Zielinstallation, gemeinsame native
+Web-/Logger-Abnahme und Rueckkehr zum RO-Boot sind noch OFFEN. Ablauf und
+Testgrenzen stehen in [Identitaetssicht](identity-view.md).
+
 ## Fortsetzung 9. November morgens: RAM auf dem Pi installiert
 
 **RAM-Installation auf dem Pi belegt; Host-Root und Boot weiterhin RW.**

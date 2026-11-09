@@ -65,3 +65,46 @@ beschaedigter Kopie, falscher UUID und RO-Wiederherstellung. Zwei Tests bestande
 Das ist noch keine Ausfuehrung auf dem Ziel-Pi. Vor dem Wartungsneustart muessen
 dessen Sicherungsergebnis und Konfigurationsunterschiede vorliegen; der
 dauerhafte Installer und die gemeinsame Web-/Logger-Sicht sind noch offen.
+
+Betreiberabnahme der Sicherung am 9. November: `ready-gesmgcud` wurde vollstaendig
+verifiziert und die Partition wieder RO gemountet. Die beiden nativen
+Konfigurationen unterscheiden sich ausschliesslich in 32 Bytes, Offset
+27836 bis 27867. Logger-PID unveraendert, kein Dienstneustart.
+
+`tools/install-identity-persistent.py` bereitet die permanente Uebernahme vor:
+
+- `prepare SNAPSHOT` prueft dessen vollstaendiges Manifest, die bestaetigten
+  Konfigurationsunterschiede und die bekannten Kompatibilitaetsdateien. Es
+  sichert sich selbst, Journal, Units und Bootzeile dauerhaft auf der separaten
+  Datenpartition. Erst danach setzt es ausschliesslich `overlayroot=disabled`
+  fuer den folgenden Wartungsstart und setzt Boot/Daten wieder RO. Kein Reboot
+  und kein Dienstneustart durch das Werkzeug.
+- `install SNAPSHOT` ist ausschliesslich auf dem bekannten RW-ext4-Root nach
+  Wartungsstart erlaubt. Es uebernimmt das vorhandene Aktivierungsfeld in die
+  aktuelle gemeinsame Konfiguration; alle anderen aktuellen Einstellungen
+  bleiben erhalten. Ein unabhaengig geaendertes Aktivierungsfeld wird abgelehnt.
+  Die Identitaetsdateien werden unter `/usr/local/libexec/meteohub-native-identity`
+  installiert, beide nativen Dienste bekommen `60-native-identity.conf` und der
+  Logger den PID-Drop-in. Es gibt keinen privaten Home-Bind mehr. AF_NETLINK wird
+  wie im bereits abgenommenen Webtest zugelassen; andere Netzwerk-/Capability-
+  Einstellungen werden nicht ersetzt.
+- Die Dienste werden fuer die Konfigurationsuebernahme angehalten und danach
+  gestartet. ExecStartPre prueft die Sicht unter den echten Dienstbedingungen.
+  Geraete-/Inodegleichheit der Konfiguration wird in beiden Prozesswurzeln
+  kontrolliert, ebenso der echte Logger-PID. Bei Fehler wird der alte Stand
+  wiederhergestellt. Rueckwegsicherung unter `/root/meteohub-identity-before-*`.
+- Nach erfolgreichem Start folgt ein regulaerer RAM-Checkpoint (mit einer
+  weiteren kurzen Anwendungspause), damit die gemeinsame Aktivierung dauerhaft
+  gesichert ist. Schlaegt dieser fehl, bleibt der Installer mit ausdruecklichem
+  Hinweis im Wartungsmodus. Der Root-Schreibschutz wird nicht automatisch
+  reaktiviert; native Seite und neue Archivdaten sind vorher am Pi zu pruefen.
+
+Lokale Tests: `python3 tools/test-install-identity-persistent.py --isolation`.
+Drei Tests pruefen die begrenzte Felduebernahme mit unabhaengigen Einstellungen,
+Bootparameter und echte systemd-Dienste mit RootDirectory, gemeinsamer
+Konfiguration, Prozessfiltern, Identitaets-Binds und PID-Datei. Ein absichtlich
+fehlschlagender ExecStartPre weist die Wiederherstellung und den anschliessenden
+erfolgreichen Installationsweg nach. Nur der RAM-Mount-Vorcheck dieser Fixture
+ist ersetzt; deren RAM-/Checkpoint-Lebenszyklus prueft `test-ram-storage.py`
+separat. Die lokale Fixture startet keine proprietaeren ARM-Binaerdateien und
+ersetzt nicht die Zielabnahme. Permanente Installation auf dem Pi noch OFFEN.
