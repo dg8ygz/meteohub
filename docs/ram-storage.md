@@ -1,10 +1,13 @@
 # RAM-Datenhaltung und SD-Sicherungen
 
-Stand 9. November 2026: **lokal implementiert und mit echten Test-Mounts und
-systemd getestet; auf dem Stations-Pi noch nicht installiert oder abgenommen.**
-Dieses Werkzeug schaltet weder Root noch Boot auf RO. Diese zweite Stufe folgt
-erst nach nachgewiesener RAM-Aufzeichnung, Sicherung und Wiederherstellung auf
-dem Ziel-Pi. `overlayroot` wird hier nicht installiert.
+Stand 9. November 2026: **RAM-Betrieb, manuelle/Shutdown-Sicherung und
+Wiederherstellung auf dem Stations-Pi nachgewiesen.** Auch der getrennte
+Host-RO-Umbau und neue Archivdaten nach dessen Boot sind belegt; Details und
+offene Punkte stehen im [Stationsnachweis](current-state.md). Die neue
+Intervallumstellung ist lokal mit echten Mounts und systemd getestet; ihre
+Zielinstallation und ein automatischer Sicherungslauf auf dem Pi sind noch
+offen. Dieses Werkzeug schaltet weder Root noch Boot auf RO und installiert
+kein `overlayroot`.
 
 ## Aufbau
 
@@ -54,8 +57,8 @@ prueft Kopie und Datenbank, installiert den Helper unter
 `/usr/local/libexec/meteohub-ram.py`, die Konfiguration unter
 `/etc/meteohub-ram.json` und neue systemd-Units/Drop-ins. Originale Runtime-Daten
 unter dem Mount bleiben erhalten. Die Dienste werden auf der RAM-Runtime
-wieder gestartet. Die Installationshuelle selbst ist noch am Ziel abzunehmen;
-ein erfolgreicher lokaler Backend-Test ist keine Pi-Abnahme.
+wieder gestartet. Ein erfolgreicher lokaler Backend-Test ersetzt die
+jeweilige Zielabnahme nicht.
 
 Danach auf dem Zielsystem pruefen:
 
@@ -102,10 +105,11 @@ Neue empfangene Messwerte sind anschliessend gesondert nachzuweisen.
 
 ## Sicherungsverhalten
 
-- Timer taeglich **04:15 Europe/Berlin**, Persistent=true fuer nachgeholte Laeufe.
+- Standardtimer taeglich **04:15 Europe/Berlin**, Persistent=true fuer
+  nachgeholte Laeufe. Kuerzere Intervalle sind explizit konfigurierbar, siehe unten.
 - Beim regulaeren Stop/Herunterfahren: systemd stoppt zuerst die abhaengigen
   Anwendungen; anschliessend sichert ExecStop der RAM-Unit.
-- Dienste pausieren waehrend einer taeglichen/manuellen Sicherung. Das ist eine
+- Dienste pausieren waehrend einer geplanten/manuellen Sicherung. Das ist eine
   kurze geplante Empfangs-/Webpause; keine Zusage lueckenloser Erfassung.
 - Der Logger muss sauber beendet sein. Kein laufendes SQLite/WAL wird blind
   kopiert: gepruefte Kopie bei angehaltenen Diensten, Konsolidierung der
@@ -121,9 +125,13 @@ Neue empfangene Messwerte sind anschliessend gesondert nachzuweisen.
   `.pending-*` bleiben bei Fehlern fuer Diagnose erhalten und koennen Platz
   verbrauchen; sie sind keine gueltigen Wiederherstellungspunkte.
 - Bei Stromverlust ist nur der letzte abgeschlossene Stand verfuegbar.
-  Normalerweise bis zu 24 Stunden Verlust, bei Sicherungsfehlern mehr.
+  Beim taeglichen Standard normalerweise bis zu 24 Stunden Verlust, bei
+  stuendlicher Sicherung etwa eine Stunde plus Laufzeit/Timerabweichung.
+  Bei Sicherungsfehlern kann die Verlustspanne in beiden Faellen groesser sein.
 - Kapazitaetspruefung alle fuenf Minuten: ab 80 Prozent RAM-Belegung oder
-  Sicherungsalter ueber 26 Stunden fehlerhafter Checkdienst mit Journalbefund.
+  Sicherungsalter ueber 26 Stunden beim taeglichen Standard fehlerhafter
+  Checkdienst mit Journalbefund. Bei konfigurierten kuerzeren Intervallen gilt
+  Intervall plus 30 Minuten (stuendlich also 90 Minuten).
   Waehrend einer laufenden Speicheroperation wird dieser einzelne Check mit
   ausdruecklichem Skip-Befund ausgelassen; das ist keine Gesundheitsbestaetigung.
   Kein E-Mail-/Pushalarm und keine behauptete externe Ueberwachung.
@@ -133,6 +141,51 @@ Anwendungsstart. Das Werkzeug verwendet nicht still die veraltete Original-
 Runtime unter dem RAM-Mount. Bei Fehlern Mountstatus und Units pruefen;
 normale Fehler/Signale loesen Aufraeumversuche aus. Stromausfall/SIGKILL
 koennen keine Aufraeumgarantie haben.
+
+## Sicherungsintervall aendern
+
+Nach Uebertragung der aktuellen `ram-storage.py` als root:
+
+```bash
+python3 ram-storage.py configure-checkpoints --minutes 60 --temporary
+systemctl list-timers --all --no-pager --full 'meteohub-ram-*'
+python3 /usr/local/libexec/meteohub-ram.py status
+```
+
+`--temporary` erlaubt einen ausdruecklichen Versuch bei aktivem Host-Overlay.
+Helper, Konfiguration und gehashte Timerunit werden in der beschreibbaren
+Host-Schicht geaendert. Bei einem Host-Overlay verschwinden diese Aenderungen
+beim Neustart; sie sind nicht Teil der Meteohub-Runtime-Sicherung. Es wird
+nichts in die schreibgeschuetzte Root-Unterlage geschrieben. Die Sicherungen
+selbst landen wie bisher geprueft auf der Persistenzpartition.
+
+Fuer die dauerhafte Umstellung in einem Wartungsboot mit normalem RW-Root
+denselben Befehl **ohne `--temporary`** ausfuehren. Das Skript muss in diesem
+Boot erneut verfuegbar sein; eine Kopie allein im vorherigen Host-Overlay
+ueberlebt den Neustart nicht. Es fuehrt weder Bootparameterwechsel noch Reboot
+aus. Permanente Umstellung bei aktivem Host-Overlay wird abgewiesen.
+
+Erlaubt sind 15, 30 oder 60 Minuten. Die Kalendereintraege liegen auf festen
+UTC-Viertel-/Halb-/Vollstunden, ohne zusaetzlichen taeglichen Lauf. Stuendlich
+ist die Empfehlung fuer den aktuellen Stationsversuch: Jeder Checkpoint
+pausiert Anwendungen und kann anschliessendes Nacharbeiten des Index ausloesen.
+Haeufiger ist daher nicht ohne Abwaegung besser. Ein nachzuholender Termin kann
+bereits beim erneuten Aktivieren des Timers einen Checkpoint starten.
+
+Die Umstellung prueft die verwalteten Dateien anhand ihrer gespeicherten
+Hashes und lehnt unbekannte Timer-Drop-ins ab. Sie aktualisiert Helper und
+Alterspruefung gemeinsam mit dem Timer. Ein zuvor inaktiver Timer bleibt
+inaktiv; sein Aktivierungszustand wird nicht still geaendert. Ein Schreibfehler
+beim Austausch stellt die alten Dateien wieder her. Die Funktion stoppt
+Anwendungen nicht selbst; ein vom Timer ausgeloester Checkpoint tut dies wie
+bisher. Sicherungsalter und App-Zustaende erscheinen im lokalen Status und
+Journal; es existiert weiterhin keine externe Benachrichtigung.
+
+Den automatischen Lauf am Ziel durch Timer-/Dienstjournal, erfolgreiche
+Beendigung, neue gespeicherte Generation und RO-Persistenz nachweisen.
+Ein manueller `systemctl start ...checkpoint.service` allein ist kein Nachweis
+fuer die Timer-Ausloesung. Danach neue native Messwerte und Indexgleichstand
+pruefen; der Regenkanal kann ein laengeres stationsspezifisches Intervall haben.
 
 ## Rueckbau vor Root-RO
 

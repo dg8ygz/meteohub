@@ -6,6 +6,7 @@ systemd must see the mounts, so unlike bootstrap tests this is not in unshare.
 """
 import importlib.util
 import contextlib
+import datetime
 import hashlib
 import json
 import os
@@ -40,6 +41,17 @@ def fixture_directory():
 
 
 class ManifestTests(unittest.TestCase):
+    def test_checkpoint_calendar(self):
+        cfg = dict(prefix='fixture', apps=[], target='fixture.target', persist='/tmp')
+        for minutes in (15, 30, 60):
+            cfg['checkpoint_interval_minutes'] = minutes
+            timer = m.render('/tmp/config', '/usr/bin/true', cfg)['fixture-checkpoint.timer']
+            calendar = next(line.split('=', 1)[1] for line in timer.splitlines() if line.startswith('OnCalendar='))
+            result = m.run('systemd-analyze', 'calendar', '--iterations=3', calendar)
+            self.assertIn('UTC', result.stdout)
+        cfg['checkpoint_interval_minutes'] = 0
+        with self.assertRaises(ValueError): m.render('/tmp/config', '/usr/bin/true', cfg)
+
     def test_boot_transaction_has_no_ordering_cycle(self):
         with tempfile.TemporaryDirectory() as td:
             top = Path(td)
@@ -153,7 +165,7 @@ class LifecycleTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError): user_access()
                 mkdtemp = tempfile.mkdtemp
                 def repair_backup(*args, **kw):
-                    if kw.get('dir') == '/root': kw['dir'] = str(top)
+                    if kw.get('dir') in ('/root', '/run'): kw['dir'] = str(top)
                     return mkdtemp(*args, **kw)
                 with patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
                     m.repair_permissions(s, config)
@@ -168,6 +180,60 @@ class LifecycleTests(unittest.TestCase):
                 self.assertIn('DefaultDependencies=no', ram_unit.read_text())
                 self.assertEqual(m.regular_json(config)['installed_files'][str(ram_unit)],
                                  hashlib.sha256(ram_unit.read_bytes()).hexdigest())
+                # Reject an accidental supposedly permanent installation on a host overlay.
+                actual_mount_info = m.mount_info
+                def host_overlay(path):
+                    if Path(path) == Path('/'): return {'fstype': 'overlay', 'options': 'rw'}
+                    return actual_mount_info(path)
+                with patch.object(m, 'mount_info', side_effect=host_overlay), \
+                     patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
+                    with self.assertRaisesRegex(ValueError, 'Host overlay active'):
+                        m.configure_checkpoints(s, config, 60)
+                    before_pids = [m.run('systemctl', 'show', app, '-p', 'MainPID', '--value').stdout for app in apps[1:]]
+                    m.configure_checkpoints(s, config, 60, temporary=True)
+                    after_pids = [m.run('systemctl', 'show', app, '-p', 'MainPID', '--value').stdout for app in apps[1:]]
+                    self.assertEqual(before_pids, after_pids)
+                    timer_path = Path('/run/systemd/system') / (prefix + '-checkpoint.timer')
+                    self.assertIn('OnCalendar=*-*-* *:00:00 UTC', timer_path.read_text())
+                    self.assertEqual(s.status()['backup_age_limit_seconds'], 5400)
+                    # Status must flag an overdue hourly backup even with all apps active.
+                    now = time.time()
+                    with patch.object(m.time, 'time', return_value=now + 5401):
+                        self.assertTrue(s.status()['needs_attention'])
+                    self.assertFalse(s.status()['needs_attention'])
+                    # Partial write failure restores helper/config/timer and their ownership hashes.
+                    old_files = {p: p.read_bytes() for p in (helper, config, timer_path)}
+                    actual_atomic = m.atomic
+                    failed = []
+                    def fail_timer(path, data):
+                        if Path(path) == timer_path and not failed:
+                            failed.append(True)
+                            raise OSError('injected timer write failure')
+                        return actual_atomic(path, data)
+                    with patch.object(m, 'atomic', side_effect=fail_timer):
+                        with self.assertRaisesRegex(OSError, 'injected'):
+                            m.configure_checkpoints(s, config, 30, temporary=True)
+                    for path, data_before in old_files.items(): self.assertEqual(path.read_bytes(), data_before)
+                    # A real systemd calendar trigger must create a fresh verified generation.
+                    marker = runtime / 'scheduled-proof'; marker.write_text('automatic checkpoint')
+                    previous = s.reference()['name']
+                    when = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=4)
+                    original_timer = timer_path.read_text()
+                    timer_path.write_text(original_timer.replace('*-*-* *:00:00 UTC', when.strftime('%Y-%m-%d %H:%M:%S UTC')).replace('AccuracySec=1min', 'AccuracySec=1ms'))
+                    m.run('systemctl', 'daemon-reload')
+                    m.run('systemctl', 'start', prefix + '-checkpoint.timer')
+                    deadline = time.monotonic() + 20
+                    while time.monotonic() < deadline:
+                        if s.reference()['name'] != previous and s.active(prefix + '-checkpoint.service') == 'inactive': break
+                        time.sleep(.2)
+                    m.run('systemctl', 'stop', prefix + '-checkpoint.timer')
+                    self.assertNotEqual(s.reference()['name'], previous)
+                    self.assertEqual((s.verify(s.reference()) / 'scheduled-proof').read_text(), 'automatic checkpoint')
+                    self.assertTrue(all(s.active(app) == 'active' for app in apps))
+                    s.disk()
+                    timer_path.write_text(original_timer)
+                    m.run('systemctl', 'daemon-reload')
+                    self.assertEqual(m.regular_json(config)['installed_files'][str(timer_path)], hashlib.sha256(timer_path.read_bytes()).hexdigest())
                 m.run('systemctl', 'stop', apps[1])
                 self.assertTrue(s.status()['needs_attention'])
                 self.assertIn(apps[1], s.status()['inactive_apps'])

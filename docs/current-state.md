@@ -198,7 +198,8 @@ Remount-Workaround und Start nach Zeitsynchronisierung sind belegt.
 Manueller Checkpoint unter Host-RO und neue Archivdaten vor dem Wartungsboot
 sind ebenfalls belegt (siehe Abendnachweis).
 Sicherungstimer ist installiert; ein automatisch ausgefuehrter taeglicher
-Lauf ist noch nicht belegt. Kuerzeres Sicherungsintervall noch offen.
+Lauf ist noch nicht belegt. Stuendliche Sicherung mit Fehlerstatus ab 90 Minuten
+Sicherungsalter lokal vorbereitet und getestet; auf dem Pi noch nicht angewandt.
 
 **Paketplan vom Betreiber fuer Host-RO:** overlayroot 0.18.debian14 (all),
 cryptsetup und cryptsetup-bin je 2:2.7.5-2 (arm64), drei neue Pakete,
@@ -316,6 +317,20 @@ neue native Archivdaten und das Aufholen des Index nach dem abschliessenden
 Host-RO-Boot nachgewiesen. Kein separater HTTP-/SVG-Abruf in diesem Check.
 Regen weiterhin Morgenstand (37798,9 s alt); neue rain0-Lieferung noch OFFEN.
 Keine dauerhafte Ueberwachung oder allgemeine Langzeitabnahme daraus ableiten.
+
+**Folgeauftrag: Regen und automatische Sicherung, kuerzeres Intervall.**
+`ram-storage.py configure-checkpoints --minutes 60 --temporary` ist fuer den
+Versuch im laufenden Host-Overlay vorbereitet. Dauerhafte Installation muss
+im RW-Wartungsboot ohne `--temporary` erfolgen. Lokaler Test mit echten
+ext4/tmpfs/Overlay-Mounts: systemd-Kalendertimer erzeugt selbststaendig eine
+neue verifizierte Generation samt Kontrollmarker; danach Apps aktiv und
+Persistenz RO. Ausbleibende stuendliche Sicherung loest ab 90 Minuten einen
+Fehlerstatus aus. Fehler beim Timerdatei-Austausch rollt Helper, Timer und
+Konfiguration zurueck. Versehentlich als permanent deklarierte Installation
+unter Host-Overlay wird abgewiesen. Keine Pi-Ausfuehrung oder neue rain0-Daten
+durch diese lokalen Tests behauptet. Vier Tests bestanden, einschliesslich
+vorhandener Speicher-/Shutdown-/Rollback-Pruefungen; kein Hardware-Neustart im
+lokalen Test.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 

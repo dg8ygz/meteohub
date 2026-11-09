@@ -333,13 +333,17 @@ class Storage:
         total = v.f_blocks * v.f_frsize
         ref = self.reference()
         manifest = regular_json(self.generations / ref['name'] / 'manifest.json')
+        interval = self.cfg.get('checkpoint_interval_minutes')
+        age_limit = interval * 60 + 1800 if interval else 26 * 3600
         report = {'runtime': str(self.runtime), 'persistence_read_only': True,
                   'active_generation': state['ref']['name'], 'saved_generation': ref['name'],
                   'ram_used_bytes': used, 'ram_limit_bytes': total,
                   'backup_age_seconds': round(time.time() - manifest['created'], 1),
+                  'backup_age_limit_seconds': age_limit,
+                  'checkpoint_interval_minutes': interval,
                   'apps': {n: self.active(n) for n in self.apps}}
         report['inactive_apps'] = [n for n, state in report['apps'].items() if state != 'active']
-        report['needs_attention'] = (used >= total * .8 or report['backup_age_seconds'] > 26 * 3600
+        report['needs_attention'] = (used >= total * .8 or report['backup_age_seconds'] > age_limit
                                      or bool(report['inactive_apps']))
         return report
 
@@ -347,6 +351,11 @@ class Storage:
 def render(config_path, helper, cfg):
     prefix = cfg['prefix']; service = prefix + '.service'
     command = f'/usr/bin/python3 {helper} --config {config_path} '
+    minutes = cfg.get('checkpoint_interval_minutes')
+    if minutes is not None and minutes not in (15, 30, 60):
+        raise ValueError('Checkpoint interval must be 15, 30 or 60 minutes')
+    calendar = ('*-*-* *:' + ','.join(f'{n:02}' for n in range(0, 60, minutes)) + ':00 UTC'
+                if minutes else '*-*-* 04:15:00 Europe/Berlin')
     return {
         service: '[Unit]\nDescription=Meteohub RAM runtime and shutdown checkpoint\nPartOf=' + cfg['target'] +
             '\nDefaultDependencies=no\nRequires=sysinit.target\nAfter=sysinit.target\nConflicts=shutdown.target\nBefore=shutdown.target' +
@@ -355,8 +364,8 @@ def render(config_path, helper, cfg):
             'ExecStart=' + command + 'restore\nExecStop=' + command + 'shutdown\n',
         prefix + '-checkpoint.service': '[Unit]\nDescription=Meteohub verified RAM checkpoint\nRequires=' + service +
             '\nAfter=' + service + '\n[Service]\nType=oneshot\nUMask=0077\nTimeoutStartSec=15min\nExecStart=' + command + 'checkpoint\n',
-        prefix + '-checkpoint.timer': '[Unit]\nDescription=Meteohub daily SD checkpoint\nPartOf=' + cfg['target'] +
-            '\n[Timer]\nOnCalendar=*-*-* 04:15:00 Europe/Berlin\nPersistent=true\nAccuracySec=1min\n[Install]\nWantedBy=' + cfg['target'] + '\n',
+        prefix + '-checkpoint.timer': '[Unit]\nDescription=Meteohub scheduled SD checkpoint\nPartOf=' + cfg['target'] +
+            '\n[Timer]\nOnCalendar=' + calendar + '\nPersistent=true\nAccuracySec=1min\n[Install]\nWantedBy=' + cfg['target'] + '\n',
         prefix + '-check.service': '[Unit]\nDescription=Meteohub RAM capacity and checkpoint age check\nRequires=' + service +
             '\nAfter=' + service + '\n[Service]\nType=oneshot\nExecStart=' + command + 'check\n',
         prefix + '-check.timer': '[Unit]\nDescription=Meteohub RAM health check\nPartOf=' + cfg['target'] +
@@ -565,6 +574,71 @@ def repair_ordering(s, config):
         print('REPAIRED: early RAM unit ordering and inactive-app health check; no services restarted')
 
 
+def configure_checkpoints(s, config, minutes, temporary=False):
+    """Change the owned timer and its health limit; preserve application processes.
+
+    On a host overlay this is deliberately an explicit temporary trial. A later
+    maintenance boot must repeat the operation on the normal writable root.
+    """
+    if minutes not in (15, 30, 60): raise ValueError('Unsupported checkpoint interval')
+    root = mount_info(Path('/'))
+    if not root or 'rw' not in root['options'].split(','):
+        raise ValueError('Writable host root required')
+    if root['fstype'] == 'overlay' and not temporary:
+        raise ValueError('Host overlay active: use --temporary for a trial or boot into maintenance')
+    with s.lock():
+        s.live_state(); s.disk()
+        old = regular_json(config)
+        owned = {safe_path(p): h for p, h in old['installed_files'].items()}
+        helper = safe_path(old['helper'])
+        owned[helper] = old['helper_sha256']
+        for path, digest in owned.items():
+            if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise ValueError('Managed file changed: ' + str(path))
+        name = old['prefix'] + '-checkpoint.timer'
+        candidates = [p for p in owned if p.name == name]
+        if len(candidates) != 1: raise ValueError('Checkpoint timer path ambiguous')
+        timer = candidates[0]
+        if run('systemctl', 'show', name, '-p', 'DropInPaths', '--value').stdout.strip():
+            raise ValueError('Review existing checkpoint timer overrides first')
+        if s.active(old['prefix'] + '-checkpoint.service') in ('active', 'activating', 'deactivating'):
+            raise ValueError('Checkpoint service busy')
+        active = s.active(name)
+        if active not in ('active', 'inactive'): raise ValueError('Unexpected timer state: ' + active)
+        updated = json.loads(json.dumps(old))
+        updated['checkpoint_interval_minutes'] = minutes
+        payload = Path(__file__).read_bytes()
+        content = render(config, helper, updated)[name].encode()
+        updated['helper_sha256'] = hashlib.sha256(payload).hexdigest()
+        updated['installed_files'][str(timer)] = hashlib.sha256(content).hexdigest()
+        backup = Path(tempfile.mkdtemp(prefix='meteohub-checkpoint-schedule-before-',
+                                      dir='/run' if temporary else '/root'))
+        paths = [helper, timer, config]
+        for i, path in enumerate(paths): shutil.copy2(path, backup / str(i))
+        save(backup / 'paths.json', [str(p) for p in paths])
+        print('SCHEDULE BACKUP:', backup, flush=True)
+        try:
+            # Do not let the timer launch the old helper during the upgrade.
+            run('systemctl', 'stop', name)
+            atomic(helper, payload)
+            atomic(timer, content); timer.chmod(0o644)
+            save(config, updated)
+            run('systemctl', 'daemon-reload')
+        except BaseException:
+            for i, path in enumerate(paths): shutil.copy2(backup / str(i), path)
+            run('systemctl', 'daemon-reload')
+            if active == 'active': run('systemctl', 'start', name)
+            raise
+        s.cfg.clear(); s.cfg.update(updated)
+    # Release storage lock before Persistent=true can launch a catch-up job.
+    if active == 'active': run('systemctl', 'start', name)
+    print(json.dumps({'checkpoint_interval_minutes': minutes,
+                      'backup_age_limit_seconds': minutes * 60 + 1800,
+                      'temporary': temporary, 'host_overlay': root['fstype'] == 'overlay',
+                      'timer_active_before': active,
+                      'note': 'Timer may immediately run a missed checkpoint; each checkpoint pauses applications.'}))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', default=DEFAULT_CONFIG)
@@ -574,6 +648,9 @@ def main():
     p.add_argument('--uuid', required=True); p.add_argument('--ram-mib', type=int, default=320)
     for name in ('restore', 'shutdown', 'checkpoint', 'status', 'check', 'remove', 'repair-permissions', 'repair-ordering'):
         sub.add_parser(name)
+    p = sub.add_parser('configure-checkpoints')
+    p.add_argument('--minutes', type=int, choices=(15, 30, 60), required=True)
+    p.add_argument('--temporary', action='store_true')
     args = parser.parse_args()
     if os.getuid() != 0: parser.error('Run as root')
     os.umask(0o077)
@@ -582,7 +659,8 @@ def main():
     info = config.stat()
     if info.st_uid != 0 or stat.S_IMODE(info.st_mode) & 0o022: raise ValueError('Unsafe config ownership/mode')
     s = Storage(regular_json(config))
-    if args.action == 'repair-permissions': repair_permissions(s, config)
+    if args.action == 'configure-checkpoints': configure_checkpoints(s, config, args.minutes, args.temporary)
+    elif args.action == 'repair-permissions': repair_permissions(s, config)
     elif args.action == 'repair-ordering': repair_ordering(s, config)
     elif args.action == 'remove': uninstall(s, config)
     elif args.action == 'restore': s.restore()
