@@ -7,8 +7,9 @@ offene Punkte stehen im [Stationsnachweis](current-state.md). Die neue
 Intervallumstellung ist lokal mit echten Mounts und systemd getestet. Auf dem
 Stations-Pi sind die stuendliche Umstellung, ein automatisch ausgeloester
 Nachhollauf und anschliessende dauerhafte Installation im Wartungsboot
-nachgewiesen. Der folgende Host-RO-Boot mit dauerhaftem Stundenplan ist noch
-offen. Dieses Werkzeug schaltet weder Root noch Boot auf RO und installiert
+nachgewiesen. Auch der folgende Host-RO-Boot mit dauerhaftem Stundenplan,
+geladener Sicherung und aktiven Anwendungen ist bestaetigt. Das ist keine
+pauschale Langzeitabnahme. Dieses Werkzeug schaltet weder Root noch Boot auf RO und installiert
 kein `overlayroot`.
 
 ## Aufbau

@@ -191,17 +191,15 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt (9. November, abends):** Nach dauerhafter Installation des
-Stundenplans den Host-RO-Boot wieder aktivieren und dessen Timer pruefen;
-neuen Regenwert noch nachweisen. Automatischer
-Nachhollauf des umgestellten Timers um 19:34 MEZ ist belegt. Frische Archivdaten nach dem
-abschliessenden Host-Overlay-Boot, Indexgleichstand, dauerhafter
-Remount-Workaround und Start nach Zeitsynchronisierung sind belegt.
-Manueller Checkpoint unter Host-RO und neue Archivdaten vor dem Wartungsboot
-sind ebenfalls belegt (siehe Abendnachweis).
-Stuendlicher Sicherungstimer mit Fehlerstatus ab 90 Minuten Sicherungsalter
-ist seit dem Wartungsboot um 20 Uhr dauerhaft auf dem normalen RW-Root
-installiert. Erneuter Host-Overlay-Boot danach noch offen.
+**Abschlussstand (9. November, gegen 20:09 MEZ):** Dauerhafter Stundenplan
+hat den erneuten Host-RO-Boot ueberstanden. Physische Root-, Boot- und
+Persistenzpartition RO, alle vier Apps active, keine failed Units, neue
+Sicherungsgeneration geladen. Automatischer Nachhollauf, neuer Regenwert im
+Archiv und Index sowie Remount-Workaround sind nachgewiesen (Einzelbelege
+unten). Naechster Timertermin 21:00 MEZ, noch kein Ausfuehrungsnachweis dieses
+zukuenftigen Termins. Alterspruefung ab 90 Minuten. Keine externe Alarmierung
+und keine laufende Fernueberwachung. Langzeitbetrieb und separate HTTP-/SVG-
+Darstellungspruefung sind damit nicht pauschal abgenommen.
 
 **Paketplan vom Betreiber fuer Host-RO:** overlayroot 0.18.debian14 (all),
 cryptsetup und cryptsetup-bin je 2:2.7.5-2 (arm64), drei neue Pakete,
@@ -360,6 +358,30 @@ Timer loeste um 20:05:37 MEZ einen Nachhollauf aus; unmittelbar folgende
 Momentaufnahme zeigte noch die vorherige Generation. Abschluss dieses Laufs
 und Rueckkehr in den Host-Overlay-Betrieb sind noch nachzuweisen. Zum separat
 geplanten 20:00-Lauf wurde kein Journalnachweis mitgeliefert.
+
+**Nachweis vor abschliessendem Neustart, 20:07:50 MEZ:** Vorbereitungsblock
+pruefte Sicherungsdienst inactive/Result=success, bevor er Bootparameter
+aenderte. Aktive/gesicherte Generation
+`gen-b7779395d5e446fcaa16b358fced0fea`, Alter 130,5 s: neuer erfolgreicher
+Sicherungsstand nach der dauerhaften Umstellung. Archiv 644604 Bytes,
+Indexgleichstand bei allen Kanaelen, kein Index-Lesefehler. Regenalter 1745,1 s
+ergibt neuen rain0-Zeitpunkt **19:38:45 MEZ**: Morgenstand ersetzt, Regen in
+native Roharchiv und abgeleiteten Index uebernommen. Kein separater SVG-/HTTP-
+Nachweis in dieser Ausgabe. Boot-/Status-/Journal-/Archivdiagnose unter
+`/root/meteohub-hourly-ro-before-8wL7YhGz` gesichert.
+
+**Abschlussboot laut Betreiber:** `/` wieder beschreibbares Host-Overlay;
+`/media/root-ro`, `/boot/firmware` und `/srv/meteohub-persist` jeweils direkte
+RO-Mounts der SD-Partitionen. Keine failed Units. Stundenplan nach Reboot
+weiter vorhanden, naechster Termin 21:00 MEZ, Intervall 60 Minuten,
+Backup-Altersgrenze 5400 s. Neue aktive und gesicherte Generation
+`gen-27f264b193544a4399d14cec7b413f16`, Alter 81,6 s. Alle vier Anwendungen
+active, inactive_apps leer, needs_attention=false, RAM 3616768 von 335544320
+Bytes. Damit Wiederherstellung und dauerhafte Timerkonfiguration im Host-RO-
+Betrieb nachgewiesen. Neue Messdaten nach genau diesem letzten Boot wurden
+nicht separat abgefragt; Empfang/Indexgleichstand einschliesslich Regen sind
+oben unmittelbar vor diesem Boot belegt. Kein weiterer Neustart fuer die
+bestaetigte Konfiguration erforderlich.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
