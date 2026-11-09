@@ -114,6 +114,29 @@ koennen keine Aufraeumgarantie haben.
 
 ## Rueckbau vor Root-RO
 
+### Korrektur der ersten RAM-Installerfassung
+
+Die erste Fassung erzeugte die obere Runtime-Wurzel als root:root/0700.
+Overlay uebernimmt diese Metadaten auch fuer den sichtbaren Mount; dadurch
+scheitert der externe Beobachter als Benutzer meteohub mit PermissionError.
+Die korrigierte Fassung uebernimmt vor jedem Mount die Metadaten der
+Runtime-Wurzel aus der geprueften unteren Generation.
+
+Bei bereits installiertem betroffenem Helper die korrigierte Datei separat
+uebertragen und als root aufrufen:
+
+```bash
+python3 /PFAD/ZUR/KORRIGIERTEN/ram-storage.py repair-permissions
+```
+
+Der Aufruf prueft den bisherigen Helper gegen den gespeicherten Hash, sichert
+Helper/Konfiguration und bisherige Wurzelrechte unter `/root`, aktualisiert
+den installierten Helper samt Hash und korrigiert die sichtbare Runtime-Wurzel.
+Keine Dienste werden neu gestartet. Anschliessend den Beobachter als regulaeren
+Meteohub-Benutzer ausfuehren; neue Daten sind gesondert nachzuweisen.
+
+### Vollstaendiger Rueckbau
+
 ```bash
 python3 /usr/local/libexec/meteohub-ram.py remove
 ```
@@ -145,6 +168,10 @@ Rueckbau auf normalen Runtime-Pfad. Zusaetzlich wird die gesamte Installation
 mit echten Units und Timern durchlaufen, einschliesslich eines injizierten
 Startfehlers mit Ruecknahme und Wiederanlauf. Dabei sind nur die Pi-spezifische
 Hardware-Vorpruefung und Stationsanwendungen durch Fixtures ersetzt.
+Zusaetzlich prueft ein Prozess mit UID/GID 65534 den Lese- und Schreibzugriff
+auf eine ihm gehoerende Runtime mit Modus 0750 nach Mount, Rebase und Restore.
+Der alte root:root/0700-Fehler wird reproduziert und mit der Live-Reparatur
+korrigiert. Das ersetzt weiterhin keine Pruefung des nativen Pi-Loggers.
 Der erste Test fand eine nicht geschlossene
 SQLite-Verbindung; explizites Schliessen ist implementiert und erneut getestet.
 Pi-Kernel, native Anwendung, echter Reboot und Langzeitwachstum bleiben bis

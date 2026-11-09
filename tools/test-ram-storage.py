@@ -55,6 +55,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(os.getuid(), 0)
         with fixture_directory() as td:
             top = Path(td)
+            top.chmod(0o755)
             runtime = top / 'runtime'; home = runtime / 'root/home/meteohub'; data = runtime / 'root/data'
             home.mkdir(parents=True); (data / 'dashboard').mkdir(parents=True)
             (data / 'weather/202601').mkdir(parents=True); (data / 'weather/202611').mkdir()
@@ -62,6 +63,8 @@ class LifecycleTests(unittest.TestCase):
             (home / 'absolute-link').symlink_to('/home/meteohub/meteohub.conf')
             (runtime / 'live-install.json').write_text('{}')
             raw = data / 'weather/202611/raw'; raw.write_text('old\n')
+            os.chown(runtime, 65534, 65534); runtime.chmod(0o750)
+            os.chown(raw, 65534, 65534)
             (data / 'weather/202601/raw').write_bytes(b'historical\n' * 10000)
             db = data / 'dashboard/weather.sqlite'
             m.run(sys.executable, '-c', 'import sqlite3,os,sys; c=sqlite3.connect(sys.argv[1]); '
@@ -112,6 +115,23 @@ class LifecycleTests(unittest.TestCase):
                 m.run('systemctl', 'daemon-reload')
                 m.run('systemctl', 'start', *apps)
                 self.assertEqual(m.mount_info(runtime)['fstype'], 'overlay')
+                self.assertEqual((runtime.stat().st_uid, runtime.stat().st_gid, runtime.stat().st_mode & 0o777),
+                                 (65534, 65534, 0o750))
+                def user_access():
+                    m.run('setpriv', '--reuid=65534', '--regid=65534', '--clear-groups',
+                          sys.executable, '-c', 'import sys; p=sys.argv[1]; '
+                          'f=open(p,"a"); f.close(); assert open(p).read().startswith("old\\n")', raw)
+                user_access()
+                # Reproduce the old installed root-only mode, then exercise the live repair.
+                os.chown(runtime, 0, 0); runtime.chmod(0o700)
+                with self.assertRaises(RuntimeError): user_access()
+                mkdtemp = tempfile.mkdtemp
+                def repair_backup(*args, **kw):
+                    if kw.get('dir') == '/root': kw['dir'] = str(top)
+                    return mkdtemp(*args, **kw)
+                with patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
+                    m.repair_permissions(s, config)
+                user_access()
                 with s.lock():
                     check = m.run(sys.executable, helper, '--config', config, 'check')
                     self.assertIn('health not assessed', check.stdout)
@@ -126,6 +146,7 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(s.live_state()['ref'], ref)
                 self.assertEqual(raw.read_text(), 'old\nnew\n')
                 self.assertFalse((Path(s.live_state()['upper']) / 'root/data/weather/202611/raw').exists())
+                user_access()
                 with contextlib.closing(sqlite3.connect(db)) as c:
                     self.assertEqual(c.execute('SELECT n FROM test').fetchall(), [(42,), (43,)])
                 # Failure after quiescing must resume apps, retain data/current and restore RO.
@@ -162,6 +183,7 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(raw.read_text(), 'old\n')  # original underlying SD tree unchanged
                 m.run('systemctl', 'start', *apps)
                 self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\n')
+                user_access()
                 self.assertFalse(fill.exists())
                 self.assertTrue(all(s.active(n) == 'active' for n in apps))
                 # Simulated loss of unsaved RAM: restore must use the last sealed generation.

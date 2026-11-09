@@ -241,6 +241,11 @@ class Storage:
 
     def overlay(self, ref, upper, work):
         lower = self.generations / ref['name'] / 'tree'
+        # Overlay root metadata comes from the upper directory, even when empty.
+        # Its parent remains root-only; the merged runtime needs its original owner/mode.
+        info = lower.stat()
+        os.chown(upper, info.st_uid, info.st_gid)
+        shutil.copystat(lower, upper, follow_symlinks=False)
         run('mount', '-t', 'overlay', '-o',
             f'lowerdir={lower},upperdir={upper},workdir={work},index=off,redirect_dir=off,nodev,nosuid',
             'meteohub-ram', self.runtime)
@@ -486,6 +491,39 @@ def uninstall(s, config):
         raise
 
 
+def repair_permissions(s, config):
+    """Upgrade the installed helper and repair only the merged runtime root metadata."""
+    with s.lock():
+        state = s.live_state()
+        lower = s.verify(state['ref'])
+        helper = safe_path(s.cfg['helper'])
+        if helper.is_symlink() or not helper.is_file():
+            raise ValueError('Installed helper is not a regular file')
+        if hashlib.sha256(helper.read_bytes()).hexdigest() != s.cfg['helper_sha256']:
+            raise ValueError('Installed helper changed; refusing automatic repair')
+        before = s.runtime.stat()
+        original = lower.stat()
+        backup = Path(tempfile.mkdtemp(prefix='meteohub-ram-permissions-before-', dir='/root'))
+        shutil.copy2(helper, backup / 'helper.py')
+        shutil.copy2(config, backup / 'config.json')
+        save(backup / 'metadata.json', {'uid': before.st_uid, 'gid': before.st_gid,
+                                      'mode': stat.S_IMODE(before.st_mode), 'runtime': str(s.runtime)})
+        print('REPAIR BACKUP:', backup, flush=True)
+        payload = Path(__file__).read_bytes()
+        atomic(helper, payload)
+        s.cfg['helper_sha256'] = hashlib.sha256(payload).hexdigest()
+        save(config, s.cfg)
+        os.chown(s.runtime, original.st_uid, original.st_gid)
+        shutil.copystat(lower, s.runtime, follow_symlinks=False)
+        actual = s.runtime.stat()
+        if (actual.st_uid, actual.st_gid, stat.S_IMODE(actual.st_mode)) != (
+                original.st_uid, original.st_gid, stat.S_IMODE(original.st_mode)):
+            raise ValueError('Runtime root permissions did not match saved metadata')
+        print(json.dumps({'repaired_runtime_root': str(s.runtime), 'uid': actual.st_uid,
+                          'gid': actual.st_gid, 'mode': oct(stat.S_IMODE(actual.st_mode)),
+                          'helper_updated': True, 'services_restarted': False}))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', default=DEFAULT_CONFIG)
@@ -493,7 +531,8 @@ def main():
     p = sub.add_parser('install')
     p.add_argument('--runtime', required=True); p.add_argument('--persist', required=True)
     p.add_argument('--uuid', required=True); p.add_argument('--ram-mib', type=int, default=320)
-    for name in ('restore', 'shutdown', 'checkpoint', 'status', 'check', 'remove'): sub.add_parser(name)
+    for name in ('restore', 'shutdown', 'checkpoint', 'status', 'check', 'remove', 'repair-permissions'):
+        sub.add_parser(name)
     args = parser.parse_args()
     if os.getuid() != 0: parser.error('Run as root')
     os.umask(0o077)
@@ -502,7 +541,8 @@ def main():
     info = config.stat()
     if info.st_uid != 0 or stat.S_IMODE(info.st_mode) & 0o022: raise ValueError('Unsafe config ownership/mode')
     s = Storage(regular_json(config))
-    if args.action == 'remove': uninstall(s, config)
+    if args.action == 'repair-permissions': repair_permissions(s, config)
+    elif args.action == 'remove': uninstall(s, config)
     elif args.action == 'restore': s.restore()
     elif args.action in ('checkpoint', 'shutdown'):
         print(json.dumps({'saved': s.checkpoint(args.action == 'shutdown')}))

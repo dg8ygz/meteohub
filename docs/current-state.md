@@ -27,6 +27,22 @@ Neuester Betreiberbeleg nach Installation (Statusalter etwa vier Sekunden):
   mit Wiederanlauf, Wiederherstellung nach Pi-Reboot und Host-Root-/Boot-RO.
   Installationsstatus ersetzt keinen Empfangs- oder Wiederherstellungsnachweis.
 
+**Nachkontrolle 07:28:58 bis 07:34:58 CET: Fehler bei der Leseberechtigung.**
+Der Beobachter als Benutzer meteohub meldete durchgaengig PermissionError fuer
+Roharchiv und Index. Damit ist kein neuer Messwert durch diesen Lauf belegt.
+RAM-Belegung danach 4386816 Bytes, Anwendungen weiterhin aktiv. Beide Timer
+bestaetigt: Check alle fuenf Minuten, naechste Sicherung 10.11.2026 04:15 CET.
+
+Lokal reproduzierte Ursache: das neu angelegte Overlay-Upper-Verzeichnis war
+root:root/0700; diese Metadaten bestimmen auch die Wurzel des eingeblendeten
+Runtime-Verzeichnisses. Der bisherige Test lief als root und erfasste diesen
+Zugriffsfehler nicht. Korrektur uebernimmt Besitzer, Modus und weitere
+Verzeichnismetadaten aus der geprueften unteren Generation vor jedem Mount.
+`repair-permissions` sichert den installierten Helper und seine Konfiguration,
+aktualisiert Helper samt verwaltetem Hash und korrigiert die gemountete
+Runtime-Wurzel ohne Dienstneustart. Kein rekursives chmod und keine Aenderung
+der versiegelten Generation. Zielausfuehrung und erneute Lesepruefung OFFEN.
+
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
 - Offline-SD-Image auf Proxmox .60: `/root/meteohub-sd-vor-ro-juN2kxBj/karte.img`,
@@ -73,7 +89,8 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Echte neue Aufzeichnung im RAM abnehmen.
+**Naechster Schritt:** Rechtekorrektur uebertragen/ausfuehren und Lesezugriff
+als meteohub erneut pruefen; echte neue Aufzeichnung im RAM abnehmen.
 Manuellen Checkpoint, RO-Datenmount, frische Daten danach und
 Wiederherstellung nach Reboot nachweisen. Erst anschliessend Host-Root-/Boot-RO
 vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
