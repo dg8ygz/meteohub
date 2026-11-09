@@ -68,6 +68,25 @@ je Lauf; dessen Code beginnt bei veraenderter Datei-Inode erneut. Neuaufbauzeit
 nach Generationswechsel bei wachsendem Archiv weiter beobachten.
 Noch keine Pi-Reboot-/Shutdown-Restore-Abnahme und kein Host-Root-RO.
 
+**Reboot-Test 07:49:52 CET: NICHT abgenommen.** Anmeldung danach erfolgreich,
+NTP bei 36,831 s und Loggerstart erst bei 36,852 s. RAM-Restore startet bei
+8,694 s und endet bei 10,046 s. Beobachtung 07:51:13 bis 07:57:13 CET zeigt
+neue Rohdaten (611949 -> 613481 Bytes), am Ende Indexgleichstand ohne Lesefehler.
+Aber Websocket und Webservice sind inactive. Zudem bleibt die gespeicherte
+Generation `gen-396d2b730dbc463eb09560fce4c77a94` vom manuellen Checkpoint;
+das Archiv beginnt nach Reboot wieder mit 611949 statt der vor Reboot bereits
+belegten 612750 Bytes. Mindestens diese 801 Bytes wurden nicht wiederhergestellt;
+Shutdown-Sicherung ist damit nicht als erfolgreich belegt. needs_attention=false
+trotz inaktiver Anwendungen ist eine weitere Luecke der Statusbewertung.
+
+Lokaler Codebefund: RAM-Service mit normalen systemd-Service-Abhaengigkeiten
+wird vor den Websocket geordnet, waehrend normale Sockets vor sockets.target
+und basic.target starten. Damit besteht ein potentieller Boot-/Shutdown-
+Ordnungszyklus. Bisherige lokale Start-/Stop-Tests nach abgeschlossenem Hostboot
+decken diese Gesamttransaktion nicht ab. Journal des aktuellen und vorherigen
+Pi-Boots zur konkreten Ursache anfordern; bis zur Korrektur kein weiterer Reboot
+und keine Host-Root-RO-Umschaltung.
+
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
 - Offline-SD-Image auf Proxmox .60: `/root/meteohub-sd-vor-ro-juN2kxBj/karte.img`,
@@ -114,9 +133,9 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Diagnose auf dem weiterhin persistenten Host-Root sichern,
-kontrolliert rebooten, neue Anmeldung, Zeitreihenfolge, Wiederherstellung,
-RO-Datenmount, Timer, Benutzerzugriff und frische Messwerte nachweisen.
+**Naechster Schritt:** Boot-/Shutdown-Fehler anhand der Pi-Journale klaeren,
+Webbetrieb wiederherstellen, Abhaengigkeiten und Statusbewertung korrigieren.
+Danach erneut Shutdown-Sicherung und Reboot mit Datenvergleich abnehmen.
 Erst anschliessend Host-Root-/Boot-RO
 vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
 Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
