@@ -62,9 +62,8 @@ bleiben als `.pending-*` gekennzeichnet.
 Lokale Abnahme: `python3 tools/test-stage-identity-persistence.py --isolation`
 prueft Bytebereichsausgabe und eine echte ext4-Kopie einschliesslich absichtlich
 beschaedigter Kopie, falscher UUID und RO-Wiederherstellung. Zwei Tests bestanden.
-Das ist noch keine Ausfuehrung auf dem Ziel-Pi. Vor dem Wartungsneustart muessen
-dessen Sicherungsergebnis und Konfigurationsunterschiede vorliegen; der
-dauerhafte Installer und die gemeinsame Web-/Logger-Sicht sind noch offen.
+Die lokale Fixture ersetzt keine Ausfuehrung auf dem Ziel-Pi. Die anschliessende
+Betreiberabnahme ist unten dokumentiert.
 
 Betreiberabnahme der Sicherung am 9. November: `ready-gesmgcud` wurde vollstaendig
 verifiziert und die Partition wieder RO gemountet. Die beiden nativen
@@ -107,4 +106,21 @@ fehlschlagender ExecStartPre weist die Wiederherstellung und den anschliessenden
 erfolgreichen Installationsweg nach. Nur der RAM-Mount-Vorcheck dieser Fixture
 ist ersetzt; deren RAM-/Checkpoint-Lebenszyklus prueft `test-ram-storage.py`
 separat. Die lokale Fixture startet keine proprietaeren ARM-Binaerdateien und
-ersetzt nicht die Zielabnahme. Permanente Installation auf dem Pi noch OFFEN.
+ersetzt nicht die Zielabnahme.
+
+## Betreiberabnahme am 9. November, ca. 23:00 CET
+
+Nach Wartungsneustart erste Ausfuehrung vor Aenderungen an belegter Speichersperre
+abgebrochen (`Errno 11`); Sperrhalter nicht nachgewiesen. Wiederholung erfolgreich.
+Rueckwegsicherung `/root/meteohub-identity-before-glppuzvh`; Installer bestaetigt
+permanente Binds, gemeinsame Konfigurationsdatei in beiden Diensten und echte
+Logger-PID. Anschliessender Checkpoint
+`gen-e9950c794ed746e794760cd851f9144c` erfolgreich, Persistenz RO, alle vier
+Anwendungsunits aktiv. Native Seite zeigt `UJpMany2 — activated` und echte IP
+`.50`. Neue Rohdaten belegt, Indexgleichstand noch nicht erreicht/geprueft.
+
+Host-Root bleibt auf Betreiberwunsch zum Feierabend im RW-Wartungsmodus. Die
+Rueckkehr zum RO-Boot und Abnahme nach diesem Neustart stehen noch aus. Die
+Dropbear-/smbd-PID-Meldungen und weitere unzutreffende oder ungeklaerte native
+Statusanzeigen werden nicht durch Scheinprozesse kaschiert. Detailbelege und
+Fortsetzung stehen in `docs/current-state.md`.

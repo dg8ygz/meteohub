@@ -6,16 +6,56 @@ automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
 
-## Neueste Fortsetzung: aktivierte Identitaetskopie gesichert
+## Feierabendstand 9. November, ca. 23:00 CET: permanente Identitaet installiert
 
 Betreiberbeleg: `/srv/meteohub-persist/identity-migration/ready-gesmgcud`
 vollstaendig verifiziert, Datenpartition wieder RO, Logger-PID unveraendert.
 Die private aktivierte Konfiguration unterscheidet sich vom gemeinsamen Stand
 nur in 32 Bytes (27836 bis 27867). Keine Aktivierungswerte in Repository/Output.
-Der permanente Installer ist lokal vorbereitet und mit drei Tests einschliesslich
-echtem systemd-Startfehler/Rollback geprueft. Zielinstallation, gemeinsame native
-Web-/Logger-Abnahme und Rueckkehr zum RO-Boot sind noch OFFEN. Ablauf und
-Testgrenzen stehen in [Identitaetssicht](identity-view.md).
+Der permanente Installer wurde nach drei lokalen Tests einschliesslich echtem
+systemd-Startfehler/Rollback auf dem Pi ausgefuehrt. Ablauf und Testgrenzen
+stehen in [Identitaetssicht](identity-view.md).
+
+- Wartungsstart vorbereitet mit Installer/Diagnose unter
+  `/srv/meteohub-persist/identity-migration/maintenance-62cap98p`.
+- Erster Installationsversuch: `Errno 11` beim Anfordern der Speichersperre,
+  vor der Konfigurationsaenderung. Ein gleichzeitig laufender Checkpoint ist
+  plausibel, der Sperrhalter wurde aber nicht festgestellt. Erneuter Aufruf
+  erfolgreich; kein Entfernen/Umgehen der Sperre.
+- Erfolgreiche Rueckwegsicherung: `/root/meteohub-identity-before-glppuzvh`.
+  Beide nativen Dienste sehen dieselbe Konfigurationsdatei; echte Logger-PID
+  verifiziert. Permanente Identitaets-/ifconfig-/PID-Drop-ins installiert.
+- Aktivierung im gemeinsamen RAM-Checkpoint gesichert:
+  `gen-e9950c794ed746e794760cd851f9144c`. Alle vier Anwendungsunits aktiv,
+  Datenpartition RO, Stundenintervall und Altersgrenze 5400 Sekunden vorhanden.
+- Native Seite vom Betreiber um 22:00:39 UTC / 23:00:39 CET bestaetigt:
+  `UJpMany2 — activated`, IP `.50`. Modell/MAC zeigen absichtlich die
+  eingeblendete Altsystem-Identitaet. Keine Aktivierungscodes dokumentiert.
+- Roharchiv um 21:58:52 UTC: 688029 Bytes, letzter Schreibvorgang 34 Sekunden
+  zuvor; t2/sol0/uv0 etwa 37 Sekunden alt. Damit frische Aufzeichnung nach der
+  Installation belegt. Um 21:59:53 UTC gleiche Dateigroesse und entsprechend
+  gealterte Messwerte; diese einzelne Minute belegt keinen neuen Ausfall.
+- Index ohne gemeldeten Fehler, aber beide Punktpruefungen mit
+  `records_added=2000` und gleichem Rueckstand: data0 240s, sol0/uv0 225s,
+  t2 270s, wind0 105s. Die angeforderte zweimalige Lesepositions-/Inodepruefung
+  im Abstand von 12 Sekunden wurde noch nicht geliefert. Fortlaufender Import
+  versus wiederholtes Einlesen ist daher OFFEN; 2000 sind verarbeitete, nicht
+  zwingend erstmals eingelesene Datensaetze.
+
+**Uebernacht: Host-Root bleibt RW im Wartungsmodus (`overlayroot=disabled`).**
+Der Installer hat den Root-Schreibschutz ausdruecklich nicht reaktiviert.
+Boot wurde bei Vorbereitung wieder RO gesetzt, Datenpartition nach Installation
+als RO bestaetigt; eine erneute vollstaendige Mount-Abnahme steht aus.
+Keine weiteren Pi-Aenderungen oder Neustarts zum Feierabend beauftragt.
+
+Naechste Schritte: Index-Lesepositionen/Inodes pruefen, dann RO-Boot vorbereiten
+und nach Neustart Aktivierung, gemeinsame Sicht, Dienste, Timer, Mounts und
+frische Aufzeichnung abnehmen. Weitere native Statusanzeigen bleiben separat
+OFFEN: `last data: never` trotz aktueller Rohdaten, Dropbear-/smbd-PID-Warnungen,
+`Time Synchronization: stopped` und `WAN IP: no internet access`. Letztere sind
+keine unabhaengigen Nachweise fuer einen Host-NTP-/Internetausfall. Keine
+zusaetzlichen Daemons oder erfundenen PID-Dateien zur Warnungsunterdrueckung.
+Dies ist eine Auswertung der Betreiberbelege, keine laufende Ueberwachung.
 
 ## Fortsetzung 9. November morgens: RAM auf dem Pi installiert
 
