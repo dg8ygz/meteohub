@@ -133,6 +133,18 @@ Marker und Archiv-Praefix in Sicherung und RAM. Bei Erfolg entfernt er den
 Drop-in und den RAM-Marker; Diagnose bleibt erhalten. Keine globale Aenderung
 der Journal-Speicherpolitik. Auf dem Pi noch nicht ausgefuehrt.
 
+**Echter Pi-Reboot-Nachweis anschliessend bestanden:** Pruefwerkzeug meldet
+neue Boot-ID, neue gespeicherte Generation, passende ExecStop-Bestaetigung,
+erhaltenen Marker und Archiv-Praefix in Sicherung und RAM. Generation
+`gen-e088378718874124a12a08a1c38ceef4`; Diagnose unter
+`/root/meteohub-ram-reboot-check`. Temporaerer Logging-Drop-in entfernt.
+Alle vier Anwendungen active, Datenpartition RO, inactive_apps leer,
+RAM 3575808 Bytes. Beobachter um 08:23:49 CET: 619465 Archivbytes, alle acht
+Sensoren im Index gleichauf, kein Indexfehler. Letzter Schreibvorgang 166,7 s
+alt bei Sicherungsalter 163,8 s: diese Momentaufnahme allein belegt noch keine
+nach diesem Boot neu archivierte Messung. Keine weitere feste Messwartezeit
+verlangt; RAM-Sicherung/Restore-Abnahme abgeschlossen. Root und Boot noch RW.
+
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
 - Offline-SD-Image auf Proxmox .60: `/root/meteohub-sd-vor-ro-juN2kxBj/karte.img`,
@@ -179,11 +191,8 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Boot-/Shutdown-Fehler anhand der Pi-Journale klaeren,
-Webbetrieb wiederherstellen, Abhaengigkeiten und Statusbewertung korrigieren.
-Danach erneut Shutdown-Sicherung und Reboot mit Datenvergleich abnehmen.
-Erst anschliessend Host-Root-/Boot-RO
-vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
+**Naechster Schritt:** Host-Root-/Boot-RO vorbereiten; vorher
+APT-Simulation fuer fehlendes overlayroot und dessen
 Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
 bleiben. Sicherungstimer ist installiert; ein automatisch ausgefuehrter
 taeglicher Lauf ist noch nicht belegt.
