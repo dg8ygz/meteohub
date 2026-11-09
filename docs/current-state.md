@@ -191,11 +191,11 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Host-Root-/Boot-RO vorbereiten; vorher
-APT-Simulation fuer fehlendes overlayroot und dessen
-Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
-bleiben. Sicherungstimer ist installiert; ein automatisch ausgefuehrter
-taeglicher Lauf ist noch nicht belegt.
+**Naechster Schritt:** Fehlgeschlagenen systemd-remount-fs-Dienst nach dem
+ersten Root-Overlay-Boot anhand Journal, Kernelmeldungen und generierter fstab
+klaeren; keine pauschale Fehlerunterdrueckung. Danach Datenfluss und manuellen
+Checkpoint unter Host-RO abnehmen. Sicherungstimer ist installiert; ein
+automatisch ausgefuehrter taeglicher Lauf ist noch nicht belegt.
 
 **Paketplan vom Betreiber fuer Host-RO:** overlayroot 0.18.debian14 (all),
 cryptsetup und cryptsetup-bin je 2:2.7.5-2 (arm64), drei neue Pakete,
@@ -231,6 +231,18 @@ Rueckweg fuer den folgenden Boot: auf der Bootpartition in cmdline.txt den
 Overlayparameter durch `overlayroot=disabled` ersetzen; Root bootet wieder
 normal, Boot bleibt laut persistenter fstab RO und kann zur Wartung remountet
 werden. Pi ist beim Betreiber, Kartenleser/Offline-Abbild vorhanden.
+
+**Erster Host-RO-Boot laut Betreiber:** SSH-Anmeldung moeglich. `/` ist ein
+beschreibbares Overlay mit tmpfs unter `/media/root-rw`; physische Rootpartition
+`/dev/mmcblk0p2` unter `/media/root-ro` ext4 RO. Boot `/dev/mmcblk0p1` vfat RO,
+Persistenz `/dev/mmcblk0p3` weiterhin direkter ext4-RO-Mount. Meteohub-Runtime
+aktive/gesicherte Generation `gen-6c4b7f5161c846ffbc60a31441bc16f3`, alle vier
+Anwendungen active, inactive_apps leer, RAM 3563520 Bytes. Host 731 MiB
+verfuegbar, Swap unbenutzt, ZRAM backing_dev=none.
+ABER `systemd-remount-fs.service` failed; Betreiber berichtet zudem eine nicht
+mitgelieferte Fehlermeldung waehrend des Umschaltskripts. Zusammenhang noch
+unbewiesen. Ursache, neue Messwerte nach diesem Boot und Checkpoint unter
+Host-RO noch OFFEN. Keine vollstaendige Betriebsabnahme.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
