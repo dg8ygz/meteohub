@@ -23,7 +23,7 @@ Neuester Betreiberbeleg nach Installation (Statusalter etwa vier Sekunden):
   Datenpartition RO, alle vier Anwendungsunits aktiv.
 - Beide RAM-Timer gelistet; Kalenderdarstellung im Terminal abgeschnitten.
   Vollstaendige naechste Ausloesezeiten noch ausgeben lassen.
-- Noch OFFEN: echte neue Archivwerte nach RAM-Umschaltung, manueller Checkpoint
+- Zu diesem Installationszeitpunkt noch OFFEN: echte neue Archivwerte nach RAM-Umschaltung, manueller Checkpoint
   mit Wiederanlauf, Wiederherstellung nach Pi-Reboot und Host-Root-/Boot-RO.
   Installationsstatus ersetzt keinen Empfangs- oder Wiederherstellungsnachweis.
 
@@ -54,6 +54,19 @@ acht Sensoren 0 s Rueckstand und ohne Fehler. Regenwert 3679,6 s alt, damit
 gerade ueber einer Stunde; naechster stuendlicher Eingang noch separat offen.
 RAM-Belegung 4853760 Bytes, aktive/gesicherte Generation unveraendert,
 Datenpartition RO, alle Anwendungen aktiv. Kein lueckenloser Langzeitnachweis.
+
+**Manueller Checkpoint und Beobachtung 07:41:04 bis 07:47:04 CET bestanden:**
+`meteohub-ram-checkpoint.service` Result=success, ExecMainStatus=0. Neue aktive
+und gesicherte Generation `gen-396d2b730dbc463eb09560fce4c77a94` identisch.
+Datenpartition wieder RO, vier Anwendungsunits aktiv; RAM direkt danach
+2764800 Bytes, nach sechs Minuten 3919872 Bytes. Keine PermissionErrors mehr.
+Roharchiv waechst von 611949 auf 612750 Bytes (+801); neue Messzeitpunkte nach
+Sicherung nachgewiesen. Neuer Regenwert 07:38:46 CET im Archiv und Index.
+Index anfangs im Rueckstand, ab 07:42:52 CET alle acht Sensoren gleichauf und
+bis Beobachtungsende ohne Fehler. Indexer verarbeitet anfangs 2000 Datensaetze
+je Lauf; dessen Code beginnt bei veraenderter Datei-Inode erneut. Neuaufbauzeit
+nach Generationswechsel bei wachsendem Archiv weiter beobachten.
+Noch keine Pi-Reboot-/Shutdown-Restore-Abnahme und kein Host-Root-RO.
 
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
@@ -101,9 +114,10 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Manuellen Lauf des Checkpoint-Dienstes ausloesen;
-neue aktive/gesicherte Generation, RO-Datenmount, Benutzerzugriff, frische Daten danach und
-Wiederherstellung nach Reboot nachweisen. Erst anschliessend Host-Root-/Boot-RO
+**Naechster Schritt:** Diagnose auf dem weiterhin persistenten Host-Root sichern,
+kontrolliert rebooten, neue Anmeldung, Zeitreihenfolge, Wiederherstellung,
+RO-Datenmount, Timer, Benutzerzugriff und frische Messwerte nachweisen.
+Erst anschliessend Host-Root-/Boot-RO
 vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
 Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
 bleiben. Sicherungstimer ist installiert; ein automatisch ausgefuehrter
