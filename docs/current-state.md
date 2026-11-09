@@ -653,6 +653,17 @@ AF_NETLINK; Netzwerkadministration bleibt ohne Capabilities gesperrt (EPERM
 in privatem Testnetz). Web-spezifische Ergaenzung vorbereitet, Pi-Abnahme OFFEN.
 Anleitung und Rueckbau: [ifconfig-Anzeigeadapter](ifconfig-compat.md).
 
+Nach AF_NETLINK-Freigabe meldete die native Seite eine abgelaufene Demo mit
+System-ID `0000eJD4`. Ein punktueller Archivcheck um 21:07:54 UTC zeigte
+frische Daten (Wind 69,1 s, letzte Archivschreibung 68,7 s) und Indexrueckstand
+0 fuer alle Sensoren. Dies ist keine Zusage fuer dauerhaften Loggerbetrieb
+ohne gueltige Aktivierung; die Lizenzseite kann weitere Warnungen verdecken.
+Der Betreiber beauftragte anschliessend ausdruecklich die Bereitstellung der
+Kennungen seines Altsystems in der Anwendungssicht und lieferte CPU-/SD-/MAC-
+Werte. Ein zeitweiliger Webtest mit separater Konfigurationskopie ist lokal
+implementiert und unter echten systemd-Mounts getestet; Zielinstallation und
+System-ID-Vergleich noch OFFEN. Siehe [Identitaetssicht](identity-view.md).
+
 ### 4. Danach weitere Betriebsfunktionen
 
 Native Aggregation, historische Diagramme und Exporte auf diesem Pi sind nicht
