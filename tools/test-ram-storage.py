@@ -288,6 +288,19 @@ class LifecycleTests(unittest.TestCase):
                     timers = [prefix + '-checkpoint.timer', prefix + '-check.timer']
                     for timer in timers:
                         self.assertEqual(s.active(timer), 'active')
+                    m.run('systemctl', 'start', prefix + '-check.service')
+                    proof_spec = importlib.util.spec_from_file_location('reboot_proof', Path(__file__).with_name('check-ram-reboot.py'))
+                    proof_tool = importlib.util.module_from_spec(proof_spec); proof_spec.loader.exec_module(proof_tool)
+                    bootid = top / 'boot-id'; bootid.write_text('boot-one')
+                    proof_path = top / 'boot-proof'
+                    logging_dropin = Path('/run/systemd/system') / (prefix + '.service.d') / '90-reboot-proof.conf'
+                    paths.append(logging_dropin)
+                    for name, value in dict(PROOF=proof_path, CONFIG=config, HELPER=helper,
+                                            DROPIN=logging_dropin, BOOTID=bootid).items():
+                        stack.enter_context(patch.object(proof_tool, name, value))
+                    with patch.object(sys, 'argv', ['check-ram-reboot.py', 'prepare']): proof_tool.main()
+                    with patch.object(sys, 'argv', ['check-ram-reboot.py', 'check']):
+                        with self.assertRaisesRegex(ValueError, 'No new boot'): proof_tool.main()
                     with raw.open('a') as f: f.write('target-stop\n')
                     # Target reaches inactive before its ordered storage ExecStop has finished.
                     m.run('systemctl', 'stop', target, prefix + '.service')
@@ -297,6 +310,12 @@ class LifecycleTests(unittest.TestCase):
                     self.assertTrue((tree / 'root/data/weather/202611/raw').read_text().endswith('target-stop\n'))
                     m.run('systemctl', 'start', target)
                     self.assertTrue(all(storage.active(n) == 'active' for n in apps))
+                    m.run('systemctl', 'start', prefix + '-check.service')
+                    # New boot identity is simulated; actual saved marker/archive and mounts are real.
+                    bootid.write_text('boot-two')
+                    with patch.object(sys, 'argv', ['check-ram-reboot.py', 'check']): proof_tool.main()
+                    self.assertTrue(m.regular_json(proof_path / 'result.json')['passed'])
+                    self.assertFalse(logging_dropin.exists())
                     with patch.object(m.tempfile, 'mkdtemp', side_effect=fixture_backup):
                         m.uninstall(m.Storage(installed), config)
                     self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\ntarget-stop\n')

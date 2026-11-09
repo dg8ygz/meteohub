@@ -116,6 +116,23 @@ Generation unveraendert. Naechste Abnahme: synchroner Stop von Target UND
 RAM-Service, neue gespeicherte Generation, Archiv-Praefixvergleich, Wiederanlauf.
 Dies ersetzt noch keinen erfolgreichen kompletten Reboot.
 
+**Kontrollierter Stop/Restore auf dem Pi bestanden:** Nachweisverzeichnis
+`/root/meteohub-stop-check-srmJ4oHy`. Neue aktive und gesicherte Generation
+`gen-c177ef8376a04d5f87ef354c5034e496`; zuvor kopierter Roharchiv-Praefix
+sowohl in der SD-Generation als auch nach RAM-Wiederherstellung identisch.
+Datenpartition RO, alle vier Anwendungen active, inactive_apps leer,
+RAM 2797568 Bytes. Echte Reboot-Abnahme bleibt offen.
+
+Fuer die Wiederholung ist `tools/check-ram-reboot.py` vorbereitet: RAM-Marker
+ausserhalb des Wetterarchivs, SHA256 des bereits vorhandenen Archiv-Praefixes,
+vorherige Boot-ID/Generation und Diagnose auf normalem beschreibbarem Root.
+Ein temporaerer Drop-in schreibt nur RAM-Unit-Ausgaben nach
+`/root/meteohub-ram-reboot-check/ram-service.log`. Nach Reboot verlangt der Check
+neue Boot-ID, neue Generation, passende ExecStop-Sicherungsbestaetigung sowie
+Marker und Archiv-Praefix in Sicherung und RAM. Bei Erfolg entfernt er den
+Drop-in und den RAM-Marker; Diagnose bleibt erhalten. Keine globale Aenderung
+der Journal-Speicherpolitik. Auf dem Pi noch nicht ausgefuehrt.
+
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
 - Offline-SD-Image auf Proxmox .60: `/root/meteohub-sd-vor-ro-juN2kxBj/karte.img`,

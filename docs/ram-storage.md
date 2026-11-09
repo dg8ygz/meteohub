@@ -78,6 +78,28 @@ RAM-Overlay, RO-Datenpartition, Timer und neue Messwerte nachweisen.
 Host-Root-RO erst danach vorbereiten. Keine alte Root-Unterlage unter einem
 laufenden Overlay beschreibbar machen oder zuruecksynchronisieren.
 
+Fuer den echten Reboot-Nachweis auf noch normalem RW-ext4-Root kann
+`tools/check-ram-reboot.py` separat uebertragen werden:
+
+```bash
+python3 check-ram-reboot.py prepare
+# Nur bei erfolgreicher Vorbereitung regulaer rebooten, keinen Checkpoint dazwischenschalten.
+systemctl reboot
+# Nach neuer Anmeldung:
+python3 /PFAD/ZU/check-ram-reboot.py check
+```
+
+Das Werkzeug rebootet nicht selbst. Es prueft neue Boot-ID/Generation,
+ExecStop-Sicherungsbestaetigung, einen ausschliesslich im RAM angelegten
+Kontrollmarker sowie den vorher vorhandenen Archiv-Praefix in Sicherung und
+wiederhergestelltem RAM. Es erzeugt keine Wetterdaten. Vorherige Diagnose und
+RAM-Service-Ausgaben bleiben unter `/root/meteohub-ram-reboot-check` dauerhaft
+erhalten. Ein eigener temporaerer Logging-Drop-in wird nach erfolgreicher
+Abnahme entfernt. Bei Fehler bleibt er fuer Diagnose bestehen. Vorhandene
+Pruefverzeichnisse werden nicht ueberschrieben. Ein neuer Test braucht einen
+bewusst separat vorbereiteten Nachweis; nicht blind vorhandene Belege loeschen.
+Neue empfangene Messwerte sind anschliessend gesondert nachzuweisen.
+
 ## Sicherungsverhalten
 
 - Timer taeglich **04:15 Europe/Berlin**, Persistent=true fuer nachgeholte Laeufe.
@@ -199,6 +221,9 @@ Zusaetzlich prueft ein Prozess mit UID/GID 65534 den Lese- und Schreibzugriff
 auf eine ihm gehoerende Runtime mit Modus 0750 nach Mount, Rebase und Restore.
 Der alte root:root/0700-Fehler wird reproduziert und mit der Live-Reparatur
 korrigiert. Das ersetzt weiterhin keine Pruefung des nativen Pi-Loggers.
+Der Reboot-Nachweishelfer wird ebenfalls mit echten Sicherungs-/Restore-Mounts,
+Logging-Drop-in und Archiv-/Markervergleich getestet; nur die Boot-ID wird in
+diesem lokalen Test simuliert. Eine unveraenderte Boot-ID wird abgewiesen.
 Der erste Test fand eine nicht geschlossene
 SQLite-Verbindung; explizites Schliessen ist implementiert und erneut getestet.
 Pi-Kernel, native Anwendung, echter Reboot und Langzeitwachstum bleiben bis
