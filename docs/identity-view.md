@@ -42,3 +42,26 @@ Root-Overlays. Sie sind kein dauerhafter Teil der Meteohub-RAM-Sicherung.
 Vor dauerhafter Uebernahme muss die gemeinsame Konfigurationssicht fuer Web und
 Logger wieder geklaert werden. Unter aktivem Overlay nie dessen unteres Root
 beschreiben.
+
+## Vorbereitung der dauerhaften Uebernahme
+
+Nach bestaetigter Aktivierung der privaten Webkopie sichert
+`tools/stage-identity-persistence.py` diese Kopie samt Identitaetsdateien,
+unveraendertem Live-Home, temporaeren Drop-ins und Diagnosen unter
+`/srv/meteohub-persist/identity-migration/ready-*`. Das Verzeichnis ist nur fuer
+root zugaenglich. Die Ausgabe enthaelt ausschliesslich Anzahl und Positionen
+geaenderter Konfigurationsbytes, keine Aktivierungswerte.
+
+Das Skript verwendet den geprueften installierten RAM-Helfer, dessen
+Checkpoint-Sperre, UUID-Kontrolle und RW/RO-Kontext. Es prueft Kopie und Quellen
+auf Inhalt, Rechte, Eigentuemer und Symlinks, verifiziert ein Manifest und
+veroeffentlicht erst danach die Sicherung. Dienste und Bootdateien werden nicht
+geaendert. Bei geaenderten Quellen wird abgebrochen; unvollstaendige Kopien
+bleiben als `.pending-*` gekennzeichnet.
+
+Lokale Abnahme: `python3 tools/test-stage-identity-persistence.py --isolation`
+prueft Bytebereichsausgabe und eine echte ext4-Kopie einschliesslich absichtlich
+beschaedigter Kopie, falscher UUID und RO-Wiederherstellung. Zwei Tests bestanden.
+Das ist noch keine Ausfuehrung auf dem Ziel-Pi. Vor dem Wartungsneustart muessen
+dessen Sicherungsergebnis und Konfigurationsunterschiede vorliegen; der
+dauerhafte Installer und die gemeinsame Web-/Logger-Sicht sind noch offen.
