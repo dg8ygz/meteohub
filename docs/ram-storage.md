@@ -135,6 +135,33 @@ den installierten Helper samt Hash und korrigiert die sichtbare Runtime-Wurzel.
 Keine Dienste werden neu gestartet. Anschliessend den Beobachter als regulaeren
 Meteohub-Benutzer ausfuehren; neue Daten sind gesondert nachzuweisen.
 
+### Korrektur der Boot-Abhaengigkeiten
+
+Die erste Fassung ordnete den RAM-Service vor dem Websocket ein, erhielt aber
+als normaler Service implizit After=basic.target. Sockets starten wiederum
+vor sockets.target/basic.target. Beim echten Pi-Boot loeschte systemd deshalb
+den Websocket-Startauftrag. Start-/Stoptests auf einem bereits gestarteten Host
+hatten diesen Kreis nicht gezeigt. Die korrigierte RAM-Unit verwendet
+DefaultDependencies=no, Requires/After=sysinit.target und explizit
+Conflicts/Before=shutdown.target. Die Mount-Abhaengigkeit bleibt erhalten.
+
+Nach Uebertragung der korrigierten Datei als root:
+
+```bash
+python3 /PFAD/ZUR/KORRIGIERTEN/ram-storage.py repair-ordering
+```
+
+Prueft verwaltete Dateien gegen ihre Hashes, sichert Helper/Unit/Konfiguration
+unter /root, aktualisiert den Helper und die RAM-Unit samt Hashes und fuehrt
+daemon-reload aus. Keine Dienste werden neu gestartet. Health-Checks melden
+nun auch inaktive Anwendungen als Handlungsbedarf. Anschliessend einen
+kontrollierten Stop von Target UND RAM-Service mit neuer Sicherung und
+Wiederanlauf pruefen; danach erneut echten Shutdown/Reboot abnehmen.
+Der erste Pi-Reboot stellte nur den letzten manuellen Checkpoint wieder her;
+die genaue Ursache der fehlenden Shutdown-Sicherung ist ohne vorheriges
+persistentes Journal nicht nachgewiesen. Nicht mit dem Bootfix als erledigt
+deklarieren.
+
 ### Vollstaendiger Rueckbau
 
 ```bash

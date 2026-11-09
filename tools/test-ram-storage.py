@@ -40,6 +40,32 @@ def fixture_directory():
 
 
 class ManifestTests(unittest.TestCase):
+    def test_boot_transaction_has_no_ordering_cycle(self):
+        with tempfile.TemporaryDirectory() as td:
+            top = Path(td)
+            prefix = 'meteohub-boot-graph'
+            apps = [prefix + suffix for suffix in ('-web.socket', '-web.service', '-logger.service', '-index.service')]
+            target = prefix + '.target'
+            cfg = dict(prefix=prefix, apps=apps, target=target, persist=td)
+            units = m.render(top / 'config.json', '/usr/bin/true', cfg)
+            units[target] = '[Unit]\nWants=basic.target ' + ' '.join(apps) + '\nRequires=' + prefix + '.service\n'
+            units[apps[0]] = '[Socket]\nListenStream=127.0.0.1:18099\n'
+            for name in apps[1:]: units[name] = '[Service]\nExecStart=/usr/bin/true\n'
+            for name in apps:
+                units[name] = '[Unit]\nRequires=' + prefix + '.service\nAfter=' + prefix + '.service\n' + units[name]
+            for name, content in units.items(): (top / name).write_text(content)
+            env = dict(os.environ, SYSTEMD_UNIT_PATH=str(top) + ':')
+            checked = subprocess.run(['systemd-analyze', 'verify', '--man=no', '--generators=no', str(top / target)],
+                                     env=env, text=True, capture_output=True)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            self.assertNotIn('ordering cycle', checked.stderr.lower())
+            # Negative control: verify can return zero even after deleting a cyclic boot job.
+            unit = top / (prefix + '.service')
+            unit.write_text(unit.read_text().replace('DefaultDependencies=no', 'DefaultDependencies=yes'))
+            broken = subprocess.run(['systemd-analyze', 'verify', '--man=no', '--generators=no', str(top / target)],
+                                    env=env, text=True, capture_output=True)
+            self.assertIn('ordering cycle', broken.stderr.lower())
+
     def test_paths_and_links(self):
         with tempfile.TemporaryDirectory() as td:
             top = Path(td)
@@ -132,6 +158,21 @@ class LifecycleTests(unittest.TestCase):
                 with patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
                     m.repair_permissions(s, config)
                 user_access()
+                ram_unit = Path('/run/systemd/system') / (prefix + '.service')
+                ram_unit.write_text(ram_unit.read_text().replace('DefaultDependencies=no', 'DefaultDependencies=yes'))
+                cfg['installed_files'][str(ram_unit)] = hashlib.sha256(ram_unit.read_bytes()).hexdigest()
+                m.save(config, cfg)
+                m.run('systemctl', 'daemon-reload')
+                with patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
+                    m.repair_ordering(s, config)
+                self.assertIn('DefaultDependencies=no', ram_unit.read_text())
+                self.assertEqual(m.regular_json(config)['installed_files'][str(ram_unit)],
+                                 hashlib.sha256(ram_unit.read_bytes()).hexdigest())
+                m.run('systemctl', 'stop', apps[1])
+                self.assertTrue(s.status()['needs_attention'])
+                self.assertIn(apps[1], s.status()['inactive_apps'])
+                m.run('systemctl', 'start', apps[1])
+                self.assertFalse(s.status()['needs_attention'])
                 with s.lock():
                     check = m.run(sys.executable, helper, '--config', config, 'check')
                     self.assertIn('health not assessed', check.stdout)
@@ -247,9 +288,18 @@ class LifecycleTests(unittest.TestCase):
                     timers = [prefix + '-checkpoint.timer', prefix + '-check.timer']
                     for timer in timers:
                         self.assertEqual(s.active(timer), 'active')
+                    with raw.open('a') as f: f.write('target-stop\n')
+                    # Target reaches inactive before its ordered storage ExecStop has finished.
+                    m.run('systemctl', 'stop', target, prefix + '.service')
+                    self.assertIsNone(m.mount_info(runtime))
+                    storage = m.Storage(installed)
+                    tree = storage.verify(storage.reference())
+                    self.assertTrue((tree / 'root/data/weather/202611/raw').read_text().endswith('target-stop\n'))
+                    m.run('systemctl', 'start', target)
+                    self.assertTrue(all(storage.active(n) == 'active' for n in apps))
                     with patch.object(m.tempfile, 'mkdtemp', side_effect=fixture_backup):
                         m.uninstall(m.Storage(installed), config)
-                    self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\n')
+                    self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\ntarget-stop\n')
                 print('PASS: actual overlay/tmpfs, checkpoint/rebase, WAL restore, full RAM recovery, failed SD write, shutdown ordering, loss of unsaved RAM and rollback to normal runtime')
             finally:
                 # Service is stopped while its helper/config still exist.

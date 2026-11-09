@@ -87,6 +87,25 @@ decken diese Gesamttransaktion nicht ab. Journal des aktuellen und vorherigen
 Pi-Boots zur konkreten Ursache anfordern; bis zur Korrektur kein weiterer Reboot
 und keine Host-Root-RO-Umschaltung.
 
+**Anschliessender Betreiberbeleg:** aktuelles Journal bestaetigt den Zyklus
+`sockets.target -> meteohub-web-test.socket -> meteohub-ram.service`;
+systemd loeschte den Websocket-Startauftrag bei 4,691 s. Vorheriges Journal
+nicht vorhanden (kein persistentes Journal); genaue Ursache der ausgebliebenen
+Shutdown-Sicherung bleibt deshalb unbewiesen. Manueller Start von Websocket
+und Webservice erfolgreich, beide wieder active/Result=success.
+
+Lokal korrigiert: RAM-Service ist eine fruehe Unit ohne implizites After=basic.target,
+mit expliziter Sysinit- und Shutdown-Ordnung sowie Mount-Abhaengigkeit.
+Status markiert jede nicht aktive Anwendung als Handlungsbedarf. Neuer
+Boot-Graph-Test reproduziert den alten Kreis mit basic.target und prueft
+zusaetzlich Meldungen: systemd-analyze verify kann trotz geloeschtem zyklischen
+Startjob Exitcode 0 liefern. Negativkontrolle reproduziert den Fehler,
+korrigierte Transaktion ist kreisfrei. Echte lokale Mount-/Unit-Tests mit
+Upgrade, Health-Fehler bei gestopptem Webdienst, gemeinsamem Target-/RAM-Stop,
+gesichertem neuem Testdatensatz und Wiederanlauf bestanden (3 Tests, 32,038 s).
+`repair-ordering` aktualisiert Helper/RAM-Unit und Verwaltungs-Hashes mit
+vorheriger Sicherung, ohne Dienstneustart. Auf dem Pi noch auszufuehren.
+
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
 - Offline-SD-Image auf Proxmox .60: `/root/meteohub-sd-vor-ro-juN2kxBj/karte.img`,

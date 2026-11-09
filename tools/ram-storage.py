@@ -338,7 +338,9 @@ class Storage:
                   'ram_used_bytes': used, 'ram_limit_bytes': total,
                   'backup_age_seconds': round(time.time() - manifest['created'], 1),
                   'apps': {n: self.active(n) for n in self.apps}}
-        report['needs_attention'] = used >= total * .8 or report['backup_age_seconds'] > 26 * 3600
+        report['inactive_apps'] = [n for n, state in report['apps'].items() if state != 'active']
+        report['needs_attention'] = (used >= total * .8 or report['backup_age_seconds'] > 26 * 3600
+                                     or bool(report['inactive_apps']))
         return report
 
 
@@ -347,6 +349,7 @@ def render(config_path, helper, cfg):
     command = f'/usr/bin/python3 {helper} --config {config_path} '
     return {
         service: '[Unit]\nDescription=Meteohub RAM runtime and shutdown checkpoint\nPartOf=' + cfg['target'] +
+            '\nDefaultDependencies=no\nRequires=sysinit.target\nAfter=sysinit.target\nConflicts=shutdown.target\nBefore=shutdown.target' +
             '\nRequiresMountsFor=' + cfg['persist'] + '\nBefore=' + ' '.join(cfg['apps']) +
             '\n[Service]\nType=oneshot\nRemainAfterExit=yes\nUMask=0077\nTimeoutStartSec=15min\nTimeoutStopSec=15min\n' +
             'ExecStart=' + command + 'restore\nExecStop=' + command + 'shutdown\n',
@@ -524,6 +527,44 @@ def repair_permissions(s, config):
                           'helper_updated': True, 'services_restarted': False}))
 
 
+def repair_ordering(s, config):
+    """Upgrade the RAM unit before a controlled stop/start test; never restart applications here."""
+    with s.lock():
+        s.live_state()
+        old_cfg = regular_json(config)
+        helper = safe_path(old_cfg['helper'])
+        units = {safe_path(p): digest for p, digest in old_cfg['installed_files'].items()}
+        unit = [p for p in units if p.name == old_cfg['prefix'] + '.service']
+        if len(unit) != 1: raise ValueError('RAM unit path ambiguous')
+        unit = unit[0]
+        for path, digest in units.items():
+            if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise ValueError('Managed unit changed: ' + str(path))
+        if helper.is_symlink() or hashlib.sha256(helper.read_bytes()).hexdigest() != old_cfg['helper_sha256']:
+            raise ValueError('Installed helper changed')
+        backup = Path(tempfile.mkdtemp(prefix='meteohub-ram-ordering-before-', dir='/root'))
+        paths = [helper, unit, config]
+        for i, path in enumerate(paths): shutil.copy2(path, backup / str(i))
+        save(backup / 'paths.json', [str(p) for p in paths])
+        print('REPAIR BACKUP:', backup, flush=True)
+        payload = Path(__file__).read_bytes()
+        content = render(config, helper, old_cfg)[unit.name].encode()
+        updated = json.loads(json.dumps(old_cfg))
+        updated['helper_sha256'] = hashlib.sha256(payload).hexdigest()
+        updated['installed_files'][str(unit)] = hashlib.sha256(content).hexdigest()
+        try:
+            atomic(helper, payload)
+            atomic(unit, content); unit.chmod(0o644)
+            save(config, updated)
+            run('systemctl', 'daemon-reload')
+        except BaseException:
+            for i, path in enumerate(paths): shutil.copy2(backup / str(i), path)
+            run('systemctl', 'daemon-reload')
+            raise
+        s.cfg.clear(); s.cfg.update(updated)
+        print('REPAIRED: early RAM unit ordering and inactive-app health check; no services restarted')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', default=DEFAULT_CONFIG)
@@ -531,7 +572,7 @@ def main():
     p = sub.add_parser('install')
     p.add_argument('--runtime', required=True); p.add_argument('--persist', required=True)
     p.add_argument('--uuid', required=True); p.add_argument('--ram-mib', type=int, default=320)
-    for name in ('restore', 'shutdown', 'checkpoint', 'status', 'check', 'remove', 'repair-permissions'):
+    for name in ('restore', 'shutdown', 'checkpoint', 'status', 'check', 'remove', 'repair-permissions', 'repair-ordering'):
         sub.add_parser(name)
     args = parser.parse_args()
     if os.getuid() != 0: parser.error('Run as root')
@@ -542,6 +583,7 @@ def main():
     if info.st_uid != 0 or stat.S_IMODE(info.st_mode) & 0o022: raise ValueError('Unsafe config ownership/mode')
     s = Storage(regular_json(config))
     if args.action == 'repair-permissions': repair_permissions(s, config)
+    elif args.action == 'repair-ordering': repair_ordering(s, config)
     elif args.action == 'remove': uninstall(s, config)
     elif args.action == 'restore': s.restore()
     elif args.action in ('checkpoint', 'shutdown'):
