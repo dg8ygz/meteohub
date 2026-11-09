@@ -210,6 +210,28 @@ Pi-Wrapper do_overlayfs schaltet auch Boot-RO; die eigentlichen Funktionen
 enable_overlayfs/enable_bootro und der erzeugte Initramfs-Stand sind noch
 anzusehen. Noch keine Installation oder RO-Aktivierung auf dem Pi belegt.
 
+**Paketinstallation auf dem Pi 09.11.2026 08:39 CET bestanden:** eigener
+systemd-Installationsdienst Result=success, Exitstatus 0, 33,215 s.
+Nur die drei geplanten Pakete installiert. dpkg-Audit ohne Ausgabe.
+Debconf fiel mangels Terminal auf Noninteractive zurueck; kein Paketfehler.
+Boot-/fstab-Sicherung `/root/meteohub-root-ro-before-7kcZRgfn`.
+Kernel `6.18.60+rpt-rpi-v8`, neues 12-MiB-Initramfs nach
+`/boot/firmware/initramfs8` kopiert; 2712-Variante ebenfalls erzeugt.
+
+Tatsaechlicher raspi-config-Code vom Pi: enable_overlayfs setzt ausschliesslich
+`overlayroot=tmpfs` in cmdline; enable_bootro setzt Boot-fstab auf defaults,ro.
+do_overlayfs 0 ruft beide auf. Geplante Anpassung vor erstem Reboot:
+Kernelparameter auf `overlayroot=tmpfs:recurse=0` setzen. Originalfunktion
+overlayrootify_fstab aus exakt overlayroot 0.18.debian14 lokal gegen die
+Stations-fstab getestet: Root wird Overlay, Boot bleibt ro, Datenpartitions-
+Eintrag bleibt mit recurse=0 unveraendert. Negativkontrolle recurse=1 legt auch
+ueber die Datenpartition ein Overlay. Nachweis lokal privat unter
+`overlayroot-review/fstab-test.json`. Keine Zielaktivierung damit behauptet.
+Rueckweg fuer den folgenden Boot: auf der Bootpartition in cmdline.txt den
+Overlayparameter durch `overlayroot=disabled` ersetzen; Root bootet wieder
+normal, Boot bleibt laut persistenter fstab RO und kann zur Wartung remountet
+werden. Pi ist beim Betreiber, Kartenleser/Offline-Abbild vorhanden.
+
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
 Der Betreiber hat die gespeicherte Regenzuordnung über echten Empfangstest
