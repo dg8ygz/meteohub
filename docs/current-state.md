@@ -584,6 +584,35 @@ der vorgelagerten Lieferverzögerung. Siehe
 
 ### 3. Native MAC-/Netzwerkwarnung diagnostizieren
 
+**Zusaetzlicher Befund vom 9. November abends:** Native Seite meldet fehlende
+loggerd/dropbear/smbd-PIDs. Logger MainPID 714 und Web MainPID 706 active,
+NRestarts=0; beide `/run` mit Geraet 22, Inode 2253, UID/GID 1000, Modus 0700.
+`var/run` zeigt in beiden Roots auf `/run`; `loggerd.pid` fehlt tatsaechlich.
+Damit kein unterschiedlicher Run-Mount als Ursache dieses Befunds.
+Im lokal geprueften Herstellerpaket 5.1e erzeugt `rpi/rcloggerd` die PID-Datei
+ueber start-stop-daemon; unser direkter systemd-Start hatte keinen Ersatz.
+Lokaler Originalskript-SHA256:
+`2e710d4e1001d918b727f2b94cecf091c244673f5abfcbed4100b765f0dd2616`.
+
+Fix lokal vorbereitet: StartPost publiziert echte MainPID atomar, StopPost
+entfernt sie. Datei `tools/logger-pid-status.conf`, SHA256
+`adf373c06033f642081727942e01ecddfcb6488f4e0ff8338ae903cefafffd88`.
+Frueher schrieb der synthetische Testlogger die PID-Datei selbst und verdeckte
+diese Integrationsluecke. Das ist entfernt. Fuenf lokale Tests bestanden,
+einschliesslich echtem systemd/lighttpd, authentifiziertem CGI-PID-Vergleich mit
+MainPID, Datei-Entfernung bei Loggerstop, PID-Erneuerung nach SIGKILL und
+erneutem Archivfortschritt. Testabfragen warten nun auf den tatsaechlichen
+Prozesswechsel/Dienstabschluss statt nur auf eine weitere TCP-Verbindung oder
+das vorzeitig erreichte Target-inactive. Kein echter ARM-Logger in diesen Tests.
+Pi-Installation und Abnahme dieses PID-Fixes noch OFFEN. MAC-Warnung getrennt.
+
+Loggerauszug zeigt nach einigen geplanten Neustarts leere TCP-Antworten und
+Wiederverbindung 30 Sekunden spaeter (20:00:10/20:00:40 sowie
+20:05:40/20:06:10). Letzter sichtbarer Start 20:08:41 mit connect. Deshalb
+Checkpoint-Dauer von rund drei Sekunden nicht mit durchgaengigem Empfang oder
+einer auf drei Sekunden begrenzten Aufzeichnungspause gleichsetzen. Ursache
+der leeren Antworten und genaue Lueckenbilanz weiterhin offen.
+
 Noch offen:
 
 ```text

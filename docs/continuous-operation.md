@@ -226,6 +226,38 @@ RO-Modus, RAM-Wetterpuffer oder täglichen Sicherungstimer. Pro Dienst gelten
 128 MiB RAM, 32 Tasks und 1 GiB maximale Dateigröße; Speicherplatz und Monatsarchive
 müssen beobachtet werden. Die [RO-/RAM-Umstellung](read-only-plan.md) folgt separat.
 
+## PID-Datei fuer die native Statusseite
+
+Die originale 5.1e-Startdatei `rpi/rcloggerd` erzeugt `/var/run/loggerd.pid`
+mit `start-stop-daemon --make-pidfile`. Beim direkten systemd-Start fehlte
+dieser Schritt. Ein gemeinsamer `/run`-Mount allein stellt die Datei nicht
+bereit. Am Beispiel-Pi waren Logger und Web aktiv, beide Run-Verzeichnisse
+hatten dasselbe Geraet/Inode, aber die Datei fehlte in beiden Ansichten.
+
+Neue generierte Loggerunits verwenden die Hooks aus
+`tools/logger-pid-status.conf`: ExecStartPost veroeffentlicht atomar die echte,
+noch lebende systemd-MainPID mit Modus 0600 unter `/run/loggerd.pid`;
+ExecStopPost entfernt sie auch nach einem Prozessabbruch. Es wird weder eine
+feste PID noch die PID des Hilfsprozesses eingetragen. Die Datei belegt die
+Prozessidentitaet, nicht den Empfang neuer Messwerte. systemd bleibt fuer
+Start, Stop und Neustarts zustaendig; alte CGI-Steuerfunktionen sind dadurch
+nicht automatisch vollstaendig kompatibel.
+
+Fuer bereits installierte Units kann die Datei als zusaetzlicher Drop-in
+installiert werden, wenn noch keine solchen Hooks existieren. Ein Versuch
+unter `/run/systemd/system/meteohub-live-logger.service.d/` ist fluechtig und
+greift beim naechsten Loggerstart, etwa nach einem regulaeren Checkpoint.
+`daemon-reload` allein erzeugt fuer einen bereits laufenden Logger noch keine
+PID-Datei. Permanente Uebernahme bei Host-Overlay nur im normalen RW-
+Wartungsboot; nicht das untere Root-Dateisystem im laufenden Overlay aendern.
+Den separaten Drop-in bei einem spaeteren Wechsel auf eine Hauptunit mit
+bereits enthaltenen Hooks entfernen, um doppelte Ausfuehrung zu vermeiden.
+
+Fehlende Dropbear-/Samba-PIDs sind davon getrennt: Diese Dienste werden von
+dieser Installation nicht gestartet. Keine Dummy-PIDs oder Hostdienste allein
+zum Beruhigen der alten Statusseite anlegen. Die native eth0/MAC-Warnung bleibt
+ebenfalls eine getrennte Diagnose.
+
 ## Reproduzierbare Entwicklungsprüfung
 
 ```bash

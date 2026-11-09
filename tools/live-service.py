@@ -95,6 +95,14 @@ def accepted_report(candidate, config, host, port):
     raise ValueError('No successful direct native archive test matches this configuration/source; run direct-test first')
 
 
+def logger_pid_properties():
+    # The vendor rcloggerd uses start-stop-daemon --make-pidfile. loggerd itself
+    # does not provide that compatibility file when launched by systemd.
+    # Publish systemd's actual main PID, never the PID of this helper process.
+    return [line for line in (TOOLS / 'logger-pid-status.conf').read_text().splitlines()
+            if line.startswith(('ExecStartPost=', 'ExecStopPost='))]
+
+
 def render(candidate, runtime, uid, gid):
     """Generate units; caller supplies validated paths. No shell commands in units."""
     live = runtime / 'live'; shared = 'meteohub-live-' + str(uid)
@@ -106,7 +114,7 @@ def render(candidate, runtime, uid, gid):
               'Restart=always', 'RestartSec=30s', 'LimitFSIZE=1G',
               'LogRateLimitIntervalSec=30s', 'LogRateLimitBurst=100']
     shared_run = ['BindPaths=/run/' + shared + ':/run']
-    logger = base + common + network.policy(host) + shared_run + [
+    logger = base + common + network.policy(host) + shared_run + logger_pid_properties() + [
         'BindReadOnlyPaths=' + str(live / 'logger.conf') + ':/home/meteohub/logger-live.conf',
         'BindPaths=' + str(runtime / '.feed-consumer.lock') + ':/run/feed-consumer.lock']
     web = base + common + network.policy() + shared_run

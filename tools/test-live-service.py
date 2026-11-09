@@ -113,7 +113,6 @@ class LiveTests(unittest.TestCase):
         config=f'@DATAPATH /data/weather/\n@ERRORLOG /data/log/meteohub.log\n@WEATHERSTATION 0 9 4 127.0.0.1:{port} 0 300 0\n@SENSORIDMAP 0 2 0 0\n'
         stub='''#!/usr/bin/python3
 import datetime,pathlib,socket,os
-pathlib.Path('/run/loggerd.pid').write_text(str(os.getpid()))
 cfg=pathlib.Path('/home/meteohub/logger-live.conf').read_text()
 endpoint=next(x.split()[4] for x in cfg.splitlines() if x.startswith('@WEATHERSTATION'))
 host,port=endpoint.split(':')
@@ -192,6 +191,16 @@ with socket.create_connection((host,int(port)),timeout=5) as s:
                 code,body=request('/cgi-bin/meteohub.cgi',True)
                 self.assertEqual(code,200);self.assertTrue(body.strip().isdigit(),body)
                 initial_pid=body.strip()
+                main_pid=subprocess.check_output(['systemctl','show',live.LOGGER,'-p','MainPID','--value']).strip()
+                self.assertEqual(initial_pid,main_pid)
+                # Stopping only the logger must remove the PID file although the
+                # shared runtime and web remain available. Restart republishes it.
+                live.ctl('stop',live.LOGGER)
+                self.assertFalse(Path('/run/meteohub-live-65534/loggerd.pid').exists())
+                self.assertEqual(live.fields(live.WEB)['ActiveState'],'active')
+                live.ctl('start',live.LOGGER)
+                initial_pid=request('/cgi-bin/meteohub.cgi',True)[1].strip()
+                self.assertEqual(initial_pid,subprocess.check_output(['systemctl','show',live.LOGGER,'-p','MainPID','--value']).strip())
                 # A different process really cannot acquire the shared receiver lock.
                 attempt=subprocess.run(['flock','-n',str(runtime/'.feed-consumer.lock'),'true'])
                 self.assertEqual(attempt.returncode,1)
@@ -199,9 +208,16 @@ with socket.create_connection((host,int(port)),timeout=5) as s:
                 self.assertEqual(subprocess.run(['systemctl','is-enabled','--quiet',live.TARGET]).returncode,0)
                 first=raw.stat().st_size
                 live.ctl('kill','--signal=SIGKILL',live.LOGGER)
-                wait_for(lambda:len(connections)>1)
+                def restarted_pid_published():
+                    pid=subprocess.check_output(['systemctl','show',live.LOGGER,'-p','MainPID','--value']).strip()
+                    if pid in (b'0',initial_pid): return False
+                    path=Path('/run/meteohub-live-65534/loggerd.pid')
+                    try: return path.read_bytes().strip()==pid
+                    except FileNotFoundError: return False
+                wait_for(restarted_pid_published)
                 wait_for(lambda:raw.stat().st_size>first)
                 self.assertNotEqual(request('/cgi-bin/meteohub.cgi',True)[1].strip(),initial_pid)
+                self.assertEqual(request('/cgi-bin/meteohub.cgi',True)[1].strip(),subprocess.check_output(['systemctl','show',live.LOGGER,'-p','MainPID','--value']).strip())
                 # Real extension activation must restart the installed unit, not create a transient duplicate.
                 pid_before_update=request('/cgi-bin/meteohub.cgi',True)[1].strip()
                 ext.update(candidate,runtime)
@@ -215,6 +231,8 @@ with socket.create_connection((host,int(port)),timeout=5) as s:
                 self.assertTrue(any(m['field']=='pressure' and m['value']==981.6 for m in json.loads(body)['metrics']))
                 before=raw.read_bytes()
                 live.ctl('stop',live.TARGET)
+                wait_for(lambda:all(live.fields(unit)['ActiveState']=='inactive'
+                                    for unit in (live.LOGGER,live.WEB,live.INDEX,live.RUNTIME)))
                 for unit in (live.LOGGER,live.WEB,live.INDEX):self.assertEqual(live.fields(unit)['ActiveState'],'inactive')
                 self.assertEqual(subprocess.run(['flock','-n',str(runtime/'.feed-consumer.lock'),'true']).returncode,0)
                 self.assertFalse(Path('/run/meteohub-live-65534').exists())
