@@ -41,7 +41,19 @@ Verzeichnismetadaten aus der geprueften unteren Generation vor jedem Mount.
 `repair-permissions` sichert den installierten Helper und seine Konfiguration,
 aktualisiert Helper samt verwaltetem Hash und korrigiert die gemountete
 Runtime-Wurzel ohne Dienstneustart. Kein rekursives chmod und keine Aenderung
-der versiegelten Generation. Zielausfuehrung und erneute Lesepruefung OFFEN.
+der versiegelten Generation.
+
+**Betreiberabnahme der Rechtekorrektur 07:40:05 CET:** korrigierter Helper
+SHA256 `42a351386adf7cabbffc460002b4736c4395c18d5b9f2f1a14f40f70eb4da8c0`
+geprueft und installiert, Sicherung unter
+`/root/meteohub-ram-permissions-before-u1ku8man`. Runtime-Wurzel wieder
+UID/GID 1000, Modus 0700; keine Dienstneustarts. Beobachter als meteohub liest
+erfolgreich: raw_bytes=611222, letzter Schreibvorgang 79,3 s alt, Windwert
+79,6 s alt, weitere Messwerte nach RAM-Installation vorhanden. Index bei allen
+acht Sensoren 0 s Rueckstand und ohne Fehler. Regenwert 3679,6 s alt, damit
+gerade ueber einer Stunde; naechster stuendlicher Eingang noch separat offen.
+RAM-Belegung 4853760 Bytes, aktive/gesicherte Generation unveraendert,
+Datenpartition RO, alle Anwendungen aktiv. Kein lueckenloser Langzeitnachweis.
 
 Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
@@ -89,9 +101,8 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Rechtekorrektur uebertragen/ausfuehren und Lesezugriff
-als meteohub erneut pruefen; echte neue Aufzeichnung im RAM abnehmen.
-Manuellen Checkpoint, RO-Datenmount, frische Daten danach und
+**Naechster Schritt:** Manuellen Lauf des Checkpoint-Dienstes ausloesen;
+neue aktive/gesicherte Generation, RO-Datenmount, Benutzerzugriff, frische Daten danach und
 Wiederherstellung nach Reboot nachweisen. Erst anschliessend Host-Root-/Boot-RO
 vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
 Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
