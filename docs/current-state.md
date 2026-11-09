@@ -672,8 +672,19 @@ archivierte Originalseite `license-compare-original.html` zeigt ebenfalls
 `UJpMany2` und activated, ohne Demo-Timeout. Damit stimmt die angezeigte ID
 mit dem gespeicherten Altsystem-Nachweis ueberein; das ist keine aktuelle
 Abfrage des Altsystems. Keine Aktivierungsdaten wurden mit diesem Schritt
-uebernommen. Lizenzaktivierung des Zielsystems und dauerhafte Installation
-bleiben offen; Kennungssicht gilt bisher nur fuer Web, mit privater Konfiguration.
+uebernommen. Anschliessend bestaetigte der Betreiber die erfolgreiche Eingabe
+des vorhandenen Aktivierungscodes ueber Wartung. In der nativen Oberflaeche
+bleiben laut seiner Rueckmeldung nur fehlende dropbear.pid und smbd.pid.
+Damit ist die Aktivierung der getrennten Web-Testkopie bestaetigt, nicht die
+dauerhafte Aktivierung der gesamten Logger-Laufzeit. Kennungssicht und private
+Webkonfiguration liegen weiterhin im fluechtigen Host-Overlay; der normale
+RAM-Checkpoint sichert diese Testkopie nicht. Dauerhafte Uebernahme, gemeinsame
+Konfigurationssicht und Abnahme nach Neustart bleiben offen. Keine Codes im Repo.
+
+Dropbear und Samba wurden in dieser Laufzeit bislang nicht eingerichtet.
+Fehlende PID-Dateien alleine beweisen keinen Dienstausfall; keinen zweiten
+SSH-Server oder Dateiserver nur zur Beseitigung der Anzeige installieren und
+keine fremden/erfundenen Prozess-IDs eintragen.
 
 ### 4. Danach weitere Betriebsfunktionen
 
