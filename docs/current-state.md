@@ -191,8 +191,9 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt (9. November, abends):** Frische Archivdaten nach dem
-abschliessenden Host-Overlay-Boot noch bestaetigen. Dauerhafter
+**Naechster Schritt (9. November, abends):** Naechsten Regenwert und den
+automatischen Sicherungslauf nachweisen. Frische Archivdaten nach dem
+abschliessenden Host-Overlay-Boot, Indexgleichstand, dauerhafter
 Remount-Workaround und Start nach Zeitsynchronisierung sind belegt.
 Manueller Checkpoint unter Host-RO und neue Archivdaten vor dem Wartungsboot
 sind ebenfalls belegt (siehe Abendnachweis).
@@ -304,6 +305,17 @@ needs_attention=false, Persistenz RO, RAM 3514368 von 335544320 Bytes.
 Indexer importiert vorhandene Historie in 2000er-Bloecken ohne verworfene
 Zeilen. Neue Empfangs-/Archivdaten nach diesem letzten Boot sind damit noch
 nicht nachgewiesen; ebenso wenig der Abschluss des Historienimports.
+
+**Nachkontrolle um 19:08:44 MEZ (18:08:44 UTC):** Betreiber meldet
+Roharchiv 629972 Bytes gegenueber 627741 Bytes um 18:58:36 MEZ. Neuester
+Windwert rund 19:06:30 MEZ, schnelle weitere Kanaele rund 19:05:45 MEZ,
+t1/thb0 rund 19:03:45 MEZ: eindeutig nach dem Loggerstart um 18:57:16 MEZ.
+Index fuer alle acht Kanaele auf gleichem letzten Zeitstempel wie das
+Roharchiv, kein Index-Lesefehler, letzter Indexlauf 4,2 s zurueck. Damit sind
+neue native Archivdaten und das Aufholen des Index nach dem abschliessenden
+Host-RO-Boot nachgewiesen. Kein separater HTTP-/SVG-Abruf in diesem Check.
+Regen weiterhin Morgenstand (37798,9 s alt); neue rain0-Lieferung noch OFFEN.
+Keine dauerhafte Ueberwachung oder allgemeine Langzeitabnahme daraus ableiten.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
