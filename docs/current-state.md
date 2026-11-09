@@ -191,15 +191,16 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt (9. November, abends):** Naechsten Regenwert und den
-automatischen Sicherungslauf nachweisen. Frische Archivdaten nach dem
+**Naechster Schritt (9. November, abends):** Stuendliche Sicherung dauerhaft
+im Wartungsboot uebernehmen; neuen Regenwert noch nachweisen. Automatischer
+Nachhollauf des umgestellten Timers um 19:34 MEZ ist belegt. Frische Archivdaten nach dem
 abschliessenden Host-Overlay-Boot, Indexgleichstand, dauerhafter
 Remount-Workaround und Start nach Zeitsynchronisierung sind belegt.
 Manueller Checkpoint unter Host-RO und neue Archivdaten vor dem Wartungsboot
 sind ebenfalls belegt (siehe Abendnachweis).
-Sicherungstimer ist installiert; ein automatisch ausgefuehrter taeglicher
-Lauf ist noch nicht belegt. Stuendliche Sicherung mit Fehlerstatus ab 90 Minuten
-Sicherungsalter lokal vorbereitet und getestet; auf dem Pi noch nicht angewandt.
+Stuendlicher Sicherungstimer mit Fehlerstatus ab 90 Minuten Sicherungsalter
+ist auf dem Pi temporaer aktiv; diese Konfigurationsaenderung geht ohne
+Uebernahme auf das normale RW-Root beim Neustart verloren.
 
 **Paketplan vom Betreiber fuer Host-RO:** overlayroot 0.18.debian14 (all),
 cryptsetup und cryptsetup-bin je 2:2.7.5-2 (arm64), drei neue Pakete,
@@ -331,6 +332,21 @@ unter Host-Overlay wird abgewiesen. Keine Pi-Ausfuehrung oder neue rain0-Daten
 durch diese lokalen Tests behauptet. Vier Tests bestanden, einschliesslich
 vorhandener Speicher-/Shutdown-/Rollback-Pruefungen; kein Hardware-Neustart im
 lokalen Test.
+
+**Stationsversuch der stuendlichen Sicherung:** Betreiber hat Helper-SHA256
+`3b77c2e8c679714b7bde914225f32d7dce88eec11f1548015bc3c85f8f184725`
+geprueft und `configure-checkpoints --minutes 60 --temporary` ausgefuehrt.
+Ruecknahme-Dateien unter `/run/meteohub-checkpoint-schedule-before-feybvh0h`
+sind fluechtig. Timer war zuvor aktiv und loeste wegen Persistent=true sofort
+um 19:34:30 MEZ einen Nachhollauf aus. Dienstjournal bestaetigt erfolgreichen
+Abschluss um 19:34:33 MEZ, Result=success, ExecMainStatus=0. Neue gepruefte
+Generation `gen-0bdfe2e55ed54f2b9e176e122885750e`, Digest
+`50080411bdddcfc4eb857adaabc36f01b247a4350fb795d0359422fa228c4f18`.
+Nachkontrolle rund 19:59 MEZ: aktive/gesicherte Generation gleich, alle Apps
+active, Persistenz RO, Backup-Altersgrenze 5400 s, needs_attention=false.
+Timer zeigt den naechsten Termin 20:00 MEZ. Dessen Ausfuehrung ist noch nicht
+belegt, der automatisch ausgeloeste Nachhollauf hingegen schon. Regen zuletzt
+um 19:34:31 MEZ geprueft und noch Morgenstand; spaetere Lieferung offen.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 

@@ -4,8 +4,9 @@ Stand 9. November 2026: **RAM-Betrieb, manuelle/Shutdown-Sicherung und
 Wiederherstellung auf dem Stations-Pi nachgewiesen.** Auch der getrennte
 Host-RO-Umbau und neue Archivdaten nach dessen Boot sind belegt; Details und
 offene Punkte stehen im [Stationsnachweis](current-state.md). Die neue
-Intervallumstellung ist lokal mit echten Mounts und systemd getestet; ihre
-Zielinstallation und ein automatischer Sicherungslauf auf dem Pi sind noch
+Intervallumstellung ist lokal mit echten Mounts und systemd getestet. Auf dem
+Stations-Pi sind die temporaere stuendliche Umstellung und ein automatisch
+ausgeloester Nachhollauf nachgewiesen; die dauerhafte Installation ist noch
 offen. Dieses Werkzeug schaltet weder Root noch Boot auf RO und installiert
 kein `overlayroot`.
 
