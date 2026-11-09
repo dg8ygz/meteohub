@@ -191,16 +191,17 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt (9. November, abends):** Stuendliche Sicherung dauerhaft
-im Wartungsboot uebernehmen; neuen Regenwert noch nachweisen. Automatischer
+**Naechster Schritt (9. November, abends):** Nach dauerhafter Installation des
+Stundenplans den Host-RO-Boot wieder aktivieren und dessen Timer pruefen;
+neuen Regenwert noch nachweisen. Automatischer
 Nachhollauf des umgestellten Timers um 19:34 MEZ ist belegt. Frische Archivdaten nach dem
 abschliessenden Host-Overlay-Boot, Indexgleichstand, dauerhafter
 Remount-Workaround und Start nach Zeitsynchronisierung sind belegt.
 Manueller Checkpoint unter Host-RO und neue Archivdaten vor dem Wartungsboot
 sind ebenfalls belegt (siehe Abendnachweis).
 Stuendlicher Sicherungstimer mit Fehlerstatus ab 90 Minuten Sicherungsalter
-ist auf dem Pi temporaer aktiv; diese Konfigurationsaenderung geht ohne
-Uebernahme auf das normale RW-Root beim Neustart verloren.
+ist seit dem Wartungsboot um 20 Uhr dauerhaft auf dem normalen RW-Root
+installiert. Erneuter Host-Overlay-Boot danach noch offen.
 
 **Paketplan vom Betreiber fuer Host-RO:** overlayroot 0.18.debian14 (all),
 cryptsetup und cryptsetup-bin je 2:2.7.5-2 (arm64), drei neue Pakete,
@@ -347,6 +348,18 @@ active, Persistenz RO, Backup-Altersgrenze 5400 s, needs_attention=false.
 Timer zeigt den naechsten Termin 20:00 MEZ. Dessen Ausfuehrung ist noch nicht
 belegt, der automatisch ausgeloeste Nachhollauf hingegen schon. Regen zuletzt
 um 19:34:31 MEZ geprueft und noch Morgenstand; spaetere Lieferung offen.
+
+**Dauerhafte Stundenplan-Installation:** Helper/Bootparameter/Diagnose vor dem
+Wartungsstart unter `/boot/firmware/meteohub-hourly-ccafrAID` gesichert.
+Nach Wartungsboot Root ext4 RW, Apps active, Persistenz RO; aktive/gesicherte
+Generation `gen-fda203e99c344ad89439ebce1197a954`. Betreiber fuehrt den
+SHA-geprueften Helper von dort ohne `--temporary` aus. Ausgabe bestaetigt
+temporary=false, host_overlay=false, Intervall 60 min und Altersgrenze 5400 s.
+Konfigurationssicherung `/root/meteohub-checkpoint-schedule-before-2iizxs41`.
+Timer loeste um 20:05:37 MEZ einen Nachhollauf aus; unmittelbar folgende
+Momentaufnahme zeigte noch die vorherige Generation. Abschluss dieses Laufs
+und Rueckkehr in den Host-Overlay-Betrieb sind noch nachzuweisen. Zum separat
+geplanten 20:00-Lauf wurde kein Journalnachweis mitgeliefert.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 

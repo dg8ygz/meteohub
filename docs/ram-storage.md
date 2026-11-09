@@ -5,8 +5,9 @@ Wiederherstellung auf dem Stations-Pi nachgewiesen.** Auch der getrennte
 Host-RO-Umbau und neue Archivdaten nach dessen Boot sind belegt; Details und
 offene Punkte stehen im [Stationsnachweis](current-state.md). Die neue
 Intervallumstellung ist lokal mit echten Mounts und systemd getestet. Auf dem
-Stations-Pi sind die temporaere stuendliche Umstellung und ein automatisch
-ausgeloester Nachhollauf nachgewiesen; die dauerhafte Installation ist noch
+Stations-Pi sind die stuendliche Umstellung, ein automatisch ausgeloester
+Nachhollauf und anschliessende dauerhafte Installation im Wartungsboot
+nachgewiesen. Der folgende Host-RO-Boot mit dauerhaftem Stundenplan ist noch
 offen. Dieses Werkzeug schaltet weder Root noch Boot auf RO und installiert
 kein `overlayroot`.
 
