@@ -191,10 +191,11 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt (9. November, abends):** Auf dem Pi erprobten
-Remount-Workaround im laufenden Wartungsboot dauerhaft installieren und
-anschliessend erneut mit Host-Overlay booten. Manueller Checkpoint unter
-Host-RO und neue Archivdaten sind inzwischen belegt (siehe Abendnachweis).
+**Naechster Schritt (9. November, abends):** Frische Archivdaten nach dem
+abschliessenden Host-Overlay-Boot noch bestaetigen. Dauerhafter
+Remount-Workaround und Start nach Zeitsynchronisierung sind belegt.
+Manueller Checkpoint unter Host-RO und neue Archivdaten vor dem Wartungsboot
+sind ebenfalls belegt (siehe Abendnachweis).
 Sicherungstimer ist installiert; ein automatisch ausgefuehrter taeglicher
 Lauf ist noch nicht belegt. Kuerzeres Sicherungsintervall noch offen.
 
@@ -282,8 +283,27 @@ bestaetigt: Root ext4 RW, alle vier Apps active, keine failed Units, Persistenz
 RO. Neue gespeicherte/aktive Generation
 `gen-d19aae6ff12b4e1a9c96564883ea92e0` (Alter 52 s) belegt erneut eine
 Sicherung beim geordneten Neustart. Dauerhafter Workaround und erneuter
-Overlay-Boot noch nicht ausgefuehrt/bestaetigt. Keine Aenderung des unteren
+Overlay-Boot waren zu diesem Zeitpunkt noch nicht ausgefuehrt/bestaetigt. Keine Aenderung des unteren
 Dateisystems bei laufendem Host-Overlay vorgenommen.
+
+**Abschluss des Wartungsboots:** Betreiber bestaetigt Installation unter
+`/etc/systemd/system/systemd-remount-fs.service.d/90-overlay-workaround.conf`,
+Sicherung `/root/meteohub-remount-before-uEG330gN`. Folgender Boot
+(gemeldetes uptime -s: 18:56:18 MEZ) mit Host-Overlay erfolgreich:
+Remount Result=success, ExecMainStatus=0,
+Environment=LIBMOUNT_FORCE_MOUNT2=always; keine failed Units. Root-Overlay RW
+auf tmpfs, physische Root-, Boot- und Persistenzpartition RO. Neue aktive und
+gesicherte Generation `gen-4fb1a0e39cfb4c4a8cd9b6c2473f0837` geladen.
+
+Fruehe Momentaufnahme zeigte Logger/Indexer inactive und needs_attention=true.
+Nachkontrolle um 18:57:42 MEZ erklaert dies: erster NTP-Server antwortete nicht;
+Synchronisierung ueber zweiten Server bei Bootsekunde 46,710. Zeitwarte-Dienst
+fertig bei 46,713; Logger und Indexer starteten bei 46,73 und waren bei 46,83
+aktiv. Keine manuelle Intervention noetig. Alle vier Anwendungen active,
+needs_attention=false, Persistenz RO, RAM 3514368 von 335544320 Bytes.
+Indexer importiert vorhandene Historie in 2000er-Bloecken ohne verworfene
+Zeilen. Neue Empfangs-/Archivdaten nach diesem letzten Boot sind damit noch
+nicht nachgewiesen; ebenso wenig der Abschluss des Historienimports.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
