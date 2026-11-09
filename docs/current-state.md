@@ -639,6 +639,12 @@ unprivilegierter Benutzer und privater Bind-Mount; abgelehnte Aenderungsbefehle
 lassen die Netzwerkdaten unveraendert. Echte CGI-Abnahme auf dem Pi OFFEN.
 Die getcwd-Warnung des Diagnosebefehls ist getrennt zu behandeln: kuenftig
 nsenter --wdns=/ statt --wd=/ fuer das Arbeitsverzeichnis im Ziel-Root nutzen.
+Erster Adapter-Zieltest: Quelle unter /run uebernimmt noexec in den Bind-Mount;
+direkter Start EACCES, ausdruecklicher Python-Aufruf liefert korrekt echte MAC
+und IP im alten Format. Ablage unter /usr/local/libexec im Host-Overlay als
+Korrektur vorbereitet. Der lokale Test nutzte zuvor selbst den Interpreter
+und erfasste diese Fehlerklasse nicht; jetzt noexec und direkten Start geprueft.
+Zielabnahme des korrigierten Mounts und der nativen CGI-Seite noch OFFEN.
 Anleitung und Rueckbau: [ifconfig-Anzeigeadapter](ifconfig-compat.md).
 
 ### 4. Danach weitere Betriebsfunktionen

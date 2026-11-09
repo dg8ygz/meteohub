@@ -58,10 +58,20 @@ run('ip','link','set','test0','address','02:00:00:00:00:01')
 run('ip','address','add','192.0.2.50/26','broadcast','192.0.2.63','dev','test0')
 run('ip','link','set','test0','up')
 before=json.loads(run('ip','-j','address','show').stdout)
-run('mount','--bind',script,target)
+blocked_dir=pathlib.Path(target).parent/'noexec-source'; blocked_dir.mkdir()
+run('mount','-t','tmpfs','-o','noexec,nosuid,nodev,mode=755','tmpfs',str(blocked_dir))
+blocked=blocked_dir/'adapter'; blocked.write_bytes(pathlib.Path(script).read_bytes()); blocked.chmod(0o755)
+run('mount','--bind',str(blocked),target)
 run('mount','-o','remount,bind,ro',target)
 cmd=['setpriv','--reuid=65534','--regid=65534','--clear-groups',sys.executable,target]
+direct=['setpriv','--reuid=65534','--regid=65534','--clear-groups',target]
+assert subprocess.run(direct+['test0'],capture_output=True).returncode != 0
+# Explicit interpreter hid this failure in the original test. Exercise both.
 text=run(*cmd,'test0').stdout
+run('umount',target)
+run('mount','--bind',script,target)
+run('mount','-o','remount,bind,ro',target)
+assert run(*direct,'test0').stdout == text
 assert 'HWaddr 02:00:00:00:00:01' in text, text
 assert 'inet addr:192.0.2.50  Bcast:192.0.2.63  Mask:255.255.255.192' in text, text
 assert subprocess.run(cmd+['test0','down'],capture_output=True).returncode != 0
@@ -72,7 +82,7 @@ assert pathlib.Path(target).read_text() == 'host file remains unchanged\n'
 print('PASS: real netlink query as unprivileged user, private read-only bind, host file preserved')
 '''
             # Make only the copied source traversable to the unprivileged fixture.
-            source = Path(td) / 'adapter.py'; source.write_bytes(SCRIPT.read_bytes()); source.chmod(0o644)
+            source = Path(td) / 'adapter.py'; source.write_bytes(SCRIPT.read_bytes()); source.chmod(0o755)
             Path(td).chmod(0o755)
             result = subprocess.run(['unshare','--mount','--net','--propagation','private',
                                      sys.executable,'-c',harness,str(source),str(target)],
