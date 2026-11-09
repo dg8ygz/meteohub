@@ -197,6 +197,19 @@ Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
 bleiben. Sicherungstimer ist installiert; ein automatisch ausgefuehrter
 taeglicher Lauf ist noch nicht belegt.
 
+**Paketplan vom Betreiber fuer Host-RO:** overlayroot 0.18.debian14 (all),
+cryptsetup und cryptsetup-bin je 2:2.7.5-2 (arm64), drei neue Pakete,
+keine Upgrades/Entfernungen. cryptsetup-Abhaengigkeiten durch overlayroot.
+Das identische overlayroot-Paket wurde lokal nur entpackt/geprueft:
+Default deaktiviert, Postinst loest update-initramfs aus. recurse=0 ist fuer
+die separate Persistenzpartition vorgesehen; deren fstab-Eintrag soll direkt
+RO gemountet bleiben und bei Checkpoints kurz RW werden. cryptsetup-Postinst
+registriert Legacy-cryptdisks-Startskripte; vorhandene aktive crypttab-Eintraege
+vor Installation ausschliessen. Kein Autoremove.
+Pi-Wrapper do_overlayfs schaltet auch Boot-RO; die eigentlichen Funktionen
+enable_overlayfs/enable_bootro und der erzeugte Initramfs-Stand sind noch
+anzusehen. Noch keine Installation oder RO-Aktivierung auf dem Pi belegt.
+
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
 Der Betreiber hat die gespeicherte Regenzuordnung über echten Empfangstest
