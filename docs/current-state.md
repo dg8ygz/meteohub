@@ -6,14 +6,28 @@ automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
 
-## Fortsetzung 9. November morgens: RAM-Installation lokal geprueft
+## Fortsetzung 9. November morgens: RAM auf dem Pi installiert
 
-**Auf dem Pi ist weiterhin noch keine RAM-/Root-RO-Umschaltung belegt.**
+**RAM-Installation auf dem Pi belegt; Host-Root und Boot weiterhin RW.**
 Der neue Meteohub-Pi ist 44.149.114.50, Quelle weiterhin 44.149.114.9:5500.
 Der Betreiber fuehrt alle Zielbefehle selbst aus. Lokale Commits erlaubt,
 weiterhin **kein GitHub-Push**.
 
-Auf dem Pi belegt:
+Neuester Betreiberbeleg nach Installation (Statusalter etwa vier Sekunden):
+
+- Uebertragene `ram-storage.py` gegen SHA256
+  `c59e978afc1eaa7164db7c802e1437d49154cd00417fbb98963da677caa9cbdf` geprueft.
+- `installed=true`, `root_ro_changed=false`; aktive und gesicherte Generation
+  `gen-a0557598d211441997b6ccad9a9be568` identisch.
+- RAM-Belegung 2772992 von 335544320 Bytes; `needs_attention=false`.
+  Datenpartition RO, alle vier Anwendungsunits aktiv.
+- Beide RAM-Timer gelistet; Kalenderdarstellung im Terminal abgeschnitten.
+  Vollstaendige naechste Ausloesezeiten noch ausgeben lassen.
+- Noch OFFEN: echte neue Archivwerte nach RAM-Umschaltung, manueller Checkpoint
+  mit Wiederanlauf, Wiederherstellung nach Pi-Reboot und Host-Root-/Boot-RO.
+  Installationsstatus ersetzt keinen Empfangs- oder Wiederherstellungsnachweis.
+
+Vorherige Nachweise vom Vorabend / etwa 00:05 CET:
 
 - Offline-SD-Image auf Proxmox .60: `/root/meteohub-sd-vor-ro-juN2kxBj/karte.img`,
   31914983424 Bytes, SHA256
@@ -37,7 +51,7 @@ Auf dem Pi belegt:
   Runtime-Daten etwa 6,8 MiB. `auto_initramfs=1`, initramfs-tools
   `0.148.4+rpt2`, raspi-config `20261026+2`; overlayroot nicht installiert.
 
-Lokal vorbereitet, **NICHT auf dem Pi installiert**:
+Werkzeugstand und lokale Vorpruefung:
 
 - `tools/ram-storage.py`: begrenztes RAM-Overlay, gepruefte Generationen,
   taegliche Sicherung 04:15 Europe/Berlin, Shutdown-Sicherung, Rebase,
@@ -46,7 +60,8 @@ Lokal vorbereitet, **NICHT auf dem Pi installiert**:
   schlechter Sicherung, Shutdown/Restore und Rueckbau bestanden. Kein nativer
   ARM-Empfangs-/Pi-Rebootnachweis durch diese Tests.
 - Aktualisierter Live-Helfer verhindert `live-remove` bei installierter
-  RAM-Speicherung. Keine neuen Skripte per git pull auf dem Pi voraussetzen.
+  RAM-Speicherung; dieser Helferstand ist auf dem Pi noch nicht nachgewiesen.
+  Dort kein `live-remove` verwenden. Keine neuen Skripte per git pull voraussetzen.
 
 Am Morgen wurde zusaetzlich die vollstaendige Installationstransaktion lokal
 ausgefuehrt: injizierter Fehler beim Start der RAM-Unit mit Ruecknahme der
@@ -58,12 +73,13 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Gepruefte Datei zum Pi uebertragen, dann RAM-Installation und echte neue Aufzeichnung
-abnehmen. Manuellen Checkpoint, RO-Datenmount, frische Daten danach und
+**Naechster Schritt:** Echte neue Aufzeichnung im RAM abnehmen.
+Manuellen Checkpoint, RO-Datenmount, frische Daten danach und
 Wiederherstellung nach Reboot nachweisen. Erst anschliessend Host-Root-/Boot-RO
 vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
 Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
-bleiben. Ein Sicherungstimer auf dem Pi ist bislang nicht eingerichtet.
+bleiben. Sicherungstimer ist installiert; ein automatisch ausgefuehrter
+taeglicher Lauf ist noch nicht belegt.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
