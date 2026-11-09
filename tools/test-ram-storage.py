@@ -17,6 +17,7 @@ import tempfile
 import shutil
 import time
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('ram_storage', Path(__file__).with_name('ram-storage.py'))
@@ -111,6 +112,9 @@ class LifecycleTests(unittest.TestCase):
                 m.run('systemctl', 'daemon-reload')
                 m.run('systemctl', 'start', *apps)
                 self.assertEqual(m.mount_info(runtime)['fstype'], 'overlay')
+                with s.lock():
+                    check = m.run(sys.executable, helper, '--config', config, 'check')
+                    self.assertIn('health not assessed', check.stdout)
                 self.assertEqual(s.status()['ram_limit_bytes'], 64 * 1024 * 1024)
                 self.assertFalse((Path(s.live_state()['upper']) / 'root/data/weather/202601/raw').exists())
                 self.assertEqual(raw.read_text(), 'old\n')
@@ -190,11 +194,46 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\n')
                 self.assertFalse(config.exists())
                 self.assertTrue(all(s.active(n) == 'active' for n in apps))
+                # Test the actual installation transaction, not just rendered units/backend methods.
+                # Hardware preflight is substituted: fixtures have no Pi ZRAM or native RootDirectory.
+                fake_clock = prefix + '-clock.service'
+                unit(fake_clock, '[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/true\n')
+                m.run('systemctl', 'daemon-reload')
+                arguments = SimpleNamespace(config=str(config), runtime=str(runtime), persist=str(persist),
+                                            uuid=cfg['uuid'], ram_mib=64)
+                with contextlib.ExitStack() as stack:
+                    for name, value in dict(APPS=apps, TARGET=target, PREFIX=prefix, HELPER=helper,
+                                            RAM_ROOT=cfg['ram'], STORAGE_LOCK=cfg['lock'], TIME_WAIT=fake_clock,
+                                            UNIT_DIR=Path('/run/systemd/system')).items():
+                        stack.enter_context(patch.object(m, name, value))
+                    stack.enter_context(patch.object(m, 'host_preflight'))
+                    original_run = m.run
+                    def failed_start(*args, **kw):
+                        if args == ('systemctl', 'start', prefix + '.service'):
+                            raise RuntimeError('injected RAM unit start failure')
+                        return original_run(*args, **kw)
+                    with patch.object(m, 'run', side_effect=failed_start):
+                        with self.assertRaisesRegex(RuntimeError, 'injected'): m.install(arguments)
+                    self.assertFalse(config.exists()); self.assertFalse(helper.exists())
+                    self.assertIsNone(m.mount_info(runtime))
+                    self.assertTrue(all(s.active(n) == 'active' for n in apps))
+                    m.install(arguments)
+                    installed = m.regular_json(config)
+                    for p in installed['installed_files']:
+                        if Path(p) not in paths: paths.append(Path(p))
+                    self.assertEqual(m.mount_info(runtime)['fstype'], 'overlay')
+                    timers = [prefix + '-checkpoint.timer', prefix + '-check.timer']
+                    for timer in timers:
+                        self.assertEqual(s.active(timer), 'active')
+                    with patch.object(m.tempfile, 'mkdtemp', side_effect=fixture_backup):
+                        m.uninstall(m.Storage(installed), config)
+                    self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\n')
                 print('PASS: actual overlay/tmpfs, checkpoint/rebase, WAL restore, full RAM recovery, failed SD write, shutdown ordering, loss of unsaved RAM and rollback to normal runtime')
             finally:
                 # Service is stopped while its helper/config still exist.
-                m.run('systemctl', 'stop', target, *apps, prefix + '.service', check=False)
-                m.run('systemctl', 'reset-failed', target, *apps, prefix + '.service', check=False)
+                m.run('systemctl', 'stop', target, *apps, prefix + '.service', prefix + '-clock.service', check=False)
+                m.run('systemctl', 'reset-failed', target, *apps, prefix + '.service',
+                      prefix + '-checkpoint.service', prefix + '-check.service', prefix + '-clock.service', check=False)
                 for p in reversed(paths):
                     p.unlink(missing_ok=True)
                     if p.parent.name.endswith('.d') and p.parent.exists(): p.parent.rmdir()

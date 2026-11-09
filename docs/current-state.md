@@ -6,9 +6,9 @@ automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
 
-## Feierabendstand 9. November: RO-Vorbereitung, noch kein RAM-/Root-RO-Betrieb
+## Fortsetzung 9. November morgens: RAM-Installation lokal geprueft
 
-**Betreiber beendet die Arbeit; heute keine weitere Umschaltung auf dem Pi.**
+**Auf dem Pi ist weiterhin noch keine RAM-/Root-RO-Umschaltung belegt.**
 Der neue Meteohub-Pi ist 44.149.114.50, Quelle weiterhin 44.149.114.9:5500.
 Der Betreiber fuehrt alle Zielbefehle selbst aus. Lokale Commits erlaubt,
 weiterhin **kein GitHub-Push**.
@@ -48,13 +48,22 @@ Lokal vorbereitet, **NICHT auf dem Pi installiert**:
 - Aktualisierter Live-Helfer verhindert `live-remove` bei installierter
   RAM-Speicherung. Keine neuen Skripte per git pull auf dem Pi voraussetzen.
 
-**Morgen fortsetzen:** RAM-Werkzeug noch einmal gezielt pruefen und gepruefte
-Datei zum Pi uebertragen, dann RAM-Installation und echte neue Aufzeichnung
+Am Morgen wurde zusaetzlich die vollstaendige Installationstransaktion lokal
+ausgefuehrt: injizierter Fehler beim Start der RAM-Unit mit Ruecknahme der
+Konfiguration und Wiederanlauf der Anwendungen, danach erfolgreiche Installation
+einschliesslich Timer und erneuter vollstaendiger Rueckbau. Echte temporaere
+ext4-/tmpfs-/Overlay-Mounts und systemd-Units; nur Pi-spezifische Hardware-
+Vorpruefung und Stationsanwendungen durch Testfixtures ersetzt. Zusaetzlich
+verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
+Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
+ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
+
+**Naechster Schritt:** Gepruefte Datei zum Pi uebertragen, dann RAM-Installation und echte neue Aufzeichnung
 abnehmen. Manuellen Checkpoint, RO-Datenmount, frische Daten danach und
 Wiederherstellung nach Reboot nachweisen. Erst anschliessend Host-Root-/Boot-RO
 vorbereiten; vorher APT-Simulation fuer fehlendes overlayroot und dessen
 Trixie-Konfiguration pruefen. Datenpartition muss ausserhalb des Host-Overlays
-bleiben. Heute ist kein Sicherungstimer auf dem Pi eingerichtet.
+bleiben. Ein Sicherungstimer auf dem Pi ist bislang nicht eingerichtet.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 

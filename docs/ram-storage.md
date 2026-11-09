@@ -102,6 +102,8 @@ laufenden Overlay beschreibbar machen oder zuruecksynchronisieren.
   Normalerweise bis zu 24 Stunden Verlust, bei Sicherungsfehlern mehr.
 - Kapazitaetspruefung alle fuenf Minuten: ab 80 Prozent RAM-Belegung oder
   Sicherungsalter ueber 26 Stunden fehlerhafter Checkdienst mit Journalbefund.
+  Waehrend einer laufenden Speicheroperation wird dieser einzelne Check mit
+  ausdruecklichem Skip-Befund ausgelassen; das ist keine Gesundheitsbestaetigung.
   Kein E-Mail-/Pushalarm und keine behauptete externe Ueberwachung.
 
 Fehlender Mount, falsche UUID oder beschaedigte Generation verhindern den
@@ -139,7 +141,11 @@ Getestet: ext4/tmpfs/Overlay, WAL-Konsolidierung, Sicherung/Rebase, Behalten
 historischer Dateien auf SD, voller RAM-Puffer, injizierter SD-Schreibfehler,
 falsche UUID, ungueltiges Sicherungsmanifest mit verweigertem Dienststart,
 Shutdown-Reihenfolge, Verlust ungesicherter RAM-Daten, Wiederherstellung und
-Rueckbau auf normalen Runtime-Pfad. Der erste Test fand eine nicht geschlossene
+Rueckbau auf normalen Runtime-Pfad. Zusaetzlich wird die gesamte Installation
+mit echten Units und Timern durchlaufen, einschliesslich eines injizierten
+Startfehlers mit Ruecknahme und Wiederanlauf. Dabei sind nur die Pi-spezifische
+Hardware-Vorpruefung und Stationsanwendungen durch Fixtures ersetzt.
+Der erste Test fand eine nicht geschlossene
 SQLite-Verbindung; explizites Schliessen ist implementiert und erneut getestet.
 Pi-Kernel, native Anwendung, echter Reboot und Langzeitwachstum bleiben bis
 zur separaten Zielabnahme OFFEN.

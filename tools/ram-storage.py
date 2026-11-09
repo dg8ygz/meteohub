@@ -27,6 +27,11 @@ APPS = ['meteohub-web-test.socket', 'meteohub-web-test.service',
         'meteohub-live-logger.service', 'meteohub-dashboard-index.service']
 TARGET = 'meteohub-live.target'
 PREFIX = 'meteohub-ram'
+HELPER = Path('/usr/local/libexec/meteohub-ram.py')
+RAM_ROOT = '/run/meteohub-ram'
+STORAGE_LOCK = '/run/lock/meteohub-storage.lock'
+UNIT_DIR = Path('/etc/systemd/system')
+TIME_WAIT = 'systemd-time-wait-sync.service'
 
 
 def run(*args, check=True):
@@ -351,25 +356,14 @@ def render(config_path, helper, cfg):
     }
 
 
-def install(args):
-    config = Path(args.config)
-    if config.exists() or config.is_symlink(): raise ValueError('RAM installation already exists; inspect status first')
-    helper = Path('/usr/local/libexec/meteohub-ram.py')
-    if helper.exists() or helper.is_symlink(): raise ValueError('RAM helper path already exists')
-    cfg = dict(schema=1, helper=str(helper), runtime=str(safe_path(args.runtime)), persist=str(safe_path(args.persist)),
-               uuid=args.uuid, ram='/run/meteohub-ram', ram_mib=args.ram_mib,
-               lock='/run/lock/meteohub-storage.lock', apps=APPS, target=TARGET, prefix=PREFIX)
-    s = Storage(cfg); s.disk()
-    if mount_info(s.runtime) or mount_info(s.ram): raise ValueError('RAM/runtime mount already exists')
-    if s.current.exists(): s.verify(s.reference())
-    if not (s.runtime / 'live-install.json').is_file(): raise ValueError('Persistent live installation required')
+def host_preflight(s, ram_mib):
     mounts = run('findmnt', '-rn', '-o', 'TARGET').stdout.splitlines()
     if any(p.startswith(str(s.runtime) + '/') for p in mounts):
         raise ValueError('Nested runtime mounts must be reviewed before RAM installation')
     for name in APPS[1:]:
         actual = run('systemctl', 'show', name, '-p', 'RootDirectory', '--value').stdout.strip()
         if actual != str(s.runtime / 'root'): raise ValueError('Unit uses a different runtime: ' + name)
-    if run('systemctl', 'show', 'systemd-time-wait-sync.service', '-p', 'ActiveState', '--value').stdout.strip() != 'active':
+    if run('systemctl', 'show', TIME_WAIT, '-p', 'ActiveState', '--value').stdout.strip() != 'active':
         raise ValueError('Verified time gate must already be active')
     if Path('/sys/block/zram0/backing_dev').read_text().strip() != 'none':
         raise ValueError('RAM-only ZRAM required')
@@ -377,16 +371,31 @@ def install(args):
         raise ValueError('Non-ZRAM swap present')
     available = next(int(line.split()[1]) * 1024 for line in Path('/proc/meminfo').read_text().splitlines()
                      if line.startswith('MemAvailable:'))
-    if available < (args.ram_mib + 128) * 1024 * 1024:
+    if available < (ram_mib + 128) * 1024 * 1024:
         raise ValueError('Insufficient available RAM for requested cap plus 128 MiB headroom')
+
+
+def install(args):
+    config = safe_path(args.config)
+    if config.exists() or config.is_symlink(): raise ValueError('RAM installation already exists; inspect status first')
+    helper = HELPER
+    if helper.exists() or helper.is_symlink(): raise ValueError('RAM helper path already exists')
+    cfg = dict(schema=1, helper=str(helper), runtime=str(safe_path(args.runtime)), persist=str(safe_path(args.persist)),
+               uuid=args.uuid, ram=RAM_ROOT, ram_mib=args.ram_mib,
+               lock=STORAGE_LOCK, apps=APPS, target=TARGET, prefix=PREFIX)
+    s = Storage(cfg); s.disk()
+    if mount_info(s.runtime) or mount_info(s.ram): raise ValueError('RAM/runtime mount already exists')
+    if s.current.exists(): s.verify(s.reference())
+    if not (s.runtime / 'live-install.json').is_file(): raise ValueError('Persistent live installation required')
+    host_preflight(s, args.ram_mib)
     units = render(config, helper, cfg)
-    files = {Path('/etc/systemd/system') / n: text for n, text in units.items()}
+    files = {UNIT_DIR / n: text for n, text in units.items()}
     dropin = '[Unit]\nRequires=' + PREFIX + '.service\nAfter=' + PREFIX + '.service\n'
     for n in APPS + [TARGET]:
         text = dropin
         if n == APPS[3]:
-            text += 'Requires=systemd-time-wait-sync.service\nAfter=systemd-time-wait-sync.service time-sync.target\n'
-        files[Path('/etc/systemd/system') / (n + '.d') / '30-ram-storage.conf'] = text
+            text += 'Requires=' + TIME_WAIT + '\nAfter=' + TIME_WAIT + ' time-sync.target\n'
+        files[UNIT_DIR / (n + '.d') / '30-ram-storage.conf'] = text
     for p in files:
         if p.exists() or p.is_symlink(): raise ValueError('Existing managed path: ' + str(p))
     with s.lock(), s.paused() as consumer:
@@ -497,9 +506,16 @@ def main():
     elif args.action == 'restore': s.restore()
     elif args.action in ('checkpoint', 'shutdown'):
         print(json.dumps({'saved': s.checkpoint(args.action == 'shutdown')}))
+    elif args.action == 'check':
+        try:
+            with s.lock(): report = s.status()
+        except BlockingIOError:
+            print('SKIPPED: storage operation in progress; health not assessed this time')
+            return 0
+        print(json.dumps(report, indent=2))
+        if report['needs_attention']: return 2
     else:
         report = s.status(); print(json.dumps(report, indent=2))
-        if args.action == 'check' and report['needs_attention']: return 2
     return 0
 
 
