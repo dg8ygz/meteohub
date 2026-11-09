@@ -664,6 +664,17 @@ Werte. Ein zeitweiliger Webtest mit separater Konfigurationskopie ist lokal
 implementiert und unter echten systemd-Mounts getestet; Zielinstallation und
 System-ID-Vergleich noch OFFEN. Siehe [Identitaetssicht](identity-view.md).
 
+Nachtrag zur Zielabnahme: Der Betreiber fuehrte das befuellte Skript aus;
+Testverzeichnis `/usr/local/libexec/meteohub-identity-wihrp6vt`, Web-Startcheck
+bestanden, Host-MAC/SD und Logger-PID unveraendert. Native Seite zeigt danach
+System-ID `UJpMany2` statt `0000eJD4`, weiterhin Demo abgelaufen. Die lokal
+archivierte Originalseite `license-compare-original.html` zeigt ebenfalls
+`UJpMany2` und activated, ohne Demo-Timeout. Damit stimmt die angezeigte ID
+mit dem gespeicherten Altsystem-Nachweis ueberein; das ist keine aktuelle
+Abfrage des Altsystems. Keine Aktivierungsdaten wurden mit diesem Schritt
+uebernommen. Lizenzaktivierung des Zielsystems und dauerhafte Installation
+bleiben offen; Kennungssicht gilt bisher nur fuer Web, mit privater Konfiguration.
+
 ### 4. Danach weitere Betriebsfunktionen
 
 Native Aggregation, historische Diagramme und Exporte auf diesem Pi sind nicht
