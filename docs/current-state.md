@@ -191,11 +191,12 @@ verhindert die Speicher-Sperre einen faelschlichen Gesundheitsfehler, wenn
 Sicherung und periodischer Check gleichzeitig starten: Check wird explizit
 ausgelassen. Keine Aenderung am Pi durch diese Laeufe.
 
-**Naechster Schritt:** Fehlgeschlagenen systemd-remount-fs-Dienst nach dem
-ersten Root-Overlay-Boot anhand Journal, Kernelmeldungen und generierter fstab
-klaeren; keine pauschale Fehlerunterdrueckung. Danach Datenfluss und manuellen
-Checkpoint unter Host-RO abnehmen. Sicherungstimer ist installiert; ein
-automatisch ausgefuehrter taeglicher Lauf ist noch nicht belegt.
+**Naechster Schritt (9. November, abends):** Auf dem Pi erprobten
+Remount-Workaround im laufenden Wartungsboot dauerhaft installieren und
+anschliessend erneut mit Host-Overlay booten. Manueller Checkpoint unter
+Host-RO und neue Archivdaten sind inzwischen belegt (siehe Abendnachweis).
+Sicherungstimer ist installiert; ein automatisch ausgefuehrter taeglicher
+Lauf ist noch nicht belegt. Kuerzeres Sicherungsintervall noch offen.
 
 **Paketplan vom Betreiber fuer Host-RO:** overlayroot 0.18.debian14 (all),
 cryptsetup und cryptsetup-bin je 2:2.7.5-2 (arm64), drei neue Pakete,
@@ -243,6 +244,46 @@ ABER `systemd-remount-fs.service` failed; Betreiber berichtet zudem eine nicht
 mitgelieferte Fehlermeldung waehrend des Umschaltskripts. Zusammenhang noch
 unbewiesen. Ursache, neue Messwerte nach diesem Boot und Checkpoint unter
 Host-RO noch OFFEN. Keine vollstaendige Betriebsabnahme.
+
+### Abendnachweis vom 9. November: Remount und Wartungsstart
+
+Betreiber meldet einen ungeplanten Neustart, vermutlich nach Beruehren des
+Pi. Um 18:48 MEZ wurde wieder die Morgengeneration
+`gen-6c4b7f5161c846ffbc60a31441bc16f3` geladen; Sicherung rund zehn Stunden
+alt. Zwischenzeitliche RAM-Aufzeichnungen sind im wiederhergestellten Archiv
+nicht vorhanden. Ein Stromausfall ist damit vereinbar, aber nicht bewiesen;
+keine genaue Lueckenbilanz oder Wiederbeschaffung behauptet.
+
+Der Remount scheiterte mit `overlay: No changes allowed in reconfigure`.
+Dieselbe Fehlermeldung wurde lokal in einem privaten Mount-Namespace mit
+einem temporaeren Overlay reproduziert. `LIBMOUNT_FORCE_MOUNT2=always`
+erlaubte den Remount; vorhandene Dateien blieben lesbar, neue Schreibzugriffe
+landeten nur im Upper-Verzeichnis. Passender Upstream-Bericht:
+https://github.com/systemd/systemd/issues/39558
+
+Auf dem Pi wurde ausschliesslich unter `/run/systemd/system/` ein Drop-in
+fuer `systemd-remount-fs.service` mit dieser Environment-Einstellung erstellt.
+Anschliessender Dienststart: Result=success, ExecMainStatus=0. Root-Overlay RW,
+physische Root-, Boot- und Persistenzpartition weiterhin RO. Das ist ein
+gezielter Mount-API-Workaround, keine Unterdrueckung des Dienstfehlers.
+
+Um 18:49:46 MEZ waren neue Archivdaten vorhanden (626693 Bytes; Wind 1,7 s,
+andere schnelle Kanaele 31,7 bis 60,7 s alt). Um 18:50:30 war der Index fuer
+alle Kanaele auf Archivstand. Regen hatte noch den Morgenstand, daher keine
+neue Regenmessung nach diesem Boot nachgewiesen. Manueller Checkpoint unter
+Host-RO erfolgreich: `gen-16a9513873884aa59758618f62ccecd6`, alle Apps active,
+Persistenz wieder RO, Sicherungsalter 1,2 s.
+
+Fuer die dauerhafte Installation wurde nur der Bootparameter auf
+`overlayroot=disabled` umgestellt. Bootparameter, Journal und temporaerer
+Workaround liegen auf der Bootpartition unter
+`/boot/firmware/meteohub-maintenance-6fnzODpj`. Wartungsboot um 18:52:36 MEZ
+bestaetigt: Root ext4 RW, alle vier Apps active, keine failed Units, Persistenz
+RO. Neue gespeicherte/aktive Generation
+`gen-d19aae6ff12b4e1a9c96564883ea92e0` (Alter 52 s) belegt erneut eine
+Sicherung beim geordneten Neustart. Dauerhafter Workaround und erneuter
+Overlay-Boot noch nicht ausgefuehrt/bestaetigt. Keine Aenderung des unteren
+Dateisystems bei laufendem Host-Overlay vorgenommen.
 
 ## Historischer Nachweis: Regenübernahme am 8. November, Nachkontrolle 14:51 MEZ
 
