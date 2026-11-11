@@ -168,9 +168,13 @@ Boot erneut verfuegbar sein; eine Kopie allein im vorherigen Host-Overlay
 ueberlebt den Neustart nicht. Es fuehrt weder Bootparameterwechsel noch Reboot
 aus. Permanente Umstellung bei aktivem Host-Overlay wird abgewiesen.
 
-Erlaubt sind 15, 30 oder 60 Minuten. Die Kalendereintraege liegen auf festen
-UTC-Viertel-/Halb-/Vollstunden, ohne zusaetzlichen taeglichen Lauf. Stuendlich
-ist die Empfehlung fuer den aktuellen Stationsversuch: Jeder Checkpoint
+Erlaubt sind 15, 30, 60 oder 360 Minuten. Die Kalendereintraege liegen auf festen
+UTC-Viertel-/Halb-/Vollstunden; bei 360 Minuten um 00, 06, 12 und 18 Uhr UTC,
+ohne zusaetzlichen taeglichen Lauf. Die Altersgrenze betraegt dann 6,5 Stunden.
+Am 11. November wurden auf Betreiberwunsch sechs Stunden im Stationsbetrieb
+dauerhaft eingerichtet und nach dem Root-RO-Boot erneut bestaetigt. Der erste
+automatische Sechs-Stunden-Lauf um 13:00 MEZ ist noch separat abzunehmen.
+Jeder Checkpoint
 pausiert Anwendungen und kann anschliessendes Nacharbeiten des Index ausloesen.
 Haeufiger ist daher nicht ohne Abwaegung besser. Ein nachzuholender Termin kann
 bereits beim erneuten Aktivieren des Timers einen Checkpoint starten.

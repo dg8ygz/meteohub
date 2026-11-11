@@ -352,10 +352,11 @@ def render(config_path, helper, cfg):
     prefix = cfg['prefix']; service = prefix + '.service'
     command = f'/usr/bin/python3 {helper} --config {config_path} '
     minutes = cfg.get('checkpoint_interval_minutes')
-    if minutes is not None and minutes not in (15, 30, 60):
-        raise ValueError('Checkpoint interval must be 15, 30 or 60 minutes')
+    if minutes is not None and minutes not in (15, 30, 60, 360):
+        raise ValueError('Checkpoint interval must be 15, 30, 60 or 360 minutes')
     calendar = ('*-*-* *:' + ','.join(f'{n:02}' for n in range(0, 60, minutes)) + ':00 UTC'
                 if minutes else '*-*-* 04:15:00 Europe/Berlin')
+    if minutes == 360: calendar = '*-*-* 00,06,12,18:00:00 UTC'
     return {
         service: '[Unit]\nDescription=Meteohub RAM runtime and shutdown checkpoint\nPartOf=' + cfg['target'] +
             '\nDefaultDependencies=no\nRequires=sysinit.target\nAfter=sysinit.target\nConflicts=shutdown.target\nBefore=shutdown.target' +
@@ -580,7 +581,7 @@ def configure_checkpoints(s, config, minutes, temporary=False):
     On a host overlay this is deliberately an explicit temporary trial. A later
     maintenance boot must repeat the operation on the normal writable root.
     """
-    if minutes not in (15, 30, 60): raise ValueError('Unsupported checkpoint interval')
+    if minutes not in (15, 30, 60, 360): raise ValueError('Unsupported checkpoint interval')
     root = mount_info(Path('/'))
     if not root or 'rw' not in root['options'].split(','):
         raise ValueError('Writable host root required')
@@ -649,7 +650,7 @@ def main():
     for name in ('restore', 'shutdown', 'checkpoint', 'status', 'check', 'remove', 'repair-permissions', 'repair-ordering'):
         sub.add_parser(name)
     p = sub.add_parser('configure-checkpoints')
-    p.add_argument('--minutes', type=int, choices=(15, 30, 60), required=True)
+    p.add_argument('--minutes', type=int, choices=(15, 30, 60, 360), required=True)
     p.add_argument('--temporary', action='store_true')
     args = parser.parse_args()
     if os.getuid() != 0: parser.error('Run as root')

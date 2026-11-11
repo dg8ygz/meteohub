@@ -43,12 +43,17 @@ def fixture_directory():
 class ManifestTests(unittest.TestCase):
     def test_checkpoint_calendar(self):
         cfg = dict(prefix='fixture', apps=[], target='fixture.target', persist='/tmp')
-        for minutes in (15, 30, 60):
+        for minutes in (15, 30, 60, 360):
             cfg['checkpoint_interval_minutes'] = minutes
             timer = m.render('/tmp/config', '/usr/bin/true', cfg)['fixture-checkpoint.timer']
             calendar = next(line.split('=', 1)[1] for line in timer.splitlines() if line.startswith('OnCalendar='))
             result = m.run('systemd-analyze', 'calendar', '--iterations=3', calendar)
             self.assertIn('UTC', result.stdout)
+        result = m.run('systemd-analyze', 'calendar',
+                       '--base-time=2026-11-11 00:00:01 UTC', '--iterations=4', calendar)
+        for stamp in ('2026-11-11 06:00:00 UTC', '2026-11-11 12:00:00 UTC',
+                      '2026-11-11 18:00:00 UTC', '2026-11-12 00:00:00 UTC'):
+            self.assertIn(stamp, result.stdout)
         cfg['checkpoint_interval_minutes'] = 0
         with self.assertRaises(ValueError): m.render('/tmp/config', '/usr/bin/true', cfg)
 
@@ -201,6 +206,14 @@ class LifecycleTests(unittest.TestCase):
                     with patch.object(m.time, 'time', return_value=now + 5401):
                         self.assertTrue(s.status()['needs_attention'])
                     self.assertFalse(s.status()['needs_attention'])
+                    m.configure_checkpoints(s, config, 360, temporary=True)
+                    self.assertIn('OnCalendar=*-*-* 00,06,12,18:00:00 UTC', timer_path.read_text())
+                    self.assertEqual(s.status()['backup_age_limit_seconds'], 23400)
+                    with patch.object(m.time, 'time', return_value=now + 21600):
+                        self.assertFalse(s.status()['needs_attention'])
+                    with patch.object(m.time, 'time', return_value=now + 23401):
+                        self.assertTrue(s.status()['needs_attention'])
+                    m.configure_checkpoints(s, config, 60, temporary=True)
                     # Partial write failure restores helper/config/timer and their ownership hashes.
                     old_files = {p: p.read_bytes() for p in (helper, config, timer_path)}
                     actual_atomic = m.atomic

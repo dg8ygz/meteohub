@@ -1,10 +1,116 @@
-# Arbeitsstand und Fortsetzung – 9. November 2026
+# Arbeitsstand und Fortsetzung – 11. November 2026
 
 **Betriebsnachweis unserer Beispielstation, keine allgemeine Installationsvorgabe.**
 Diese Notiz hält den zuletzt vom Betreiber gemeldeten Stand fest. Sie ist keine
 automatisch aktualisierte Überwachung. Allgemeine Schritte stehen im
 [Installer](installer.md), die individuellen Sensorentscheidungen im
 [Stationsbeispiel](station-example.md).
+
+## Betreiberpruefung 11. November morgens und Sechs-Stunden-Plan
+
+Betreiberbelege, keine eigene SSH-Zielabfrage: Anmeldung mit vorhandenen
+Schluesseln abgewiesen. Um 07:53 MEZ Uptime 32h57, NTP synchronisiert,
+keine fehlgeschlagenen Units oder Kernelwarnungen im 24h-Fenster; 698 MiB RAM
+verfuegbar, Swap unbenutzt. Alle 24 stuendlichen Sicherungen im gelieferten
+Journal erfolgreich. Loggerstarts an diesen Terminen sind geplante Pausen.
+Zu diesem Pruefzeitpunkt Host-Root noch normales ext4 RW; Boot und Persistenz
+RO. Anschliessende Rueckkehr zum Root-Overlay siehe unten.
+
+Betreiberauftrag: Sicherungen auf sechs Stunden reduzieren. Helfer um
+360-Minuten-Plan erweitert, lokal mit echten systemd-/Mount-Fixtures geprueft.
+Zielumstellung um 08:03 bestaetigt, dauerhaft, Altersgrenze 23400 Sekunden.
+Termine 00/06/12/18 UTC (im Winter 01/07/13/19 MEZ), naechster Lauf 13:00 MEZ.
+Rueckwegsicherung `/root/meteohub-checkpoint-schedule-before-qewphm1y`;
+Helper-SHA `d588b4cefdba8a5dea26d9f96420651e19a29922ad9187a5b77753f51d2023ad`.
+
+Archivpruefung 10.11.08:24:09 bis 11.11.08:24:09 MEZ, Bericht auf dem Pi
+`/root/meteohub-day-audit-6dd92jbe/report.json`:
+
+- Alle acht Sensoren aktuell im Rahmen ihrer beobachteten Intervalle und
+  Archivverzoegerung. Keine identischen Duplikate, widerspruechlichen oder
+  rueckwaerts laufenden Zeitstempel; strukturell ungueltige Zeilen 0.
+- rain0: 24 Werte, Stundenabstand; t1/thb0: je 287, Median 300s;
+  t2: 958, Median 90s. Keine inneren Luecken ueber der beobachteten Kadenz.
+- data0: 15 verlaengerte Abstaende bis 121s; sol0/uv0: je 24 bis 92s;
+  wind0: 24 bis 90s bei normal 15s. Sichtbare Beispiele fallen auf die
+  stuendlichen Checkpoint-/Wiederanlaufzeiten. Native Logs enthalten dabei
+  leere TCP-Antworten; kurze Dienstauszeit ist keine Zusage gleich kurzer
+  Datenluecken. Vollstaendige Einzelkorrelation bleibt im Bericht nachzusehen.
+- Aktueller Roharchivindex: Offset=Dateigroesse=1191745, Inode passend,
+  history_importing=false, rejected=0. Der alte provenance.jsonl-Eintrag
+  hat abweichende Inode bei gleichem Offset/Dateiende; aktive Verarbeitung
+  dieses Altpfads ist damit nicht belegt. Nicht als Roharchivverlust werten.
+- Dashboardintervalle sind Anzeigeannahmen, nicht Sollvorgaben der Quelle.
+  Die Lueckenauswertung verwendet beobachtete Medianabstaende, keine erfundenen
+  exakten Sollslots. Der noch nicht archivierte Fensterrand wird separat als
+  Messalter ausgewiesen. Kein Nachweis vollstaendig lueckenlosen Empfangs.
+
+### Root-RO-Boot und Empfang danach bestaetigt
+
+Der Betreiber hat `return-root-ro-pi50.py prepare` erfolgreich ausgefuehrt und
+anschliessend regulaer neu gestartet. Sicherung/Diagnose:
+`/root/meteohub-root-ro-before-rvs20loq`. Der Helfer sichert vor der
+Bootaenderung explizit die Runtime und speichert einen Archivpraefix-Hash.
+Der Root-RO-Pruefhelfer rebootet selbst nicht. Rueckweg bei Bootproblemen:
+in der Bootpartition `cmdline.txt` nur `overlayroot=tmpfs:recurse=0` durch
+`overlayroot=disabled` ersetzen (Karte erforderlichenfalls am vorhandenen
+Linux-Kartenleser bearbeiten).
+
+- Nach neuer Anmeldung: neue Boot-ID, Host-Overlay/tmpfs aktiv; Root-Unterlage,
+  Boot und Persistenz RO. Archivpraefix bytegleich erhalten, alle vier
+  Anwendungsunits aktiv, keine fehlgeschlagenen Units. Remount-Dienst erfolgreich.
+- Generation `gen-c4d44c73704e4c5a842ddca214b8006c` wiederhergestellt;
+  Sechs-Stunden-Plan und Altersgrenze 23400 Sekunden erhalten. Naechster
+  automatischer Lauf weiterhin 11.11.13:00 MEZ.
+- Native Webseite um 08:31 MEZ: System-ID `UJpMany2`, **activated**.
+  Dropbear-/smbd-PID-Warnungen bleiben erwartbar, da diese Daemons nicht in
+  der privaten Laufzeit eingerichtet sind. Native Anzeigen `last data: never`,
+  Zeitsynchronisation und WAN bleiben getrennte, ungeklaerte Anzeigepunkte;
+  keine PID-Attrappen oder zusaetzlichen Dienste eingerichtet.
+- Um 08:29:30 MEZ: Index noch beim Nacharbeiten (2000 Datensaetze, einzelne
+  Sensoren 60--90s zurueck); Archiv 1192811 Bytes. Dieser erste Punkt allein
+  war noch kein sicherer Nachweis neuer Messungen nach Boot.
+- Um **08:32:16 MEZ**: Archiv **1193497 Bytes**, also **686 Bytes Zuwachs**.
+  Windzeitstempel ca. **08:30:28 MEZ**, damit neue Aufzeichnung nach Boot
+  nachgewiesen. Indexrueckstand fuer alle acht Sensoren 0, kein Indexfehler.
+  Regenalter 3213,9s passt zum Stundenintervall; kein neuer Regenwert seit
+  Boot behauptet. Runtime zuletzt etwa 6,3 MiB von 320 MiB belegt.
+
+**Wiederanlauf einschliesslich RO, Aktivierung, Archiv und Index abgenommen.**
+Offen bleibt die Zielabnahme des ersten automatischen Sechs-Stunden-Laufs
+um 13:00 MEZ und seines Einflusses auf die Empfangsluecke. Die bereits
+belegten stuendlichen Laeufe ersetzen diesen Nachweis nicht. Ebenso offen:
+vollstaendige Ursachen-/Einzelkorrelation der 24h-Luecken und native
+Aggregation/Exporte/Statusanzeigen; kein pauschales "alles abgeschlossen".
+
+### Gesicherte Werkzeuge und lokale Pruefungen
+
+- `tools/set-checkpoints-6h.py`: prueft den alten oder bereits aktualisierten
+  Helferhash, erzeugt exakt den getesteten neuen Helfer und ruft dessen
+  gesicherte Intervallumstellung auf. Download-SHA:
+  `e6e57cfccbfd9a3c57ed0db6ffb1d1852864fbfd889a197f9cf2ec873cbff207`.
+- `tools/audit-day-pi50.py`: reine Leseauswertung mit lokalem Bericht;
+  keine Dienst-/Mount-/Bootaenderung. Download-SHA:
+  `90006d4c922db416711df7b4bb8e0d5fd19d4e93863faecdde7d389b52a102db`.
+- `tools/return-root-ro-pi50.py`: stationsgebundene UUID-Pruefungen,
+  Sicherung/Bootvorbereitung und getrennter Nach-Boot-Check. Download-SHA:
+  `d2899793f51a6891e92039cd0b01438219e185ecd3413c0697941892533da5ff`.
+
+Lokale RAM-Tests: vier Tests mit `--isolation` erfolgreich, einschliesslich
+echter systemd-/ext4-/Overlay-/tmpfs-Fixtures, Sechs-Stunden-Timerdarstellung,
+Altersgrenze und Ruecknahme bei injiziertem Schreibfehler. Kalenderabstaende
+ueber Tagesgrenze geprueft. Upgrade gegen Original- und neuen Helferhash sowie
+Ablehnung unbekannter Inhalte geprueft. Audit mit synthetischen Rohdaten
+(Luecke, Duplikat, Konflikt, Ruecksprung, Rand, fehlender Sensor, Zukunft,
+unvollstaendige Zeile) sowie echten temporaeren Dateien/SQLite durchlaufen.
+RO-Helfer mit temporaeren Dateien und ersetzten Hostbefehlen geprueft:
+Vorbereitung/Nachcheck, abweichendes Archiv, Sicherungsfehler vor Bootaenderung,
+Bootschreibfehler mit Ruecknahme und RO-Remount. Diese lokalen RO-Fixtures
+sind keine echten Pi-Boots; die Zielabnahme steht separat oben.
+
+Downloadartefakte auf dem eigenen HTTP-Host bereitgestellt und jeweils
+bytegleich per HTTP abgerufen. Keine Aktivierungswerte oder Zugangsdaten
+enthalten. Lokale Dokumentation/Quellen sichern; kein GitHub-Push beauftragt.
 
 ## Feierabendstand 9. November, ca. 23:00 CET: permanente Identitaet installiert
 
