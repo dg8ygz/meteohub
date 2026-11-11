@@ -296,3 +296,7 @@ Standortbezogene Betriebsbelege liegen außerhalb dieses Repositorys in einem
 privaten Verzeichnis. Sie enthalten interne Angaben und gehören nicht auf
 GitHub. Commits erfolgen zunächst lokal; eine Veröffentlichung ist ein
 getrennter Schritt.
+
+Vorbereitet, noch nicht auf dem Pi installiert: [Morgenpaket 12.11.2026](docs/morning-maintenance-2026-11-12.md)
+für dauerhafte Host-Statusanzeige, natives Last-data-Laufzeitverzeichnis und
+begrenzte Checkpoints mit erhaltener TCP-Verbindung samt Rückweg und Testgrenzen.
