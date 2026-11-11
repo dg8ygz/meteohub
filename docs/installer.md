@@ -33,6 +33,83 @@ Für eine neue Einrichtung: Ausgangspunkt → Oberfläche →
 [direkter nativer TCP-Empfang](#direkter-nativer-meteohub-tcp-empfang) →
 Dashboard/SVG. Die als historisch markierten Plugin-Tests sind dabei auszulassen.
 
+## Updates auf dieser Trixie-Portierung
+
+**Stand 11. November 2026: Der native Updater unter Maintenance / Software
+Update funktioniert hier nicht als unterstützter Updateweg. Weder Auto-/Web-
+Update noch das Einspielen einer Herstellerdatei über diese Oberfläche verwenden.**
+Der Menüpunkt ist weiterhin sichtbar; er wurde nicht technisch entfernt oder
+zu einem neuen Updater umgebaut. Daraus folgt keine Zusage, dass ein Klick
+wirkungslos wäre. Diese Einschränkung betrifft unsere Trixie-Portierung,
+nicht pauschal alle ursprünglichen Meteohub-Geräte.
+
+Der ursprüngliche Ablauf wurde im 5.1e-CGI nachvollzogen:
+
+- Die Suche ruft `http://www.meteohub.de/cgi-bin/updatecheck.pl?vers=5.1e`
+  mit `wget` auf. Eine leere Antwort führt ebenfalls zu „No update available“;
+  diese Meldung beweist also keine erfolgreiche Verbindung zum Hersteller.
+- Bei einer angebotenen Version wird `updatedownload VERSION` über
+  `/dev/meteohub` an den historischen Hintergrundprozess übergeben. Die
+  Downloadadresse liegt unter `http://www.meteohub.de/files/`.
+- Liegt eine Version bereits in `update.vers` bereit, löst derselbe
+  Formularbefehl die Installation aus: Archiv entpacken und beispielsweise
+  `update.rpi` starten. Es ist dann keine bloße Updateprüfung mehr.
+
+Die alten Pakete enthalten auch Betriebssystemdateien, Bibliotheken und
+Startskripte. Sie kennen unsere Trixie-Bibliotheksanpassungen, isolierten
+systemd-Dienste und RAM-/RO-Speicherung nicht. Netz-/Schreibbeschränkungen
+sind keine verlässliche Absicherung gegen eine teilweise ausgeführte Änderung.
+Die aktuelle Erreichbarkeit des Hersteller-Endpunkts wurde dabei nicht geprüft.
+
+### Meteohub-Kernprogramme
+
+Der derzeit implementierte, fest geprüfte Zielstand ist **5.1e (Build 277)**.
+`install-pi.py install` bereitet diesen Stand für eine neue bzw. passende
+vorbereitete Installation vor; es ist **kein allgemeiner Versions-Upgrader**.
+Es sucht keine neueren Herstellerstände. Ein erneuter Aufruf auf einer bereits
+umgebauten Betriebsinstallation ersetzt keinen geplanten Updateablauf.
+
+Der vorgesehene Weg für ein Herstellerpaket ist:
+
+1. Paket separat vom Hersteller beziehen, Herkunft und Prüfsumme dokumentieren.
+2. Inhalt prüfen und in einem **neuen Kandidatenverzeichnis** nur die benötigten
+   Programme samt Bibliotheksanpassung vorbereiten. Hersteller-Update-Skripte
+   nicht ausführen und das Paket nicht über das Host-Dateisystem entpacken.
+3. Bibliotheksauflösung, isolierten CGI-Start und Logger-Kompatibilität prüfen.
+   Vor der Umschaltung Konfiguration, Aktivierung, Messdaten und bisherige
+   Programmstände sichern; einen konkreten Rückweg bereithalten.
+4. Dienste kontrolliert auf den geprüften Kandidaten umstellen und danach
+   native Versions-/Aktivierungsanzeige, neue Rohdaten, Index und Neustart prüfen.
+
+Die [ausführliche Pi-Anleitung](raspberry-pi-setup.md#b5q-zielversion-51e-vom-hersteller-beziehen)
+beschreibt die vorhandene **5.1e-Vorbereitung** mit `tools/test-update.py` und
+`tools/stage-update.py`. Die Werkzeuge sind auf bekannte Dateien und Prüfsummen
+festgelegt. Ein späterer Herstellerstand braucht eine neue inhaltliche Prüfung
+und Anpassung dieser Werkzeuge; ein automatischer Upgrade-/Umschaltbefehl für
+beliebige neue Versionen ist noch nicht implementiert.
+
+### Dashboard/SVG und Projekt-Helfer
+
+Repository-Änderungen zunächst mit `git pull --ff-only` beziehen und die
+jeweilige Änderungs-/Installationsanleitung beachten. Das aktualisiert nur den
+Checkout, nicht automatisch installierte Helfer, systemd-Dateien oder Kandidaten.
+Für Dashboard/SVG gibt es den separaten, unten beschriebenen Befehl
+`python3 install-pi.py extension-update` und `extension-rollback` als Rückweg.
+Dieser Befehl aktualisiert keine proprietären Meteohub-Kernprogramme.
+
+**Bei aktiviertem Host-Overlay und RAM-Runtime:** Änderungen an Hostdateien
+müssen über einen geplanten Wartungsboot dauerhaft installiert werden.
+Änderungen an der RAM-Runtime benötigen zusätzlich den passenden
+Sicherungs-/Wiederherstellungsablauf. Ein erfolgreicher `git pull` oder eine
+Änderung im laufenden Overlay ist kein Nachweis, dass sie einen Neustart
+übersteht. Die untenstehenden Extension-Befehle sind keine vollständige
+Updateanleitung für diese spätere RAM-/RO-Ausbaustufe; dafür ist ein gesonderter
+Wartungsablauf mit Sicherung, Rückweg und Neustartabnahme nötig.
+
+Debian-/Raspberry-Pi-OS-Pakete werden getrennt über die Paketverwaltung des
+Hosts im geplanten Wartungsbetrieb aktualisiert. Das native Meteohub-Menü
+verwaltet weder diese Pakete noch unsere Kompatibilitätshelfer.
+
 ## Ausgangspunkt
 
 Raspberry Pi 3 Model B/B+ oder Pi 4 Model B mit Raspberry Pi OS Lite **Trixie,

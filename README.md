@@ -63,6 +63,12 @@ unter [Bekannte Grenzen](#bekannte-grenzen-und-noch-ausstehende-arbeit).
 
 ## Einstieg
 
+**Updates:** Der eingebaute Updater unter **Maintenance / Software Update**
+ist in dieser Trixie-Portierung kein funktionsfähiger, unterstützter Updateweg.
+Herstellerpakete dort nicht installieren. Den vorgesehenen Weg für
+[Meteohub-Kernprogramme, Dashboard und Host-System](docs/installer.md#updates-auf-dieser-trixie-portierung)
+beachten; `git pull` allein aktualisiert keine laufende Installation.
+
 Die bisher einzeln ausgeführten Pi-Schritte sind jetzt in
 [`install-pi.py`](install-pi.py) gebündelt. Die
 [Installer-Anleitung](docs/installer.md) beschreibt Installation, Wiederaufnahme,
