@@ -1,4 +1,14 @@
-# Arbeitsstand und Fortsetzung – 7. November 2026
+# Arbeitsstand und Fortsetzung
+
+**Aktueller Betreiberbeleg vom 11. November 2026:**
+[Tagesprüfung 00:00–20:20 MEZ](day-check-2026-11-11.md).
+Die automatischen Sechs-Stunden-Sicherungen um 13:00 und 19:00 sind erfolgreich
+nachgewiesen; anschließend Empfang, Index, Anwendungen und RO-Zustand geprüft.
+Es bleiben jeweils 90s Wind-Messwertabstand beim Sichern/Wiederverbinden.
+Der funktionierende Host-Statusadapter bleibt auf Betreiberwunsch temporär.
+Prüfgrenzen und nächste Arbeiten stehen im verlinkten Bericht.
+
+## Historischer Arbeitsstand vom 7. November 2026
 
 **Betriebsnachweis unserer Beispielstation, keine allgemeine Installationsvorgabe.**
 Diese Notiz hält den zuletzt vom Betreiber gemeldeten Stand fest. Sie ist keine
