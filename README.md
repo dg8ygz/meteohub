@@ -17,6 +17,11 @@ noch ein fertiges Installationsimage.
 **Stand: 7. November 2026 – laufender Migrationstest, noch keine vollständige
 Produktionsfreigabe.**
 
+**Neuer Betriebsnachweis vom 11. November:**
+[Tagesprüfung, automatische Sechs-Stunden-Sicherungen und Statusadapter](docs/day-check-2026-11-11.md).
+Beide Sicherungsläufe erfolgreich; bekannte Empfangslücken und noch offene
+Arbeiten sind im Bericht ausdrücklich aufgeführt.
+
 [Installer und Extension-Update](docs/installer.md) ·
 [Dauerbetrieb und Autostart](docs/continuous-operation.md) ·
 [Aktueller Arbeitsstand und nächste Schritte](docs/current-state.md) ·

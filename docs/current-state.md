@@ -1,4 +1,13 @@
-# Arbeitsstand und Fortsetzung – 11. November 2026
+# Arbeitsstand und Fortsetzung
+
+**Betreiberbeleg vom 11. November 2026:**
+[Tagesprüfung 00:00–20:20 MEZ](day-check-2026-11-11.md).
+Die damaligen Sechs-Stunden-Sicherungen um 13:00 und 19:00 waren erfolgreich;
+90s Wind-Messwertabstand beim Sichern/Wiederverbinden blieben bestehen.
+Der Host-Statusadapter war zu diesem Zeitpunkt noch temporär.
+
+## Arbeitsstand bis 11. November 2026
+
 
 **Betriebsnachweis unserer Beispielstation, keine allgemeine Installationsvorgabe.**
 Diese Notiz hält den zuletzt vom Betreiber gemeldeten Stand fest. Sie ist keine
