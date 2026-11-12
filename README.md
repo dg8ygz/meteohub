@@ -17,7 +17,12 @@ noch ein fertiges Installationsimage.
 **Stand: 7. November 2026 – laufender Migrationstest, noch keine vollständige
 Produktionsfreigabe.**
 
-**Neuer Betriebsnachweis vom 11. November:**
+**Neuer Betriebsnachweis vom 12. November:**
+[Dauerhafte Statusanzeige und native Last-data-Anzeige nach Neustart](docs/morning-maintenance-2026-11-12.md).
+Erster ruhiger Checkpoint erfolgreich; automatische Sicherung und Lückenprüfung
+stehen noch aus.
+
+**Betriebsnachweis vom 11. November:**
 [Tagesprüfung, automatische Sechs-Stunden-Sicherungen und Statusadapter](docs/day-check-2026-11-11.md).
 Beide Sicherungsläufe erfolgreich; bekannte Empfangslücken und noch offene
 Arbeiten sind im Bericht ausdrücklich aufgeführt.

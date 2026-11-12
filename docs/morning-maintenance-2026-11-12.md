@@ -1,11 +1,53 @@
 # Vorbereitung für den Morgen des 12.11.2026
 
-Status: vorbereitet und lokal getestet, **noch nicht auf dem Stations-Pi installiert**.
-Der Betreiber hat ein herunterladbares Paket für den nächsten Morgen sowie
-Dokumentation und Commit beauftragt. Keine nächtlichen Dienständerungen am Pi.
-Der bisherige SSH-Zugang zur .50 schlug bei dieser Vorbereitung fehl; deshalb
-ist der aktuelle Zustand von `/run/meteohub-live-1000/meteohub` dort nicht direkt
-nachgewiesen. Zielprüfungen im Installer dürfen diese Lücke nicht überspringen.
+Status am **12.11.2026, 08:13:34 MEZ**: vom Betreiber auf .50 installiert und
+nach Rückkehr zum Host-Overlay geprüft. Dauerhafte SSH-/Zeit-Statusanzeige und
+native Last-data-Anzeige sind nach dem Neustart bestätigt. Der erste manuelle
+Freeze-Checkpoint im Installer war erfolgreich; der nächste automatische
+6h-Lauf und seine Auswirkungen auf Messwertlücken bleiben **OFFEN**.
+
+Die Zielnachweise stammen aus den vom Betreiber übermittelten Konsolen- und
+CGI-Ausgaben, nicht aus einer eigenen aktuellen SSH-Abfrage. Die nächtliche
+Vorbereitung änderte keine Dienste auf dem Pi.
+
+## Zielabnahme am 12. November
+
+- Download mit SHA256 geprüft; `prepare`, Wartungsboot, `apply` und erneuter
+  Overlay-Boot durchgeführt. Rückwegsicherung:
+  `/root/meteohub-morning-before-7jutpit6`.
+- `apply`: private native PID-/ps-Sicht bestanden, Logger-PID unverändert,
+  erster ruhiger Checkpoint erfolgreich. Der Original-Logger hatte bereits
+  selbst `logger.dat` geschrieben (Alter 3,7s).
+- `check` nach dem zweiten Boot: permanente Dateien einschließlich RO-Unterlage,
+  Host-Overlay, Statuspfade, alle vier Anwendungen, Archivpräfix und 6h-Plan
+  bestanden. Keine fehlgeschlagenen Units gemeldet. Aktive/gesicherte Generation
+  `gen-5c2a7622b9444417bc196090681444d8`, RAM 6.959.104 von 335.544.320 Bytes,
+  Sicherungsalter 61,2s. Die native Datei fehlte bei diesem frühen Check noch;
+  die Ausgabe ließ deren Prüfung ausdrücklich offen.
+- Folgeprüfung 08:11:18 MEZ: Statusverzeichnis UID/GID meteohub, Modus 0700;
+  Datei enthält `1794467471` = 08:11:11 MEZ. Damit schreibt der Original-Logger
+  die flüchtige Datei auch nach einem neuen Boot. Keine synthetischen Werte.
+- Archivbeobachtung zu diesem Zeitpunkt: 1.554.305 Bytes, letzte Schreibung
+  242s alt, keine Lesefehler. Der Index lag je Sensor noch bis 300s hinter dem
+  Roharchiv, zuletzt 2.000 Datensätze hinzugefügt. Das passt zum Startimport;
+  vollständiges Aufholen und lückenlose neue Archivierung sind damit allein
+  noch nicht nachgewiesen.
+- Native Systemseite um **08:13:34 MEZ**: `Weather Data Logging: running
+  (last data: 9 sec)`, `SSH Login: running`, `Time Synchonization: running`,
+  `SMB Shares: stopped`. Keine bisherigen PID-Datei-Fehlermeldungen, Aktivierung
+  weiter `activated`. SMB bleibt korrekt gestoppt, da kein Dienst installiert ist.
+
+### Noch offen
+
+Der nächste planmäßige Lauf ist am 12.11. um **13:00 MEZ / 12:00 UTC**.
+Danach sind Sicherungserfolg, Writer-PIDs/Verbindungsfortbestand, RO-Zustand und
+Sensorabstände über den Sicherungszeitpunkt zu prüfen. Ein erfolgreicher
+Installer-Checkpoint ersetzt diese Betriebsabnahme nicht. Keine automatische
+Hintergrundbeobachtung eingerichtet oder zugesagt.
+
+Die native Anzeige `WAN IP: no internet access` ist separat ungeklärt; sie
+beweist allein keinen allgemeinen Internetausfall. Historische Diagramme,
+Recomputation und Exporte sind mit dieser Statusprüfung nicht abgenommen.
 
 ## Änderungen
 
@@ -52,8 +94,8 @@ Statische Prüfung der vorhandenen privaten 5.1e-Binaries:
   zum Funktionsende (`0x3be0c` → `0x3be2c`).
 - Die bisherige gemeinsame Runtime-Unit legt nur das äußere `/run`-Verzeichnis
   an. Ein frischer Boot kann daher den für den nativen Status benötigten
-  Unterordner verlieren. Das ist eine konkrete plausible Ursache, noch kein
-  auf dem aktuellen Pi ausgeführter ARM-Reproduktionsnachweis.
+  Unterordner verlieren. Die Zielabnahme oben bestätigt nach Bereitstellung des Unterordners
+  das Schreiben durch den Original-Logger und die korrekte CGI-Anzeige.
 
 Keine native Binärdatei ist im Download oder Commit enthalten.
 
@@ -194,4 +236,5 @@ SHA256: `72549ea03eadc159ff13bcb7c6666b9070352a1cb6fae96315ae4b2157b58de1`
 Der Download enthält ausschließlich die drei eigenen Python-Helfer. Der Builder
 `tools/build-morning-bundle.py` erzeugt ihn deterministisch; derselbe Dateistand
 muss denselben Hash ergeben. HTTP-Download und Hash wurden auf dem
-Entwicklungsrechner gegengeprüft; Erreichbarkeit von .50 ist noch nicht geprüft.
+Entwicklungsrechner gegengeprüft. Download und Hashprüfung auf .50 wurden
+am 12.11. durch die Betreiber-Ausgabe bestätigt.

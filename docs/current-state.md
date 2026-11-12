@@ -1,5 +1,12 @@
 # Arbeitsstand und Fortsetzung
 
+**Aktuell: 12. November 2026, 08:13 MEZ.**
+[Dauerhafte Statusadapter und native Last-data-Anzeige nach Neustart bestätigt](morning-maintenance-2026-11-12.md).
+Host-RO-Overlay, alle Anwendungen, Archivpräfix und 6h-Plan geprüft. Erster
+ruhiger Installer-Checkpoint erfolgreich; automatischer Lauf um 13:00 MEZ
+und Messwertlücken danach noch **OFFEN**. Betreiberbelege, keine laufende
+Überwachung. Die folgenden älteren Befunde sind historisch einzuordnen.
+
 **Betreiberbeleg vom 11. November 2026:**
 [Tagesprüfung 00:00–20:20 MEZ](day-check-2026-11-11.md).
 Die damaligen Sechs-Stunden-Sicherungen um 13:00 und 19:00 waren erfolgreich;
