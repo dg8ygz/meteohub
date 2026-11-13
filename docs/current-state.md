@@ -1,11 +1,14 @@
 # Arbeitsstand und Fortsetzung
 
-**Aktuell: 12. November 2026, 08:13 MEZ.**
-[Dauerhafte Statusadapter und native Last-data-Anzeige nach Neustart bestätigt](morning-maintenance-2026-11-12.md).
-Host-RO-Overlay, alle Anwendungen, Archivpräfix und 6h-Plan geprüft. Erster
-ruhiger Installer-Checkpoint erfolgreich; automatischer Lauf um 13:00 MEZ
-und Messwertlücken danach noch **OFFEN**. Betreiberbelege, keine laufende
-Überwachung. Die folgenden älteren Befunde sind historisch einzuordnen.
+**Aktuell: 13. November 2026, 08:20 MEZ.**
+[24-Stunden-Abnahme der ruhigen Checkpoints bestanden](day-check-2026-11-13.md):
+alle acht Sensorreihen ohne auffällige innere Lücken, vier automatische
+Freeze-Sicherungen erfolgreich und jeweils unveränderte Logger-PID.
+Host-Schreibschutz, laufende Anwendungen und dauerhafter Statusadapter bestätigt.
+Betreiber-Ausgabe, keine eigene SSH-Abfrage oder laufende Überwachung.
+Userspace-Puffer, Wiederherstellung dieser Freeze-Sicherungen und die separate
+provenance-Inode bleiben ausdrücklich außerhalb der abgeschlossenen Abnahme.
+Die folgenden älteren Befunde sind historisch einzuordnen.
 
 **Betreiberbeleg vom 11. November 2026:**
 [Tagesprüfung 00:00–20:20 MEZ](day-check-2026-11-11.md).

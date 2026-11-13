@@ -14,13 +14,19 @@ Bestandteil der Webcam-Software. Das Projekt ist keine offizielle
 Meteohub-Veröffentlichung und enthält weder die proprietären Originalprogramme
 noch ein fertiges Installationsimage.
 
-**Stand: 7. November 2026 – laufender Migrationstest, noch keine vollständige
+**Stand: 13. November 2026 – laufender Migrationstest, noch keine vollständige
 Produktionsfreigabe.**
 
-**Neuer Betriebsnachweis vom 12. November:**
+**Neuer Betriebsnachweis vom 13. November:**
+[24 Stunden mit vier ruhigen Sicherungen bestanden](docs/day-check-2026-11-13.md):
+keine auffälligen inneren Lücken in acht Sensorreihen, Logger-PID bei allen
+Sicherungen erhalten, Schreibschutz und Statusadapter bestätigt. Grenzen der
+Pufferung und Wiederherstellungsprüfung bleiben ausdrücklich dokumentiert.
+
+**Betriebsnachweis vom 12. November:**
 [Dauerhafte Statusanzeige und native Last-data-Anzeige nach Neustart](docs/morning-maintenance-2026-11-12.md).
-Erster ruhiger Checkpoint erfolgreich; automatische Sicherung und Lückenprüfung
-stehen noch aus.
+Erster ruhiger Checkpoint und native Statusanzeige bestätigt; die anschließende
+24-Stunden-Prüfung ist oben verlinkt.
 
 **Betriebsnachweis vom 11. November:**
 [Tagesprüfung, automatische Sechs-Stunden-Sicherungen und Statusadapter](docs/day-check-2026-11-11.md).
@@ -31,8 +37,8 @@ Arbeiten sind im Bericht ausdrücklich aufgeführt.
 [Dauerbetrieb und Autostart](docs/continuous-operation.md) ·
 [Aktueller Arbeitsstand und nächste Schritte](docs/current-state.md) ·
 [Stationsbeispiel und feste Softwarevorgaben](docs/station-example.md) ·
-[RO-/RAM-Konzept (noch offen)](docs/read-only-plan.md) ·
-[RAM-Sicherung (lokal getestet, Pi-Abnahme offen)](docs/ram-storage.md) ·
+[RO-/RAM-Konzept](docs/read-only-plan.md) ·
+[RAM-Sicherung und Prüfgrenzen](docs/ram-storage.md) ·
 [Funktionen](#was-das-projekt-bereits-bietet) ·
 [Projektstatus](#aktueller-projektstatus) ·
 [Raspberry-Pi-Anleitung für Einsteiger](docs/raspberry-pi-setup.md) ·
@@ -63,7 +69,7 @@ Arbeiten sind im Bericht ausdrücklich aufgeführt.
 | ARM-Anwendung im Trixie-Testgast | Native Oberfläche und historische PNG-Erzeugung getestet; Host-Neustart mit Wiederanlauf geprüft. |
 | Neue Wetteranzeige | Dashboard, SVG-Einbettung, Authentifizierungsgrenzen und Datenkorrekturen im Testsystem geprüft. |
 | Lokale Regressionstests | 17 Unit-Tests und ein realer Plugin-Prozesstest bestanden. |
-| Langzeitbetrieb | Test eingerichtet; durchgehende 24-Stunden-Abnahme und vollständiger Datensatzabgleich noch offen. |
+| Langzeitbetrieb | 24h mit vier Freeze-Sicherungen und acht Sensorreihen geprüft; keine auffälligen inneren Lücken. Vollständiger Abgleich mit der Quelle und Langzeitwachstum weiter offen. |
 | Produktive Umstellung | Archiv-/Aggregat-/Exportintegration und vollständige Wartungsabnahme noch offen. |
 | Pi-Installation | `install-pi.py` bündelt die Vorbereitung auf Pi 3/4 mit Trixie ARM64; separater Dashboard-/SVG-Updater. Vollständiger Produktionsinstaller und Abnahme noch offen. |
 
@@ -288,8 +294,9 @@ Betriebsbelege werden nicht in ein öffentliches Repository exportiert.
 Hinweise zum sicheren Mitlesen und zum behobenen Pipe-Hänger stehen in
 [Feed und Logger-Wiederanlauf](docs/feed-recovery.md).
 
-- Die durchgehende 24-Stunden-Abnahme und der vollständige Datensatzabgleich
-  sind noch nicht abgeschlossen. Frühere Punktprüfungen ersetzen dies nicht.
+- Die begrenzte 24-Stunden-Abnahme ist am 13.11. abgeschlossen. Vollständiger
+  Datensatzabgleich mit der Quelle, längerfristiges RAM-Wachstum und echte
+  Wiederherstellung der neuen Freeze-Sicherungen bleiben offen.
 - Produktive Archiv-/Aggregat-/Exportintegration, vollständige Wartungsabnahme
   und die endgültige Stationszuführung bleiben offen.
 - Der negative Regen-Gesamtzähler ist noch ungeklärt; nur dessen Auswirkung auf
@@ -307,6 +314,6 @@ privaten Verzeichnis. Sie enthalten interne Angaben und gehören nicht auf
 GitHub. Commits erfolgen zunächst lokal; eine Veröffentlichung ist ein
 getrennter Schritt.
 
-Vorbereitet, noch nicht auf dem Pi installiert: [Morgenpaket 12.11.2026](docs/morning-maintenance-2026-11-12.md)
+Am 12.11. installiert und nach Neustart geprüft: [Morgenpaket 12.11.2026](docs/morning-maintenance-2026-11-12.md)
 für dauerhafte Host-Statusanzeige, natives Last-data-Laufzeitverzeichnis und
 begrenzte Checkpoints mit erhaltener TCP-Verbindung samt Rückweg und Testgrenzen.

@@ -3,8 +3,9 @@
 Status am **12.11.2026, 08:13:34 MEZ**: vom Betreiber auf .50 installiert und
 nach Rückkehr zum Host-Overlay geprüft. Dauerhafte SSH-/Zeit-Statusanzeige und
 native Last-data-Anzeige sind nach dem Neustart bestätigt. Der erste manuelle
-Freeze-Checkpoint im Installer war erfolgreich; der nächste automatische
-6h-Lauf und seine Auswirkungen auf Messwertlücken bleiben **OFFEN**.
+Freeze-Checkpoint im Installer war erfolgreich. Am 13.11. wurde die
+[24-Stunden-Abnahme mit vier automatischen Läufen](day-check-2026-11-13.md)
+bestätigt: unveränderte Logger-PID und keine auffälligen inneren Sensorlücken.
 
 Die Zielnachweise stammen aus den vom Betreiber übermittelten Konsolen- und
 CGI-Ausgaben, nicht aus einer eigenen aktuellen SSH-Abfrage. Die nächtliche
@@ -37,13 +38,14 @@ Vorbereitung änderte keine Dienste auf dem Pi.
   `SMB Shares: stopped`. Keine bisherigen PID-Datei-Fehlermeldungen, Aktivierung
   weiter `activated`. SMB bleibt korrekt gestoppt, da kein Dienst installiert ist.
 
-### Noch offen
+### Nachfolgende Betriebsabnahme und verbleibende Grenzen
 
-Der nächste planmäßige Lauf ist am 12.11. um **13:00 MEZ / 12:00 UTC**.
-Danach sind Sicherungserfolg, Writer-PIDs/Verbindungsfortbestand, RO-Zustand und
-Sensorabstände über den Sicherungszeitpunkt zu prüfen. Ein erfolgreicher
-Installer-Checkpoint ersetzt diese Betriebsabnahme nicht. Keine automatische
-Hintergrundbeobachtung eingerichtet oder zugesagt.
+Die zunächst offene automatische Betriebsabnahme wurde mit der
+[Prüfung vom 13.11.](day-check-2026-11-13.md) abgeschlossen. Vier geplante
+Freeze-Läufe waren erfolgreich, ohne auffällige Sensorabstände oder Änderung
+der Logger-PID. Die Prüfung beweist keinen vollständigen Flush interner
+Logger-Puffer und keine Wiederherstellung dieser vier Sicherungsgenerationen.
+Keine automatische Hintergrundbeobachtung eingerichtet oder zugesagt.
 
 Die native Anzeige `WAN IP: no internet access` ist separat ungeklärt; sie
 beweist allein keinen allgemeinen Internetausfall. Historische Diagramme,
