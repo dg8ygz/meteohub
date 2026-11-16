@@ -40,8 +40,10 @@ kleinere Einsparungen auf Boot und Persistenz.
   geprüften verbliebenen Laufzeiten/Generationen; Aktivierungsfelder dort leer.
 - Alle fünf Anwendungs-Units aktiv, keine fehlgeschlagenen Units. Root-Unterlage,
   Bootpartition und Persistenz wieder RO. Dashboard ohne Rückstand gegenüber
-  dem vorhandenen Roharchiv. Bis 21:56:26 war noch kein neuer Archivzuwachs nach dem letzten Dienststart
-  belegt; aktive Units allein sind kein Nachweis weiterer Aufnahme.
+  dem vorhandenen Roharchiv. Um 21:56:58 ist auch neuer Empfang nachgewiesen: Archivzuwachs von
+  3.261.495 auf 3.262.298 Byte, letzter Windwert etwa 23 Sekunden alt.
+  Der Index importierte zu diesem Zeitpunkt noch die Historie und lag wieder
+  hinter den gerade eingetroffenen Rohdaten; kein abgeschlossener Dauertest.
 - Native CGI-Abfrage liefert erwartungsgemäß „Demo Version has timed out“ mit
   der tatsächlichen Geräteidentität. Eine aktivierte native Weboberfläche wird
   nach der ausdrücklich gewünschten Entfernung nicht mehr zugesagt.
