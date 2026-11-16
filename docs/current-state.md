@@ -23,7 +23,9 @@ werden. Der Schalter ist dauerhaft gespeichert, die Freigabe selbst gilt bis
 zum Neustart. Vorhandene Passwortprüfung bleibt aktiv.
 
 Offen sind der erneute Boot-Nachweis dieser letzten Ergänzung und die leeren
-nativen `thb0`-Aggregate bei den bekannten auffälligen Quelldaten. Kein neuer
+nativen `thb0`-Aggregate. Der [isolierte THB-Vergleich](thb-analysis-2026-11-16.md)
+grenzt deren Ursache inzwischen auf die Verarbeitung des Taupunktfelds ein;
+die produktive Druckauswertung wurde noch nicht umgestellt. Kein neuer
 24-Stunden-Test und keine laufende Überwachung werden damit behauptet.
 Private Konfiguration, Aktivierungsdaten, Herstellerbinärdateien und vollständige
 Betriebsbelege werden nicht veröffentlicht.

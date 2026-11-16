@@ -130,11 +130,12 @@ separat beschrieben in [Webzugriff](web-access-pi50.md).
 - Dauerhafte Dateien/Autostart verifiziert; ein erneuter Pi-Boot wurde bei
   diesem Eingriff nicht durchgeführt und bleibt als Boot-Abnahme offen.
 - **Separater Quelldatenbefund:** `thb0`-Aggregate bleiben beim Originalauswerter
-  leer. Die bekannten Rohwerte enthalten 128,9 °C und weitere unplausible
-  THB-Felder; das Dashboard nutzt davon bewusst nur Druck. Zusammenhang mit
-  der nativen Wertebereichsprüfung ist plausibel, noch nicht einzeln durch
-  einen kontrollierten Wertevergleich nachgewiesen. Keine Ersatztemperatur,
-  keine Änderung der Rohdaten. Siehe [Druckkanal](feed-recovery.md).
+  leer. Der anschließende [isolierte Vergleich um 21:35–21:38 MEZ](thb-analysis-2026-11-16.md)
+  grenzt die Ablehnung auf das dritte THB-Messwertfeld ein, das der Auswerter
+  als Taupunkt anders skaliert als das Temperaturfeld. Die ursprüngliche
+  Temperaturvermutung allein ist damit widerlegt. Keine Testwerte wurden
+  produktiv übernommen; eine Druckauswertung ohne erfundene Klimawerte bleibt
+  offen. Siehe auch [Druckkanal](feed-recovery.md).
 
 Private Installations-/Abnahmebelege auf .34:
 `/var/local/meteohub-private/wan-recompute-20261116/`. Vollständige native
