@@ -1,6 +1,15 @@
 # Arbeitsstand und Fortsetzung
 
-## Aktueller Stand vom 16. November 2026
+## Aktueller Stand: SD-Bereinigung am 16. November 2026
+
+Auf Betreiberwunsch sind Aktivierung und isolierte Hardware-Identitätsanpassung
+von Pi .50 entfernt. Alte Images, Testverzeichnisse, Berichte und aktivierte
+Sicherungskopien wurden auch auf dem dauerhaften SD-Dateisystem gelöscht.
+Wetterarchive bleiben erhalten. Das native CGI meldet nun erwartungsgemäß
+**Demo abgelaufen / nicht aktiviert**; frühere Aktivierungsnachweise sind
+historisch. Siehe [Bereinigung und Grenzen des SD-Abbilds](sd-cleanup-2026-11-16.md).
+
+## Vorheriger Arbeitsstand vom 16. November 2026
 
 Auf Pi .50 sind die [native Auswertung und WAN-IP-Anzeige](native-evaluation.md)
 dauerhaft eingerichtet. Ursache des stehen gebliebenen Auftrags war die
