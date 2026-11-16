@@ -1,5 +1,10 @@
 # Meteohub auf Debian Trixie
 
+Aktueller Ergänzungsstand auf Pi .50 (16.11.2026):
+[native Auswertung und WAN-IP](docs/native-evaluation.md),
+[lokal schaltbarer LAN-Webzugriff](docs/web-access-pi50.md).
+Die ältere Projektbeschreibung unten enthält historische Abnahmestände.
+
 **Eine bestehende Meteohub-Wetterstation auf einer aktuellen Linux-Basis
 weiterbetreiben und ihre Messwerte ohne Flash anzeigen.**
 

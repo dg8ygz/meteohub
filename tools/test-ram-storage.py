@@ -1,0 +1,417 @@
+#!/usr/bin/python3
+"""Real, separately named ext4/overlay/tmpfs/systemd fixtures; no real receiver.
+
+Run as root with --isolation. Uses only temporary mountpoints and test units;
+systemd must see the mounts, so unlike bootstrap tests this is not in unshare.
+"""
+import importlib.util
+import contextlib
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import shutil
+import time
+import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
+
+spec = importlib.util.spec_from_file_location('ram_storage', Path(__file__).with_name('ram-storage.py'))
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+ISOLATION = '--isolation' in sys.argv
+if ISOLATION: sys.argv.remove('--isolation')
+
+
+@contextlib.contextmanager
+def fixture_directory():
+    top = Path(tempfile.mkdtemp(prefix='meteohub-ram-check-', dir='/var/tmp'))
+    try:
+        yield str(top)
+    finally:
+        mounted = m.run('findmnt', '-rn', '-o', 'TARGET').stdout.splitlines()
+        if any(path == str(top) or path.startswith(str(top) + '/') for path in mounted):
+            print('Fixture retained because mounts remain:', top, file=sys.stderr)
+        else:
+            shutil.rmtree(top)
+
+
+class ManifestTests(unittest.TestCase):
+    def test_checkpoint_calendar(self):
+        cfg = dict(prefix='fixture', apps=[], target='fixture.target', persist='/tmp')
+        for minutes in (15, 30, 60, 360):
+            cfg['checkpoint_interval_minutes'] = minutes
+            timer = m.render('/tmp/config', '/usr/bin/true', cfg)['fixture-checkpoint.timer']
+            calendar = next(line.split('=', 1)[1] for line in timer.splitlines() if line.startswith('OnCalendar='))
+            result = m.run('systemd-analyze', 'calendar', '--iterations=3', calendar)
+            self.assertIn('UTC', result.stdout)
+        result = m.run('systemd-analyze', 'calendar',
+                       '--base-time=2026-11-11 00:00:01 UTC', '--iterations=4', calendar)
+        for stamp in ('2026-11-11 06:00:00 UTC', '2026-11-11 12:00:00 UTC',
+                      '2026-11-11 18:00:00 UTC', '2026-11-12 00:00:00 UTC'):
+            self.assertIn(stamp, result.stdout)
+        cfg['checkpoint_interval_minutes'] = 0
+        with self.assertRaises(ValueError): m.render('/tmp/config', '/usr/bin/true', cfg)
+
+    def test_boot_transaction_has_no_ordering_cycle(self):
+        with tempfile.TemporaryDirectory() as td:
+            top = Path(td)
+            prefix = 'meteohub-boot-graph'
+            apps = [prefix + suffix for suffix in ('-web.socket', '-web.service', '-logger.service', '-index.service', '-eval.service')]
+            target = prefix + '.target'
+            cfg = dict(prefix=prefix, apps=apps, target=target, persist=td)
+            units = m.render(top / 'config.json', '/usr/bin/true', cfg)
+            units[target] = '[Unit]\nWants=basic.target ' + ' '.join(apps) + '\nRequires=' + prefix + '.service\n'
+            units[apps[0]] = '[Socket]\nListenStream=127.0.0.1:18099\n'
+            for name in apps[1:]: units[name] = '[Service]\nExecStart=/usr/bin/true\n'
+            for name in apps:
+                units[name] = '[Unit]\nRequires=' + prefix + '.service\nAfter=' + prefix + '.service\n' + units[name]
+            for name, content in units.items(): (top / name).write_text(content)
+            env = dict(os.environ, SYSTEMD_UNIT_PATH=str(top) + ':')
+            checked = subprocess.run(['systemd-analyze', 'verify', '--man=no', '--generators=no', str(top / target)],
+                                     env=env, text=True, capture_output=True)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            self.assertNotIn('ordering cycle', checked.stderr.lower())
+            # Negative control: verify can return zero even after deleting a cyclic boot job.
+            unit = top / (prefix + '.service')
+            unit.write_text(unit.read_text().replace('DefaultDependencies=no', 'DefaultDependencies=yes'))
+            broken = subprocess.run(['systemd-analyze', 'verify', '--man=no', '--generators=no', str(top / target)],
+                                    env=env, text=True, capture_output=True)
+            self.assertIn('ordering cycle', broken.stderr.lower())
+
+    def test_paths_and_links(self):
+        with tempfile.TemporaryDirectory() as td:
+            top = Path(td)
+            (top / 'link').symlink_to('/does/not/exist')
+            self.assertEqual(m.fingerprint(top)['link']['target'], '/does/not/exist')
+            for path in ('/', str(top / 'link'), '/tmp/a,b', '/tmp/../etc'):
+                with self.assertRaises(ValueError): m.safe_path(path)
+
+
+@unittest.skipUnless(ISOLATION, 'requires --isolation as root')
+class LifecycleTests(unittest.TestCase):
+    def test_real_overlay_checkpoints_shutdown_restore_and_failures(self):
+        self.assertEqual(os.getuid(), 0)
+        with fixture_directory() as td:
+            top = Path(td)
+            top.chmod(0o755)
+            runtime = top / 'runtime'; home = runtime / 'root/home/meteohub'; data = runtime / 'root/data'
+            home.mkdir(parents=True); (data / 'dashboard').mkdir(parents=True)
+            (data / 'weather/202601').mkdir(parents=True); (data / 'weather/202611').mkdir()
+            (home / 'meteohub.conf').write_bytes(b'test-settings')
+            (home / 'absolute-link').symlink_to('/home/meteohub/meteohub.conf')
+            (runtime / 'live-install.json').write_text('{}')
+            raw = data / 'weather/202611/raw'; raw.write_text('old\n')
+            os.chown(runtime, 65534, 65534); runtime.chmod(0o750)
+            os.chown(raw, 65534, 65534)
+            (data / 'weather/202601/raw').write_bytes(b'historical\n' * 10000)
+            db = data / 'dashboard/weather.sqlite'
+            m.run(sys.executable, '-c', 'import sqlite3,os,sys; c=sqlite3.connect(sys.argv[1]); '
+                  'c.execute("PRAGMA journal_mode=WAL"); c.execute("CREATE TABLE test(n)"); '
+                  'c.execute("INSERT INTO test VALUES (42)"); c.commit(); os._exit(0)', db)
+            image = top / 'disk.img'
+            with image.open('wb') as f: f.truncate(1024 * 1024 * 1024)
+            m.run('mkfs.ext4', '-q', '-E', 'lazy_itable_init=0,lazy_journal_init=0', image)
+            loop = m.run('losetup', '--find', '--show', image).stdout.strip()
+            persist = top / 'persist'; persist.mkdir()
+            prefix = 'meteohub-ram-test-' + str(time.time_ns())
+            apps = [prefix + suffix for suffix in ('-web.socket', '-web.service', '-logger.service', '-index.service')]
+            target = prefix + '.target'
+            config = top / 'config.json'
+            cfg = dict(runtime=str(runtime), persist=str(persist), ram=str(top / 'ram'),
+                       uuid='', ram_mib=64, apps=apps, target=target, prefix=prefix,
+                       lock=str(top / 'storage.lock'))
+            paths = []
+            s = None
+            try:
+                m.run('mount', '-o', 'ro', loop, persist)
+                cfg['uuid'] = m.run('blkid', '-s', 'UUID', '-o', 'value', loop).stdout.strip()
+                s = m.Storage(cfg)
+                def unit(name, text):
+                    path = Path('/run/systemd/system') / name
+                    path.write_text(text); paths.append(path)
+                unit(target, '[Unit]\nDescription=Private RAM storage test\nWants=' + ' '.join(apps) + '\n')
+                unit(apps[0], '[Socket]\nListenStream=' + str(top / 'socket') + '\n')
+                for name in apps[1:]: unit(name, '[Service]\nExecStart=/usr/bin/sleep infinity\n')
+                m.run('systemctl', 'daemon-reload'); m.run('systemctl', 'start', *apps)
+                with s.lock(), s.paused(): seed = s.capture()
+                helper = top / 'ram-helper.py'
+                helper.write_bytes(Path(__file__).with_name('ram-storage.py').read_bytes())
+                cfg['helper'] = str(helper)
+                cfg['helper_sha256'] = hashlib.sha256(helper.read_bytes()).hexdigest()
+                control_start = len(paths)
+                for name, text in m.render(config, helper, cfg).items():
+                    unit(name, text)
+                # Apply the same Before/After/Requires ordering as the production installer.
+                for name in apps:
+                    p = Path('/run/systemd/system') / (name + '.d') / 'ram.conf'
+                    p.parent.mkdir()
+                    p.write_text('[Unit]\nRequires=' + prefix + '.service\nAfter=' + prefix + '.service\n')
+                    paths.append(p)
+                cfg['installed_files'] = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths[control_start:]}
+                m.save(config, cfg)
+                m.run('systemctl', 'stop', *apps)
+                m.run('systemctl', 'daemon-reload')
+                m.run('systemctl', 'start', *apps)
+                self.assertEqual(m.mount_info(runtime)['fstype'], 'overlay')
+                self.assertEqual((runtime.stat().st_uid, runtime.stat().st_gid, runtime.stat().st_mode & 0o777),
+                                 (65534, 65534, 0o750))
+                def user_access():
+                    m.run('setpriv', '--reuid=65534', '--regid=65534', '--clear-groups',
+                          sys.executable, '-c', 'import sys; p=sys.argv[1]; '
+                          'f=open(p,"a"); f.close(); assert open(p).read().startswith("old\\n")', raw)
+                user_access()
+                # Reproduce the old installed root-only mode, then exercise the live repair.
+                os.chown(runtime, 0, 0); runtime.chmod(0o700)
+                with self.assertRaises(RuntimeError): user_access()
+                mkdtemp = tempfile.mkdtemp
+                def repair_backup(*args, **kw):
+                    if kw.get('dir') in ('/root', '/run'): kw['dir'] = str(top)
+                    return mkdtemp(*args, **kw)
+                with patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
+                    m.repair_permissions(s, config)
+                user_access()
+                ram_unit = Path('/run/systemd/system') / (prefix + '.service')
+                ram_unit.write_text(ram_unit.read_text().replace('DefaultDependencies=no', 'DefaultDependencies=yes'))
+                cfg['installed_files'][str(ram_unit)] = hashlib.sha256(ram_unit.read_bytes()).hexdigest()
+                m.save(config, cfg)
+                m.run('systemctl', 'daemon-reload')
+                with patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
+                    m.repair_ordering(s, config)
+                self.assertIn('DefaultDependencies=no', ram_unit.read_text())
+                self.assertEqual(m.regular_json(config)['installed_files'][str(ram_unit)],
+                                 hashlib.sha256(ram_unit.read_bytes()).hexdigest())
+                # Reject an accidental supposedly permanent installation on a host overlay.
+                actual_mount_info = m.mount_info
+                def host_overlay(path):
+                    if Path(path) == Path('/'): return {'fstype': 'overlay', 'options': 'rw'}
+                    return actual_mount_info(path)
+                with patch.object(m, 'mount_info', side_effect=host_overlay), \
+                     patch.object(m.tempfile, 'mkdtemp', side_effect=repair_backup):
+                    with self.assertRaisesRegex(ValueError, 'Host overlay active'):
+                        m.configure_checkpoints(s, config, 60)
+                    before_pids = [m.run('systemctl', 'show', app, '-p', 'MainPID', '--value').stdout for app in apps[1:]]
+                    m.configure_checkpoints(s, config, 60, temporary=True)
+                    after_pids = [m.run('systemctl', 'show', app, '-p', 'MainPID', '--value').stdout for app in apps[1:]]
+                    self.assertEqual(before_pids, after_pids)
+                    timer_path = Path('/run/systemd/system') / (prefix + '-checkpoint.timer')
+                    self.assertIn('OnCalendar=*-*-* *:00:00 UTC', timer_path.read_text())
+                    self.assertEqual(s.status()['backup_age_limit_seconds'], 5400)
+                    # Status must flag an overdue hourly backup even with all apps active.
+                    now = time.time()
+                    with patch.object(m.time, 'time', return_value=now + 5401):
+                        self.assertTrue(s.status()['needs_attention'])
+                    self.assertFalse(s.status()['needs_attention'])
+                    m.configure_checkpoints(s, config, 360, temporary=True)
+                    self.assertIn('OnCalendar=*-*-* 00,06,12,18:00:00 UTC', timer_path.read_text())
+                    self.assertEqual(s.status()['backup_age_limit_seconds'], 23400)
+                    with patch.object(m.time, 'time', return_value=now + 21600):
+                        self.assertFalse(s.status()['needs_attention'])
+                    with patch.object(m.time, 'time', return_value=now + 23401):
+                        self.assertTrue(s.status()['needs_attention'])
+                    m.configure_checkpoints(s, config, 60, temporary=True)
+                    # Partial write failure restores helper/config/timer and their ownership hashes.
+                    old_files = {p: p.read_bytes() for p in (helper, config, timer_path)}
+                    actual_atomic = m.atomic
+                    failed = []
+                    def fail_timer(path, data):
+                        if Path(path) == timer_path and not failed:
+                            failed.append(True)
+                            raise OSError('injected timer write failure')
+                        return actual_atomic(path, data)
+                    with patch.object(m, 'atomic', side_effect=fail_timer):
+                        with self.assertRaisesRegex(OSError, 'injected'):
+                            m.configure_checkpoints(s, config, 30, temporary=True)
+                    for path, data_before in old_files.items(): self.assertEqual(path.read_bytes(), data_before)
+                    # A real systemd calendar trigger must create a fresh verified generation.
+                    marker = runtime / 'scheduled-proof'; marker.write_text('automatic checkpoint')
+                    previous = s.reference()['name']
+                    when = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=4)
+                    original_timer = timer_path.read_text()
+                    timer_path.write_text(original_timer.replace('*-*-* *:00:00 UTC', when.strftime('%Y-%m-%d %H:%M:%S UTC')).replace('AccuracySec=1min', 'AccuracySec=1ms'))
+                    m.run('systemctl', 'daemon-reload')
+                    m.run('systemctl', 'start', prefix + '-checkpoint.timer')
+                    deadline = time.monotonic() + 20
+                    while time.monotonic() < deadline:
+                        if s.reference()['name'] != previous and s.active(prefix + '-checkpoint.service') == 'inactive': break
+                        time.sleep(.2)
+                    m.run('systemctl', 'stop', prefix + '-checkpoint.timer')
+                    self.assertNotEqual(s.reference()['name'], previous)
+                    self.assertEqual((s.verify(s.reference()) / 'scheduled-proof').read_text(), 'automatic checkpoint')
+                    self.assertTrue(all(s.active(app) == 'active' for app in apps))
+                    s.disk()
+                    timer_path.write_text(original_timer)
+                    m.run('systemctl', 'daemon-reload')
+                    self.assertEqual(m.regular_json(config)['installed_files'][str(timer_path)], hashlib.sha256(timer_path.read_bytes()).hexdigest())
+                m.run('systemctl', 'stop', apps[1])
+                self.assertTrue(s.status()['needs_attention'])
+                self.assertIn(apps[1], s.status()['inactive_apps'])
+                m.run('systemctl', 'start', apps[1])
+                self.assertFalse(s.status()['needs_attention'])
+                with s.lock():
+                    check = m.run(sys.executable, helper, '--config', config, 'check')
+                    self.assertIn('health not assessed', check.stdout)
+                self.assertEqual(s.status()['ram_limit_bytes'], 64 * 1024 * 1024)
+                self.assertFalse((Path(s.live_state()['upper']) / 'root/data/weather/202601/raw').exists())
+                self.assertEqual(raw.read_text(), 'old\n')
+                with raw.open('a') as f: f.write('new\n')
+                with contextlib.closing(sqlite3.connect(db)) as c:
+                    c.execute('INSERT INTO test VALUES(43)'); c.commit()
+                ref = s.checkpoint()
+                self.assertEqual(s.reference(), ref)
+                self.assertEqual(s.live_state()['ref'], ref)
+                self.assertEqual(raw.read_text(), 'old\nnew\n')
+                self.assertFalse((Path(s.live_state()['upper']) / 'root/data/weather/202611/raw').exists())
+                user_access()
+                with contextlib.closing(sqlite3.connect(db)) as c:
+                    self.assertEqual(c.execute('SELECT n FROM test').fetchall(), [(42,), (43,)])
+                # Failure after quiescing must resume apps, retain data/current and restore RO.
+                real_run = m.run
+                def failed_copy(*args, **kw):
+                    if args[0] == 'cp': raise RuntimeError('injected persistence write failure')
+                    return real_run(*args, **kw)
+                with patch.object(m, 'run', side_effect=failed_copy):
+                    with self.assertRaisesRegex(RuntimeError, 'injected'): s.checkpoint()
+                self.assertEqual(s.reference(), ref)
+                self.assertTrue(all(s.active(n) == 'active' for n in apps))
+                self.assertIn('ro', m.mount_info(persist)['options'].split(','))
+                self.assertEqual(raw.read_text(), 'old\nnew\n')
+                with self.assertRaises(ValueError): s.verify(dict(ref, digest='0' * 64))
+                with patch.dict(s.cfg, uuid='wrong'):
+                    with self.assertRaises(ValueError): s.restore()
+                # Exhaust the bounded upper: checkpoint/rebase still has its control state outside it.
+                fill = data / 'fill-test'
+                with fill.open('wb') as f:
+                    try:
+                        for _ in range(100): f.write(b'x' * 1024 * 1024)
+                        f.flush()
+                    except OSError as error:
+                        self.assertEqual(error.errno, 28)
+                self.assertTrue(s.status()['needs_attention'])
+                s.checkpoint()
+                self.assertLess(s.status()['ram_used_bytes'], 1024 * 1024)
+                fill.unlink()
+                # Stop the storage unit; systemd must stop dependent apps before its checkpoint.
+                with raw.open('a') as f: f.write('shutdown\n')
+                m.run('systemctl', 'stop', prefix + '.service')
+                self.assertIsNone(m.mount_info(runtime))
+                self.assertIsNone(m.mount_info(s.ram))
+                self.assertEqual(raw.read_text(), 'old\n')  # original underlying SD tree unchanged
+                m.run('systemctl', 'start', *apps)
+                self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\n')
+                user_access()
+                self.assertFalse(fill.exists())
+                self.assertTrue(all(s.active(n) == 'active' for n in apps))
+                # Simulated loss of unsaved RAM: restore must use the last sealed generation.
+                m.run('systemctl', 'stop', *apps)
+                with raw.open('a') as f: f.write('unsaved\n')
+                m.run('umount', runtime); m.run('umount', s.ram)
+                s.restore()
+                self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\n')
+                m.run('systemctl', 'start', *apps)
+                # A bad generation at boot must prevent app start, not fall back to stale SD data.
+                m.run('systemctl', 'stop', prefix + '.service')
+                valid = s.reference()
+                with s.writable(): m.save(s.current, dict(valid, digest='0' * 64))
+                failed = m.run('systemctl', 'start', *apps, check=False)
+                self.assertNotEqual(failed.returncode, 0)
+                self.assertIsNone(m.mount_info(runtime))
+                self.assertNotEqual(s.active(apps[2]), 'active')
+                self.assertEqual(raw.read_text(), 'old\n')
+                with s.writable(): m.save(s.current, valid)
+                m.run('systemctl', 'reset-failed', prefix + '.service')
+                m.run('systemctl', 'start', *apps)
+                # Exercise complete removal including copying final data back to the original host filesystem.
+                real_mkdtemp = tempfile.mkdtemp
+                def fixture_backup(*args, **kw):
+                    if kw.get('dir') == '/root': kw['dir'] = str(top)
+                    return real_mkdtemp(*args, **kw)
+                with patch.object(m.tempfile, 'mkdtemp', side_effect=fixture_backup):
+                    m.uninstall(s, config)
+                self.assertIsNone(m.mount_info(runtime))
+                self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\n')
+                self.assertFalse(config.exists())
+                self.assertTrue(all(s.active(n) == 'active' for n in apps))
+                # Test the actual installation transaction, not just rendered units/backend methods.
+                # Hardware preflight is substituted: fixtures have no Pi ZRAM or native RootDirectory.
+                fake_clock = prefix + '-clock.service'
+                unit(fake_clock, '[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/true\n')
+                m.run('systemctl', 'daemon-reload')
+                arguments = SimpleNamespace(config=str(config), runtime=str(runtime), persist=str(persist),
+                                            uuid=cfg['uuid'], ram_mib=64)
+                with contextlib.ExitStack() as stack:
+                    for name, value in dict(APPS=apps, TARGET=target, PREFIX=prefix, HELPER=helper,
+                                            RAM_ROOT=cfg['ram'], STORAGE_LOCK=cfg['lock'], TIME_WAIT=fake_clock,
+                                            UNIT_DIR=Path('/run/systemd/system')).items():
+                        stack.enter_context(patch.object(m, name, value))
+                    stack.enter_context(patch.object(m, 'host_preflight'))
+                    original_run = m.run
+                    def failed_start(*args, **kw):
+                        if args == ('systemctl', 'start', prefix + '.service'):
+                            raise RuntimeError('injected RAM unit start failure')
+                        return original_run(*args, **kw)
+                    with patch.object(m, 'run', side_effect=failed_start):
+                        with self.assertRaisesRegex(RuntimeError, 'injected'): m.install(arguments)
+                    self.assertFalse(config.exists()); self.assertFalse(helper.exists())
+                    self.assertIsNone(m.mount_info(runtime))
+                    self.assertTrue(all(s.active(n) == 'active' for n in apps))
+                    m.install(arguments)
+                    installed = m.regular_json(config)
+                    for p in installed['installed_files']:
+                        if Path(p) not in paths: paths.append(Path(p))
+                    self.assertEqual(m.mount_info(runtime)['fstype'], 'overlay')
+                    timers = [prefix + '-checkpoint.timer', prefix + '-check.timer']
+                    for timer in timers:
+                        self.assertEqual(s.active(timer), 'active')
+                    m.run('systemctl', 'start', prefix + '-check.service')
+                    proof_spec = importlib.util.spec_from_file_location('reboot_proof', Path(__file__).with_name('check-ram-reboot.py'))
+                    proof_tool = importlib.util.module_from_spec(proof_spec); proof_spec.loader.exec_module(proof_tool)
+                    bootid = top / 'boot-id'; bootid.write_text('boot-one')
+                    proof_path = top / 'boot-proof'
+                    logging_dropin = Path('/run/systemd/system') / (prefix + '.service.d') / '90-reboot-proof.conf'
+                    paths.append(logging_dropin)
+                    for name, value in dict(PROOF=proof_path, CONFIG=config, HELPER=helper,
+                                            DROPIN=logging_dropin, BOOTID=bootid).items():
+                        stack.enter_context(patch.object(proof_tool, name, value))
+                    with patch.object(sys, 'argv', ['check-ram-reboot.py', 'prepare']): proof_tool.main()
+                    with patch.object(sys, 'argv', ['check-ram-reboot.py', 'check']):
+                        with self.assertRaisesRegex(ValueError, 'No new boot'): proof_tool.main()
+                    with raw.open('a') as f: f.write('target-stop\n')
+                    # Target reaches inactive before its ordered storage ExecStop has finished.
+                    m.run('systemctl', 'stop', target, prefix + '.service')
+                    self.assertIsNone(m.mount_info(runtime))
+                    storage = m.Storage(installed)
+                    tree = storage.verify(storage.reference())
+                    self.assertTrue((tree / 'root/data/weather/202611/raw').read_text().endswith('target-stop\n'))
+                    m.run('systemctl', 'start', target)
+                    self.assertTrue(all(storage.active(n) == 'active' for n in apps))
+                    m.run('systemctl', 'start', prefix + '-check.service')
+                    # New boot identity is simulated; actual saved marker/archive and mounts are real.
+                    bootid.write_text('boot-two')
+                    with patch.object(sys, 'argv', ['check-ram-reboot.py', 'check']): proof_tool.main()
+                    self.assertTrue(m.regular_json(proof_path / 'result.json')['passed'])
+                    self.assertFalse(logging_dropin.exists())
+                    with patch.object(m.tempfile, 'mkdtemp', side_effect=fixture_backup):
+                        m.uninstall(m.Storage(installed), config)
+                    self.assertEqual(raw.read_text(), 'old\nnew\nshutdown\ntarget-stop\n')
+                print('PASS: actual overlay/tmpfs, checkpoint/rebase, WAL restore, full RAM recovery, failed SD write, shutdown ordering, loss of unsaved RAM and rollback to normal runtime')
+            finally:
+                # Service is stopped while its helper/config still exist.
+                m.run('systemctl', 'stop', target, *apps, prefix + '.service', prefix + '-clock.service', check=False)
+                m.run('systemctl', 'reset-failed', target, *apps, prefix + '.service',
+                      prefix + '-checkpoint.service', prefix + '-check.service', prefix + '-clock.service', check=False)
+                for p in reversed(paths):
+                    p.unlink(missing_ok=True)
+                    if p.parent.name.endswith('.d') and p.parent.exists(): p.parent.rmdir()
+                m.run('systemctl', 'daemon-reload')
+                if m.mount_info(runtime): m.run('umount', runtime)
+                if s and m.mount_info(s.ram): m.run('umount', s.ram)
+                if m.mount_info(persist): m.run('umount', persist)
+                m.run('losetup', '-d', loop)
+
+
+if __name__ == '__main__': unittest.main()
