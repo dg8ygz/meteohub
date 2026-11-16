@@ -67,6 +67,24 @@ Pi oder des Loggers war nötig. Sicherung der vorherigen Dateien:
 den neu angelegten WantedBy-Link entfernen; alte Dateien und Konfiguration
 nicht einzeln während laufender Sicherung zurückkopieren.
 
+## Quellen im Repository und Installationsgrenze
+
+Diese Veröffentlichung enthält die Steuerung, Unit-Vorlage und den dafür
+benötigten RAM-Helfer einschließlich seiner Testabhängigkeit
+`tools/check-ram-reboot.py`. Sie ist kein neues Ein-Klick-Installationspaket.
+Auf .50 bestehen bereits der RAM-Aufbau, der Wartungshelfer mit Freeze/Thaw
+und die originale ARM-Laufzeit. Der Basis-RAM-Helfer allein ersetzt den
+installierten Freeze-Checkpoint nicht; dessen vorhandener Service-Drop-in
+bleibt erforderlich. Seine `apps`-Liste liefert die zu stoppenden bzw.
+einzufrierenden Dienste.
+
+Bei einer Übertragung müssen der originale Auswerter und der Shell-Einstieg
+`wmr928fulleval` ausführbar installiert werden (0755). Unit, Bind-Pfade,
+App-Liste, Helfer-Hash und Autostart sind gemeinsam abzugleichen. Ein
+`git pull` installiert keine dieser Hoständerungen. Die beschriebene
+Live-Abnahme gilt für .50; sie ist keine allgemeine Installationsfreigabe für
+andere Systeme.
+
 ## WAN-IP
 
 Der native Aufruf fragt

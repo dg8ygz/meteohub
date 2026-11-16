@@ -1,5 +1,35 @@
 # Arbeitsstand und Fortsetzung
 
+## Aktueller Stand vom 16. November 2026
+
+Auf Pi .50 sind die [native Auswertung und WAN-IP-Anzeige](native-evaluation.md)
+dauerhaft eingerichtet. Ursache des stehen gebliebenen Auftrags war die
+fehlende native Ausführung; die Anzeige wurde nicht künstlich auf erfolgreich
+gesetzt. Die Vollberechnung und die anschließende Aktualisierung erzeugen
+Aggregate, das Original-CGI zeigt währenddessen `in progress` und danach
+`completed`.
+
+Der neue Auswertungsdienst wird als fünfte Anwendung in die vorhandenen
+RAM-Sicherungen aufgenommen. Die Abnahme zwischen 21:07 und 21:12 MEZ belegt
+neue Rohdaten, einen aufgeholten Dashboard-Index, erfolgreiche Freeze-Sicherung
+und unveränderte Logger-PID. Root-Unterlage, Boot und Persistenz sind wieder RO.
+Die WAN-IP-Abfrage funktioniert über den originalen Herstellerdienst mit dem
+Host-DNS; die dafür erlaubte Hersteller-IP muss bei DNS-Änderungen überprüft
+werden.
+
+Die native Webseite kann zusätzlich mit dem
+[lokalen LAN-Schalter](web-access-pi50.md) freigegeben und wieder geschlossen
+werden. Der Schalter ist dauerhaft gespeichert, die Freigabe selbst gilt bis
+zum Neustart. Vorhandene Passwortprüfung bleibt aktiv.
+
+Offen sind der erneute Boot-Nachweis dieser letzten Ergänzung und die leeren
+nativen `thb0`-Aggregate bei den bekannten auffälligen Quelldaten. Kein neuer
+24-Stunden-Test und keine laufende Überwachung werden damit behauptet.
+Private Konfiguration, Aktivierungsdaten, Herstellerbinärdateien und vollständige
+Betriebsbelege werden nicht veröffentlicht.
+
+## Historischer Betreiberbeleg vom 11. November 2026
+
 **Aktueller Betreiberbeleg vom 11. November 2026:**
 [Tagesprüfung 00:00–20:20 MEZ](day-check-2026-11-11.md).
 Die automatischen Sechs-Stunden-Sicherungen um 13:00 und 19:00 sind erfolgreich
