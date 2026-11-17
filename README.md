@@ -138,6 +138,10 @@ bezieht sich auf den Labormonat November 2026 und dessen lokale Vergleichsbasis.
 
 ## Originalsoftware und Lizenz
 
+Für ein öffentliches Basisimage wurde auch das SheevaPlug-Paket untersucht:
+[Ergebnis und vorgesehener Herstellerdownload](docs/vendor-setup-plug-review.md).
+Es ersetzt die geprüfte Raspberry-Pi-Quelle nicht direkt.
+
 Meteohub bietet ein [Raspberry-Pi-Image](https://wiki.meteohub.de/wiki/index.php/Images)
 zum Download an. Betriebssystem und proprietäre Anwendung sind getrennt
 lizenziert; dies erläutert der Hersteller unter
