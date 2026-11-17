@@ -1,0 +1,89 @@
+{
+  "scope": "Static audit of six original 5.1e ARMHF executables; not an installer allowlist or application acceptance",
+  "date": "2026-11-17",
+  "programs": [
+    {
+      "name": "loggerd",
+      "sha256": "acc728deb3759fc45cce54cca0e6a5d40fe3f98ea8580d2e5296181ce29a0efb",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "openssl_imports": []
+    },
+    {
+      "name": "meteohub.cgi",
+      "sha256": "88d3bea39a66756c258ad52e11b2f12da2fc50a74def88b09ab7e0f2b9c5d1a6",
+      "needed": [
+        "libm.so.6",
+        "libgcgi.so.0",
+        "libssl.so.1.0.0",
+        "libc.so.6",
+        "libcrypto.so.1.0.0"
+      ],
+      "openssl_imports": [
+        "EVP_PKEY_free@OPENSSL_1.0.0",
+        "BIO_new_mem_buf@OPENSSL_1.0.0",
+        "RSA_new@OPENSSL_1.0.0",
+        "EVP_PKEY_get1_RSA@OPENSSL_1.0.0",
+        "BIO_set_flags@OPENSSL_1.0.0",
+        "PEM_read_bio_PUBKEY@OPENSSL_1.0.0",
+        "BIO_free_all@OPENSSL_1.0.0",
+        "RSA_public_decrypt@OPENSSL_1.0.0",
+        "BIO_push@OPENSSL_1.0.0",
+        "BIO_read@OPENSSL_1.0.0",
+        "BIO_ctrl@OPENSSL_1.0.0",
+        "BIO_free@OPENSSL_1.0.0",
+        "BIO_f_base64@OPENSSL_1.0.0",
+        "BIO_s_mem@OPENSSL_1.0.0",
+        "BIO_new@OPENSSL_1.0.0",
+        "BIO_write@OPENSSL_1.0.0"
+      ]
+    },
+    {
+      "name": "meteonet",
+      "sha256": "a2597dc8a3e6bcb70ac3b2ac6bb3dfef446688d5d226f453d02088f5fc3c9293",
+      "needed": [
+        "libm.so.6",
+        "libssl.so.1.0.0",
+        "libc.so.6",
+        "libcrypto.so.1.0.0"
+      ],
+      "openssl_imports": [
+        "MD5@OPENSSL_1.0.0"
+      ]
+    },
+    {
+      "name": "meteometar",
+      "sha256": "0594afc52864e9109ed351d0c48a0c4a15ba124578b2a53ffb17a281ba642030",
+      "needed": [
+        "libm.so.6",
+        "libssl.so.1.0.0",
+        "libc.so.6"
+      ],
+      "openssl_imports": []
+    },
+    {
+      "name": "meteoschedule",
+      "sha256": "38033efa587c37fe332479392943d19dcdf011b832ad0cad9f5d9890743722c9",
+      "needed": [
+        "libm.so.6",
+        "libssl.so.1.0.0",
+        "libc.so.6",
+        "libcrypto.so.1.0.0"
+      ],
+      "openssl_imports": [
+        "MD5@OPENSSL_1.0.0"
+      ]
+    },
+    {
+      "name": "loggereval",
+      "sha256": "a9cb1c64843447d32af6e3fd8b67725c61b9f6ccdad2abcbefb5bd9eef974812",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "openssl_imports": []
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 # Meteohub auf Debian Trixie
 
+Untersuchung vom 17.11.2026:
+[unveränderte Herstellerprogramme mit externem OpenSSL-Adapter und offene Installer-Schritte](docs/unmodified-runtime-investigation.md).
+Experimentelle Funktionstests bestanden; noch keine native Hardware- oder Imagefreigabe.
+
 Aktueller Ergänzungsstand auf Pi .50 (16.11.2026):
 [native Auswertung und WAN-IP](docs/native-evaluation.md),
 [lokal schaltbarer LAN-Webzugriff](docs/web-access-pi50.md).
