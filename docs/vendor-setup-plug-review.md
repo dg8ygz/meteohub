@@ -73,4 +73,4 @@ beim Empfänger vermeidet, dass wir diese Programme selbst im Image verteilen.
 Er ist jedoch keine pauschale Erlaubnis für jede Anpassung oder Verwendung.
 Die Anwendungsbedingungen gelten weiter, einschließlich der Einschränkungen
 für Änderungen. Die bisherigen OpenSSL-Anpassungen sind ebenfalls gesondert
-zu beurteilen. Siehe [Originalsoftware und Lizenz](../README.md#originalsoftware-und-lizenz).
+zu beurteilen. Siehe [Originalsoftware und Lizenz](originalsoftware.md).

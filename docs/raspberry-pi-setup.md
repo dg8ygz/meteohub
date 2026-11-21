@@ -81,7 +81,7 @@ Inhalt auf die gesamte Karte übertragen.
 Unser Repository enthält neue Hilfsprogramme und eine Anzeige ohne Flash.
 Die ursprüngliche Meteohub-Anwendung ist separat zu beziehen und zu lizenzieren.
 Ein Download ersetzt keine Aktivierung. Siehe
-[Originalsoftware und Lizenz](../README.md#originalsoftware-und-lizenz).
+[Originalsoftware und Lizenz](originalsoftware.md).
 
 ## 2. Was du brauchst
 
@@ -1958,7 +1958,7 @@ Die bestehende Installation dient bis zur Abnahme als Rückweg.
 
 ### B6. Noch offene native Installation und Abnahme
 
-Die [Original-Binaries](../README.md#original-binaries-beschaffen) werden separat
+Die [Original-Binaries](originalsoftware.md#original-binaries-beschaffen) werden separat
 benötigt. Einfach `/home/meteohub` und ein CGI in den Webroot zu kopieren reicht
 für unsere Trixie-Migration nicht. Im emulierten Testgast wurden zusätzliche,
 versionsabhängige Bibliotheksanpassungen, Webserverregeln, Verzeichnisse und
